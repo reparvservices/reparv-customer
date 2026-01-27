@@ -1,0 +1,21 @@
+{
+  "migIndex": 1,
+  "data": [
+    {
+      "path": "assets/fonts/SegoeUI-Bold.ttf",
+      "sha1": "b2b26ea5a35f7c2f107d358f584985aa14218c4d"
+    },
+    {
+      "path": "assets/fonts/SegoeUI-BoldItalic.ttf",
+      "sha1": "3d4d4e5829dc013f6d4c93e03c439c5afa3b1853"
+    },
+    {
+      "path": "assets/fonts/SegoeUI-Italic.ttf",
+      "sha1": "5fc7be6462d15845217ffa4d609fd904e4c36fea"
+    },
+    {
+      "path": "assets/fonts/SegoeUI-Regular.ttf",
+      "sha1": "995e37cfba0e3df9a716891a4cf9a05b38b118f9"
+    }
+  ]
+}
