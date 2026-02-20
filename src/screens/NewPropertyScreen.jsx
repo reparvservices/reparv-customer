@@ -39,7 +39,7 @@ export default function NewPropertyScreen() {
     {title: 'Buy New Plot', img: Plot, ptype: 'NewPlot'},
     {title: 'Buy New Shop', img: ShopImg, ptype: 'NewShop'},
     {title: 'Buy Row House', img: LandImg, ptype: 'RowHouse'},
-    {title: 'Buy Resale', img:Resale, ptype: 'Resale'},
+    // {title: 'Buy Resale', img:Resale, ptype: 'Resale'},
     {title: 'Buy New Farm Land ', img: Farm, ptype: 'FarmLand'},
     {title: 'Buy New Farm House', img: FarmHouseImg, ptype: 'FarmHouse'},
     {title: 'Buy Commercial Flat', img: OfficeImg, ptype: 'CommercialFlat'},

@@ -32,7 +32,7 @@ export default function PropertyBookDetails() {
   const [loading, setLoading] = useState(false);
   const [customerPayments, setCustomerPayments] = useState([]);
   const [paymentAmount, setPaymentAmount] = useState('');
- 
+
   useEffect(() => {
     getCustomer();
   }, [booking]);
@@ -56,6 +56,7 @@ export default function PropertyBookDetails() {
 
     fetchPropertyData();
   }, [booking?.seoSlug]);
+
   const getCustomer = async () => {
     try {
       fetch(
@@ -148,7 +149,7 @@ export default function PropertyBookDetails() {
         </LinearGradient>
 
         {/* Visit Details Card */}
-        <View style={{padding: 16}}>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={[styles.card, {marginTop: -50, gap: 1}]}>
             <View style={styles.cardHeader}>
               <Text style={styles.cardTitle}>Visit Details</Text>
@@ -302,170 +303,173 @@ export default function PropertyBookDetails() {
               </View>
             </View>
           </View>
-        </View>
 
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          {/* PAYMENT SUMMARY CARD */}
-          <View style={[styles.card, {gap: 8, padding: 0}]}>
-            <View style={styles.titleRow}>
-              <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-                <Path
-                  d="M11.005 2L18.303 4.28C18.5065 4.34354 18.6844 4.47048 18.8107 4.64229C18.937 4.81409 19.0051 5.02177 19.005 5.235V7H21.005C21.2702 7 21.5246 7.10536 21.7121 7.29289C21.8996 7.48043 22.005 7.73478 22.005 8V10H9.005V8C9.005 7.73478 9.11036 7.48043 9.2979 7.29289C9.48543 7.10536 9.73979 7 10.005 7H17.005V5.97L11.005 4.094L5.005 5.97V13.374C5.00486 13.9862 5.14525 14.5903 5.41537 15.1397C5.68548 15.6892 6.07811 16.1692 6.563 16.543L6.752 16.679L11.005 19.579L14.787 17H10.005C9.73979 17 9.48543 16.8946 9.2979 16.7071C9.11036 16.5196 9.005 16.2652 9.005 16V12H22.005V16C22.005 16.2652 21.8996 16.5196 21.7121 16.7071C21.5246 16.8946 21.2702 17 21.005 17L17.785 17.001C17.398 17.511 16.928 17.961 16.385 18.331L11.005 22L5.625 18.332C4.81753 17.7815 4.15676 17.042 3.70014 16.1779C3.24353 15.3138 3.0049 14.3513 3.005 13.374V5.235C3.00513 5.02194 3.07329 4.81449 3.19957 4.64289C3.32584 4.47128 3.50363 4.34449 3.707 4.281L11.005 2Z"
-                  fill="#5E23DC"
-                />
-              </Svg>
+          {/* <ScrollView contentContainerStyle={styles.scrollContent}> */}
+          <View>
+            {/* PAYMENT SUMMARY CARD */}
+            <View style={[styles.card, {gap: 8, padding: 0}]}>
+              <View style={styles.titleRow}>
+                <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+                  <Path
+                    d="M11.005 2L18.303 4.28C18.5065 4.34354 18.6844 4.47048 18.8107 4.64229C18.937 4.81409 19.0051 5.02177 19.005 5.235V7H21.005C21.2702 7 21.5246 7.10536 21.7121 7.29289C21.8996 7.48043 22.005 7.73478 22.005 8V10H9.005V8C9.005 7.73478 9.11036 7.48043 9.2979 7.29289C9.48543 7.10536 9.73979 7 10.005 7H17.005V5.97L11.005 4.094L5.005 5.97V13.374C5.00486 13.9862 5.14525 14.5903 5.41537 15.1397C5.68548 15.6892 6.07811 16.1692 6.563 16.543L6.752 16.679L11.005 19.579L14.787 17H10.005C9.73979 17 9.48543 16.8946 9.2979 16.7071C9.11036 16.5196 9.005 16.2652 9.005 16V12H22.005V16C22.005 16.2652 21.8996 16.5196 21.7121 16.7071C21.5246 16.8946 21.2702 17 21.005 17L17.785 17.001C17.398 17.511 16.928 17.961 16.385 18.331L11.005 22L5.625 18.332C4.81753 17.7815 4.15676 17.042 3.70014 16.1779C3.24353 15.3138 3.0049 14.3513 3.005 13.374V5.235C3.00513 5.02194 3.07329 4.81449 3.19957 4.64289C3.32584 4.47128 3.50363 4.34449 3.707 4.281L11.005 2Z"
+                    fill="#5E23DC"
+                  />
+                </Svg>
 
-              <Text style={styles.cardTitle}>Payment Summary</Text>
-            </View>
-
-            <View style={[styles.summaryRow, {paddingHorizontal: 10}]}>
-              <Text style={styles.summaryLabel}>Deal Amount</Text>
-              <Text style={styles.summaryValue}>
-                ₹{formatIndianAmount(booking?.dealamount)}
-              </Text>
-            </View>
-            <View
-              style={{
-                alignItems: 'center',
-                width: '100%',
-                height: 1, // height for the divider line
-
-                backgroundColor: '#D9D9D9', // border color equivalent
-              }}
-            />
-            <View style={[styles.summaryRow, {paddingHorizontal: 10}]}>
-              <View style={{flexDirection: 'row', alignItems: 'center'}}>
-                <Text style={styles.summaryLabel}>Token Paid</Text>
-
-                {/* Rectangle 207 Badge */}
-                <View style={styles.paidBadge}>
-                  <Text style={styles.paidBadgeText}>Paid</Text>
-                </View>
+                <Text style={styles.cardTitle}>Payment Summary</Text>
               </View>
 
-              <Text style={[styles.summaryValue, {color: '#6D28D9'}]}>
-                ₹{formatIndianAmount(booking?.tokenamount)}
-              </Text>
-            </View>
+              <View style={[styles.summaryRow, {paddingHorizontal: 10}]}>
+                <Text style={styles.summaryLabel}>Deal Amount</Text>
+                <Text style={styles.summaryValue}>
+                  ₹{formatIndianAmount(booking?.dealamount)}
+                </Text>
+              </View>
+              <View
+                style={{
+                  alignItems: 'center',
+                  width: '100%',
+                  height: 1, // height for the divider line
 
-            <View style={[styles.summaryRow, {paddingHorizontal: 10}]}>
-              <Text style={styles.summaryLabel}>
-                Total Paid Amount {'\n'} with Token
-              </Text>
-              <Text style={styles.summaryValue}>
-                ₹{formatIndianAmount(totalPaidAmount)}
-              </Text>
-            </View>
-            <View
-              style={[
-                styles.summaryRow,
-                {
-                  backgroundColor: '#EFE7FF',
-                  paddingVertical: 10,
-                  paddingHorizontal: 10,
-                },
-              ]}>
-              <Text style={styles.summaryLabel}>Remaining Balance</Text>
-              <Text style={[styles.summaryValue, {color: '#6D28D9'}]}>
-                ₹
-                {formatIndianAmount(
-                  parseAmount(booking?.dealamount) -
-                    (parseAmount(booking?.tokenamount) +
-                      customerPayments.reduce(
-                        (sum, p) => sum + parseAmount(p?.paymentAmount),
-                        0,
-                      )),
-                )}
-              </Text>
-            </View>
+                  backgroundColor: '#D9D9D9', // border color equivalent
+                }}
+              />
+              <View style={[styles.summaryRow, {paddingHorizontal: 10}]}>
+                <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                  <Text style={styles.summaryLabel}>Token Paid</Text>
 
-            <View style={styles.noteBox}>
-              <Svg
-                width="16"
-                height="16"
-                viewBox="0 0 16 16"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg">
-                <G clip-path="url(#clip0_3604_421)">
-                  <Path
-                    d="M8.00004 14.6668C11.6819 14.6668 14.6667 11.6821 14.6667 8.00016C14.6667 4.31826 11.6819 1.3335 8.00004 1.3335C4.31814 1.3335 1.33337 4.31826 1.33337 8.00016C1.33337 11.6821 4.31814 14.6668 8.00004 14.6668Z"
-                    stroke="#FFAB00"
-                    stroke-width="2"
-                  />
-                  <Path
-                    d="M8 4.66699H8.00667"
-                    stroke="#FFAB00"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                  />
-                  <Path
-                    d="M6.66675 7.3335H8.00008V10.6668M6.66675 10.6668H9.33341"
-                    stroke="#FFAB00"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                </G>
-                <Defs>
-                  <ClipPath id="clip0_3604_421">
-                    <Rect width="16" height="16" fill="white" />
-                  </ClipPath>
-                </Defs>
-              </Svg>
-
-              <Text style={styles.noteText}>
-                Payment schedule will be shared by your channel partner within
-                24 hours.
-              </Text>
-            </View>
-          </View>
-
-          {/* PAYMENT STATUS CARD */}
-
-          {customerPayments.length > 0 &&
-            customerPayments.map(d => {
-              return (
-                <>
-                  <View style={styles.card}>
-                    <View style={styles.cardHeader}>
-                      <Text style={styles.cardTitle}>Payment Status</Text>
-                      <View style={styles.statusPillConfirmed}>
-                        <Text style={styles.statusTextConfirmed}>Success</Text>
-                      </View>
-                    </View>
-                    <View style={styles.summaryRow}>
-                      <Text style={styles.summaryLabel}>Payment Method</Text>
-                      <Text style={styles.summaryValue}>{d?.paymentTyp}</Text>
-                    </View>
-                    <View style={styles.summaryRow}>
-                      <Text style={styles.summaryLabel}>Paid Amount</Text>
-                      <Text style={styles.summaryValue}>
-                        ₹{formatIndianAmount(d?.paymentAmount)}
-                      </Text>
-                    </View>
-
-                    <View style={styles.summaryRow}>
-                      <Text style={styles.summaryLabel}>Date & Time</Text>
-                      <Text style={styles.summaryValue}>{d?.created_at}</Text>
-                    </View>
-
-                    <TouchableOpacity>
-                      <Text style={styles.downloadReceipt}>
-                        Download Receipt ⬇
-                      </Text>
-                    </TouchableOpacity>
+                  {/* Rectangle 207 Badge */}
+                  <View style={styles.paidBadge}>
+                    <Text style={styles.paidBadgeText}>Paid</Text>
                   </View>
-                </>
-              );
-            })}
+                </View>
 
-          <TouchableOpacity
-            style={styles.closeBtn}
-            onPress={() => {
-              navigation.goBack();
-            }}>
-            <Text style={styles.closeText}>Close</Text>
-          </TouchableOpacity>
+                <Text style={[styles.summaryValue, {color: '#6D28D9'}]}>
+                  ₹{formatIndianAmount(booking?.tokenamount)}
+                </Text>
+              </View>
+
+              <View style={[styles.summaryRow, {paddingHorizontal: 10}]}>
+                <Text style={styles.summaryLabel}>
+                  Total Paid Amount {'\n'} with Token
+                </Text>
+                <Text style={styles.summaryValue}>
+                  ₹{formatIndianAmount(totalPaidAmount)}
+                </Text>
+              </View>
+              <View
+                style={[
+                  styles.summaryRow,
+                  {
+                    backgroundColor: '#EFE7FF',
+                    paddingVertical: 10,
+                    paddingHorizontal: 10,
+                  },
+                ]}>
+                <Text style={styles.summaryLabel}>Remaining Balance</Text>
+                <Text style={[styles.summaryValue, {color: '#6D28D9'}]}>
+                  ₹
+                  {formatIndianAmount(
+                    parseAmount(booking?.dealamount) -
+                      (parseAmount(booking?.tokenamount) +
+                        customerPayments.reduce(
+                          (sum, p) => sum + parseAmount(p?.paymentAmount),
+                          0,
+                        )),
+                  )}
+                </Text>
+              </View>
+
+              <View style={styles.noteBox}>
+                <Svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg">
+                  <G clip-path="url(#clip0_3604_421)">
+                    <Path
+                      d="M8.00004 14.6668C11.6819 14.6668 14.6667 11.6821 14.6667 8.00016C14.6667 4.31826 11.6819 1.3335 8.00004 1.3335C4.31814 1.3335 1.33337 4.31826 1.33337 8.00016C1.33337 11.6821 4.31814 14.6668 8.00004 14.6668Z"
+                      stroke="#FFAB00"
+                      stroke-width="2"
+                    />
+                    <Path
+                      d="M8 4.66699H8.00667"
+                      stroke="#FFAB00"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                    />
+                    <Path
+                      d="M6.66675 7.3335H8.00008V10.6668M6.66675 10.6668H9.33341"
+                      stroke="#FFAB00"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </G>
+                  <Defs>
+                    <ClipPath id="clip0_3604_421">
+                      <Rect width="16" height="16" fill="white" />
+                    </ClipPath>
+                  </Defs>
+                </Svg>
+
+                <Text style={styles.noteText}>
+                  Payment schedule will be shared by your channel partner within
+                  24 hours.
+                </Text>
+              </View>
+            </View>
+
+            {/* PAYMENT STATUS CARD */}
+
+            {customerPayments.length > 0 &&
+              customerPayments.map(d => {
+                return (
+                  <>
+                    <View style={styles.card}>
+                      <View style={styles.cardHeader}>
+                        <Text style={styles.cardTitle}>Payment Status</Text>
+                        <View style={styles.statusPillConfirmed}>
+                          <Text style={styles.statusTextConfirmed}>
+                            Success
+                          </Text>
+                        </View>
+                      </View>
+                      <View style={styles.summaryRow}>
+                        <Text style={styles.summaryLabel}>Payment Method</Text>
+                        <Text style={styles.summaryValue}>{d?.paymentTyp}</Text>
+                      </View>
+                      <View style={styles.summaryRow}>
+                        <Text style={styles.summaryLabel}>Paid Amount</Text>
+                        <Text style={styles.summaryValue}>
+                          ₹{formatIndianAmount(d?.paymentAmount)}
+                        </Text>
+                      </View>
+
+                      <View style={styles.summaryRow}>
+                        <Text style={styles.summaryLabel}>Date & Time</Text>
+                        <Text style={styles.summaryValue}>{d?.created_at}</Text>
+                      </View>
+
+                      <TouchableOpacity>
+                        <Text style={styles.downloadReceipt}>
+                          Download Receipt ⬇
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </>
+                );
+              })}
+
+            <TouchableOpacity
+              style={styles.closeBtn}
+              onPress={() => {
+                navigation.goBack();
+              }}>
+              <Text style={styles.closeText}>Close</Text>
+            </TouchableOpacity>
+          </View>
         </ScrollView>
       </View>
     </>
@@ -520,7 +524,7 @@ const styles = StyleSheet.create({
 
   scrollContent: {
     padding: 16,
-    marginTop: -0,
+    marginTop: 30,
     paddingBottom: 50,
     zIndex: 1000,
   },

@@ -30,7 +30,7 @@ export default function NewLaunchShowcase() {
         item =>
           item.status === 'Active' &&
           item.approve === 'Approved' &&
-          item.hotDeal !== 'Inactive',
+          item.topPicksStatus !== 'Inactive',
       );
       setFlats(filtered);
     } catch (error) {
@@ -113,7 +113,7 @@ export default function NewLaunchShowcase() {
             style={[styles.icon]}
           />
           <Text style={styles.title}>
-            <Text style={styles.highlight}>30 Most Popular{'\n'}</Text>
+            <Text style={styles.highlight}>Most Popular{'\n'}</Text>
             New Projects in{'\n'}
             Nagpur
           </Text>
@@ -129,13 +129,14 @@ export default function NewLaunchShowcase() {
             />
           </View>
           <View>
-            <Text style={styles.company}>Reparv</Text>
+            <Text style={styles.company}>
+              {currentFlat?.projectBy || 'Reparv'}
+            </Text>
             <TouchableOpacity
               style={styles.cta}
               onPress={() =>
-                navigation.navigate('HighlightedPropertyListScreen', {
-                  properties: flats, // array
-                  
+                navigation.navigate('PropertyDetails', {
+                  seoSlug: currentFlat?.seoSlug,
                 })
               }>
               <Text style={styles.ctaText}>View Project</Text>
@@ -145,34 +146,29 @@ export default function NewLaunchShowcase() {
         </View>
 
         {/* Current Property */}
-        <View style={styles.imageBox}>
+        {/* Current Property */}
+        <TouchableOpacity
+          style={[styles.imageBox, {borderRadius: 24}]}
+          onPress={() =>
+            navigation.navigate('PropertyDetails', {
+              seoSlug: currentFlat?.seoSlug,
+            })
+          }>
           <Image
             source={
-              imgUrl
-                ? {uri: imgUrl}
-                : require('../../assets/image/common/notfound.png')
+              currentFlat?.topPicksBanner
+                ? {uri: currentFlat?.topPicksBanner}
+                : require('../../assets/image/home/defaultProject.png')
             }
             style={styles.image}
+            resizeMode="contain"
           />
-          <LinearGradient
-            colors={['rgba(241,230,255,0)', '#1A003D']}
-            style={styles.imageOverlay}
-          />
-          <View style={styles.imageText}>
-            <Text style={styles.projectName}>{currentFlat?.propertyName}</Text>
-            <Text style={styles.location}>{currentFlat?.location}</Text>
-            <Text style={styles.price}>
-              ₹{formatIndianAmount(currentFlat?.totalOfferPrice)}
-            </Text>
-            <Text style={styles.config}>
-              {currentFlat?.propertyType.join(' , ')}{' '}
-              {currentFlat?.propertyCategory}
-            </Text>
-          </View>
+
+          {/* Only Arrow Button */}
           <TouchableOpacity style={styles.arrowBtn} onPress={handleNext}>
             <ArrowRight size={14} color="#8A38F5" />
           </TouchableOpacity>
-        </View>
+        </TouchableOpacity>
       </LinearGradient>
     </View>
   );
@@ -214,7 +210,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   icon: {width: 105, height: 85, marginRight: 12},
-  title: {fontSize: 24, lineHeight: 32, fontWeight: '700', color: '#000'},
+  title: {fontSize: 22, lineHeight: 32, fontWeight: '700', color: '#000'},
   companyRow: {flexDirection: 'row', marginTop: 16, paddingHorizontal: 16},
   logoBox: {
     width: 76,
@@ -235,9 +231,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
+    width: 150,
   },
   ctaText: {color: '#FFF', fontSize: 16, fontWeight: '600'},
-  imageBox: {marginTop: 16, height: 260, borderRadius: 24, overflow: 'hidden'},
+  imageBox: {
+    marginTop: 16,
+    height: 260,
+
+    overflow: 'hidden',
+    borderRadius: 24,
+    borderColor: '#C8C8C8',
+    shadowColor: '#000',
+  },
   image: {width: '100%', height: '100%'},
   imageOverlay: {...StyleSheet.absoluteFillObject},
   imageText: {

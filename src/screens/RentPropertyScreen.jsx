@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontFamily: 'Segoe UI',
     fontSize: 16,
-    lineHeight:30,
+    lineHeight: 30,
     fontFamily: 'SegoeUI-Bold',
     color: '#000',
   },

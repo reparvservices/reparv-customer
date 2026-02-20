@@ -64,7 +64,9 @@ export default function ActivitiesScreen() {
     setLoading(true);
     try {
       const res = await fetch(
-        `https://aws-api.reparv.in/customerapp/property/get-wishlist/${user?.id || auth?.user?.id}`,
+        `https://aws-api.reparv.in/customerapp/property/get-wishlist/${
+          user?.id || auth?.user?.id
+        }`,
       );
       const json = await res.json();
       setWishlist(json?.data || []);
@@ -89,8 +91,9 @@ export default function ActivitiesScreen() {
     if (!user?.id) return;
     setLoading(true);
     try {
-      const url = new URL(`https://aws-api.reparv.in/customerapp/enquiry/get/${user.id}`);
-  
+      const url = new URL(
+        `https://aws-api.reparv.in/customerapp/enquiry/get/${user.id}`,
+      );
 
       const res = await fetch(url.toString());
       const json = await res.json();
@@ -146,10 +149,11 @@ export default function ActivitiesScreen() {
       const json = await res.json();
 
       setBookings(json || []);
-if (json?.length) {         setCounts(c => ({
-        ...c,
-        bookings: json?.filter(i => i.status === 'Token').length || 0,
-      }));
+      if (json?.length) {
+        setCounts(c => ({
+          ...c,
+          bookings: json?.filter(i => i.status === 'Token').length || 0,
+        }));
       }
     } finally {
       setLoading(false);
@@ -163,14 +167,14 @@ if (json?.length) {         setCounts(c => ({
   }, [activeTab]);
 
   useFocusEffect(
-  useCallback(() => {
-    fetchBookings();
-    fetchEnquiries();
-    fetchVisits();
-    fetchWishlist();
-    getActiveList();
-  }, []),
-);
+    useCallback(() => {
+      fetchBookings();
+      fetchEnquiries();
+      fetchVisits();
+      fetchWishlist();
+      getActiveList();
+    }, []),
+  );
   const getActiveList = () => {
     switch (activeTab) {
       case 'wishlist':
@@ -243,18 +247,16 @@ if (json?.length) {         setCounts(c => ({
 
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => {
-            navigation.goBack();
-          }}>
+        {/* Left */}
+        <TouchableOpacity onPress={() => navigation.goBack()}>
           <ArrowLeft size={22} color="#111" />
         </TouchableOpacity>
 
+        {/* Center */}
         <Text style={styles.headerTitle}>Activities</Text>
 
-        <TouchableOpacity>
-          <Bell size={22} color="#111" fill={'#111'} />
-        </TouchableOpacity>
+        {/* Right placeholder (same width as left icon) */}
+        <View style={{width: 22}} />
       </View>
 
       {/* Tabs */}
@@ -320,7 +322,8 @@ if (json?.length) {         setCounts(c => ({
           <Text style={{textAlign: 'center', marginTop: 40, color: '#6B7280'}}>
             No properties found
           </Text>
-        ) : (getActiveList()?.length > 0 &&
+        ) : (
+          getActiveList()?.length > 0 &&
           getActiveList().map((item, index) => {
             if (activeTab === 'bookings') {
               return (

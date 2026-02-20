@@ -62,6 +62,7 @@ import PriceSummaryDrawer from '../components/property/PriceSummaryDrawer';
 import PropertyVideoModal from '../components/PropertyDetails/VideoModel';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {getImageUri, parseFrontView} from '../utils/imageHandle';
+import PlotAvailabilityModal from './PlotAvailability';
 const {width} = Dimensions.get('window');
 const isTablet = width >= 768;
 
@@ -81,6 +82,8 @@ const PropertyDetailsScreen = () => {
   const [open, setOpen] = useState(false);
   const [showDrawer, setshowDrawer] = useState(false);
   const [propertyApprovedBy, setPropertyApprovedBy] = useState('NMRDA');
+  const [data, setData] = useState([]);
+  const [modalVisible, setModalVisible] = useState(false);
   const scrollRef = useRef(null);
   const thumbnailRef = useRef(null);
   const navigation = useNavigation();
@@ -117,12 +120,7 @@ const PropertyDetailsScreen = () => {
         const data = await response.json();
         setPropertyData(data);
         setPropertyApprovedBy(data?.propertyApprovedBy);
-        setForm({
-          propertyid: data?.propertyid,
-          user_id: token,
-          category: data?.propertyCategory, // Ensure category is provided or passed as prop
-        });
-        // Parse images AFTER data arrives
+
         const rawValue = data?.frontView;
       } catch (error) {
         console.error('Error fetching property data:', error);
@@ -168,6 +166,9 @@ const PropertyDetailsScreen = () => {
     scrollRef.current?.scrollTo({y: 0, animated: true});
   }, [seoSlug]); // or [pdata.id] if that’s what you use
 
+  useEffect(() => {
+    fetchPlotData();
+  }, [propertyData]);
   const scrollTo = index => {
     setCurrentIndex(index);
   };
@@ -316,7 +317,6 @@ Best regards,
 
   //add wish list
   const handleLikePress = async () => {
-    console.log(token, 'id', propertyData?.propertyid);
     setIsLiked(prev => !prev);
     try {
       const response = await fetch(
@@ -328,7 +328,7 @@ Best regards,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            user_id: token,
+            user_id: user?.id,
             property_id: propertyData?.propertyid,
           }),
         },
@@ -502,6 +502,8 @@ Best regards,
     },
   ];
 
+  // console.log(propertyData, 'proo');
+
   const property = {
     title: propertyData?.propertyName,
     location: `${propertyData?.city},${propertyData?.state} -
@@ -517,6 +519,26 @@ Best regards,
       return [];
     }
   })();
+  const fetchPlotData = async () => {
+    try {
+      const isNewFlat = propertyData?.propertyCategory === 'NewFlat';
+
+      const url = isNewFlat
+        ? `https://aws-api.reparv.in/frontend/properties/additionalinfo/flat/get/all/${propertyData?.propertyid}`
+        : `https://aws-api.reparv.in/frontend/properties/additionalinfo/plot/get/all/${propertyData?.propertyid}`;
+
+      const response = await fetch(url);
+      const json = await response.json();
+
+      console.log(json, 'data');
+      setData(json);
+      setLoading(false);
+    } catch (error) {
+      console.error('Fetch Plot Data Error:', error);
+      setLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
@@ -532,7 +554,6 @@ Best regards,
         backgroundColor="#F7F7F7"
         translucent={false}
       />
-
       <View style={styles.container}>
         <ScrollView showsVerticalScrollIndicator={false}>
           {/* IMAGE SECTION */}
@@ -577,7 +598,7 @@ Best regards,
                   ),
                 }}
                 style={styles.heroImage}
-                resizeMode="cover"
+                resizeMode="contain"
               />
             ) : (
               <Image
@@ -585,7 +606,7 @@ Best regards,
                   uri: getImageUri(parseFrontView(propertyData?.frontView)[0]),
                 }}
                 style={styles.heroImage}
-                resizeMode="cover"
+                resizeMode="contain"
               />
             )}
             {/* Center Left Arrow */}
@@ -665,7 +686,7 @@ Best regards,
                 {/* Preview Image */}
                 <Image
                   source={{
-                    uri: `https://aws-api.reparv.in/${propertyData?.frontView?.[0]}`,
+                    uri: getImageUri(propertyData?.frontView?.[0]),
                   }}
                   style={styles.videoPreview}
                 />
@@ -795,6 +816,37 @@ Best regards,
               availableCount={propertyData?.availableCount}
               bookedCount={propertyData?.bookedCount}
             />
+            {/* {propertyData?.propertyCategory &&
+              [
+                'NewPlot',
+                'NewFlat',
+                'CommercialFlat',
+                'CommercialPlot',
+              ].includes(propertyData.propertyCategory) && (
+                <View style={{alignItems: 'center'}}>
+                  <TouchableOpacity
+                    onPress={() => setModalVisible(true)}
+                    style={{
+                      width: '100%',
+                      height: 50,
+                      backgroundColor: '#8A38F5',
+                      borderRadius: 12,
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                    }}>
+                    <Text
+                      style={{
+                        fontFamily: 'Poppins',
+                        fontWeight: '700',
+                        fontSize: 16,
+                        lineHeight: 28,
+                        color: '#FFFFFF',
+                      }}>
+                      Check Availability
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )} */}
 
             {/* Badges */}
             <View style={styles.badgeRow}>
@@ -1107,6 +1159,7 @@ Best regards,
           />
           <HomeLoan />
         </ScrollView>
+
         <PropertyUploadModal
           visible={open}
           onClose={() => setOpen(false)}
@@ -1133,6 +1186,14 @@ Best regards,
           }}
         />
       </View>
+      <PlotAvailabilityModal
+        seoSlug={propertyData?.seoSlug}
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        apiData={data}
+        onBook={() => setOpen(true)}
+        propertyCategory={propertyData?.propertyCategory}
+      />
     </SafeAreaView>
   );
 };

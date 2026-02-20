@@ -1,4 +1,4 @@
-import React, {useCallback, useState} from 'react';
+import React, {useCallback, useMemo, useState} from 'react';
 import {
   View,
   Text,
@@ -31,6 +31,13 @@ const PURPLE = '#6C3EF0';
 const LIGHT_PURPLE = '#EFE9FF';
 const BG = '#FAF9FF';
 
+const STATIC_VIEWS_DATA = [
+  {label: 'Week 1', value: 12000},
+  {label: 'Week 2', value: 32000},
+  {label: 'Week 3', value: 18000},
+  {label: 'Week 4', value: 50000},
+];
+
 export default function MyListingsScreen() {
   const navigation = useNavigation();
   const auth = useSelector(state => state.auth);
@@ -42,6 +49,11 @@ export default function MyListingsScreen() {
   const [totalWhatsapp, setTotalWhatsapp] = useState(0);
   const [savedCount, setSavedCount] = useState(0);
   const [enquiries, setEnquiries] = useState([]);
+  const [viewsData, setViewsData] = useState([]);
+  const [lastPeriodListings, setLastPeriodListings] = useState(1);
+  const [lastPeriodViews, setLastPeriodViews] = useState(1);
+  const [lastPeriodSaved, setLastPeriodSaved] = useState(1);
+  const [lastPeriodEnquiries, setLastPeriodEnquiries] = useState(1);
 
   useFocusEffect(
     useCallback(() => {
@@ -156,6 +168,52 @@ export default function MyListingsScreen() {
     }
   };
 
+  const calculateGrowth = (current, previous) => {
+    if (!previous || previous === 0) return null; // hide growth
+    return Math.round(((current - previous) / previous) * 10);
+  };
+
+  const weeklyViewsFromApi = useMemo(() => {
+    if (!enquiries.length) return [];
+
+    const weekMap = {};
+
+    enquiries.forEach(item => {
+      const date = new Date(item.created_at);
+      const week = `Week ${Math.ceil(date.getDate() / 7)}`;
+      weekMap[week] = (weekMap[week] || 0) + 1;
+    });
+
+    return Object.keys(weekMap).map(key => ({
+      label: key,
+      value: weekMap[key] * 1000, // scale for chart visibility
+    }));
+  }, [enquiries]);
+
+  const finalViewsData =
+    weeklyViewsFromApi.length > 0 ? weeklyViewsFromApi : STATIC_VIEWS_DATA;
+
+  const listingsGrowth = calculateGrowth(
+    propertyData.length,
+    lastPeriodListings,
+  );
+
+  const viewsGrowth = calculateGrowth(totalVisitors, lastPeriodViews);
+
+  const savedGrowth = calculateGrowth(savedCount, lastPeriodSaved);
+
+  const enquiriesGrowth = calculateGrowth(
+    enquiries.length,
+    lastPeriodEnquiries,
+  );
+
+  const performanceData = [
+    {label: 'Views', value: totalVisitors},
+    {label: 'Calls', value: totalCalls},
+    {label: 'Shares', value: totalShares},
+    {label: 'WhatsApp', value: totalWhatsapp},
+  ];
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor={BG} />
@@ -204,11 +262,14 @@ export default function MyListingsScreen() {
             icon={<Home color={PURPLE} />}
             label="Total Listings"
             value={propertyData.length}
+            growth={listingsGrowth}
           />
+
           <StatCard
             icon={<Eye color="#3B82F6" />}
             label="Total Views"
             value={totalVisitors}
+            growth={viewsGrowth}
           />
         </View>
 
@@ -216,20 +277,26 @@ export default function MyListingsScreen() {
           <StatCard
             icon={<Mail color="#22C55E" />}
             label="Enquiries"
-            value={enquiries.length || 0}
+            value={enquiries.length}
+            growth={enquiriesGrowth}
           />
+
           <StatCard
             icon={<Heart color="#F97316" />}
             label="Saved Count"
             value={savedCount}
+            growth={savedGrowth}
           />
         </View>
 
         {/* Views Over Time */}
-        <ChartCard title="Views Over Time" />
+        {/* <ChartCard title="Views Over Time" data={finalViewsData} /> */}
 
         {/* Listing Performance */}
-        <BarChartCard title="Listing Performance" />
+        <BarChartCard
+          title="Listing Performance"
+          performanceData={performanceData}
+        />
 
         {/* Listings */}
         <Text style={styles.sectionTitle}>Your Listings</Text>
@@ -264,35 +331,49 @@ export default function MyListingsScreen() {
 }
 
 /* COMPONENTS  */
-const StatCard = ({icon, label, value}) => (
-  <View style={styles.statCard}>
-    {/* Top Row */}
-    <View style={styles.statTopRow}>
-      <View style={styles.statIcon}>{icon}</View>
+const StatCard = ({icon, label, value, growth}) => {
+  const isPositive = growth >= 0;
 
-      <Text style={styles.statLabel} numberOfLines={1} ellipsizeMode="tail">
-        {label}
-      </Text>
-    </View>
+  return (
+    <View style={styles.statCard}>
+      {/* Top Row */}
+      <View style={styles.statTopRow}>
+        <View style={styles.statIcon}>{icon}</View>
+        <Text style={styles.statLabel}>{label}</Text>
+      </View>
 
-    {/* Bottom Row */}
-    <View style={styles.statBottomRow}>
-      <Text style={styles.statValue}>{value}</Text>
-      <View style={styles.statGrowth}>
-        <Svg width={9} height={10} viewBox="0 0 9 10" fill="none">
-          <Path
-            d="M4.25 0.5V9.25M4.25 0.5L8 4.25M4.25 0.5L0.5 4.25"
-            stroke="#00DA3A"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </Svg>
+      {/* Bottom Row */}
+      <View style={styles.statBottomRow}>
+        <Text style={styles.statValue}>{value}</Text>
 
-        <Text style={styles.statGrowthText}>12%</Text>
+        {/* {typeof growth === 'number' && (
+          <View style={styles.statGrowth}>
+            <Svg width={9} height={10} viewBox="0 0 9 10">
+              <Path
+                d={
+                  isPositive
+                    ? 'M4.25 0.5V9.25M4.25 0.5L8 4.25M4.25 0.5L0.5 4.25'
+                    : 'M4.25 9.25V0.5M4.25 9.25L8 5.5M4.25 9.25L0.5 5.5'
+                }
+                stroke={isPositive ? '#00DA3A' : '#EF4444'}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </Svg>
+
+            <Text
+              style={[
+                styles.statGrowthText,
+                {color: isPositive ? '#00DA3A' : '#EF4444'},
+              ]}>
+              {Math.abs(growth)}%
+            </Text>
+          </View>
+        )} */}
       </View>
     </View>
-  </View>
-);
+  );
+};
 
 const viewsData = [
   {label: 'Week 1', value: 12000},
@@ -301,7 +382,7 @@ const viewsData = [
   {label: 'Week 4', value: 50000},
 ];
 
-const ChartCard = ({title}) => {
+const ChartCard = ({title, data}) => {
   const width = 330;
   const height = 160;
   const paddingLeft = 36;
@@ -314,8 +395,8 @@ const ChartCard = ({title}) => {
   const chartWidth = width - paddingLeft - 10;
   const chartHeight = height - paddingBottom - paddingTop;
 
-  const points = viewsData.map((item, index) => {
-    const x = paddingLeft + (index * chartWidth) / (viewsData.length - 1);
+  const points = data.map((item, index) => {
+    const x = paddingLeft + (index * chartWidth) / (data.length - 1);
 
     const y = paddingTop + chartHeight - (item.value / maxY) * chartHeight;
 
@@ -334,7 +415,7 @@ const ChartCard = ({title}) => {
     <View style={styles.card}>
       <View style={styles.cardHeader}>
         <Text style={styles.cardTitle}>{title}</Text>
-        <Text style={styles.dropdown}>Month ▾</Text>
+        {/* <Text style={styles.dropdown}>Month ▾</Text> */}
       </View>
 
       <Svg width={width} height={height}>
@@ -372,7 +453,7 @@ const ChartCard = ({title}) => {
 
       {/* X Axis labels */}
       <View style={styles.xAxisRow}>
-        {viewsData.map(item => (
+        {data.map(item => (
           <Text key={item.label} style={styles.xLabel}>
             {item.label}
           </Text>
@@ -382,21 +463,14 @@ const ChartCard = ({title}) => {
   );
 };
 
-const performanceData = [
-  {label: 'Building Projects', value: 35},
-  {label: 'Family Home', value: 28},
-  {label: 'Rental Property', value: 18},
-  {label: 'City Plot', value: 8},
-];
-
-const BarChartCard = ({title}) => {
+const BarChartCard = ({title, performanceData}) => {
   const maxY = 40;
 
   return (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
         <Text style={styles.cardTitle}>{title}</Text>
-        <Text style={styles.dropdown}>Month ▾</Text>
+        {/* <Text style={styles.dropdown}>Month ▾</Text> */}
       </View>
 
       <View style={styles.barChartContainer}>

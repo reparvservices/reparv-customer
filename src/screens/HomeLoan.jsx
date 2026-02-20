@@ -98,10 +98,11 @@ export default function HomeLoan() {
     monthlyAvgBalance: '',
     ongoingEMI: '',
   });
-
   const [docs, setDocs] = useState({
     pan: '',
+    panImages: [],
     aadhaar: '',
+    aadhaarImages: [],
   });
 
   const handleBack = () => {
@@ -109,77 +110,210 @@ export default function HomeLoan() {
     else navigation.goBack();
   };
   const handleContinue = () => {
-    let e = {};
+    let isValid = false;
 
-    if (step === 1) {
-      if (!personal?.name?.trim()) e.name = 'Full name is required';
-      if (!personal?.dob) e.dob = 'DOB is required';
-      if (!personal?.phone || personal.phone.trim().length !== 10)
-        e.phone = 'Enter valid mobile number';
-      if (!personal?.email || !/^\S+@\S+\.\S+$/.test(personal.email))
-        e.email = 'Enter valid email';
+    if (step === 1) isValid = validateStep1();
+    if (step === 2) isValid = validateStep2();
+    if (step === 3) isValid = validateStep3();
 
-      const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
-      if (!personal?.panno?.trim()) e.panno = 'PAN number is required';
-      else if (!panRegex.test(personal.panno.toUpperCase()))
-        e.panno = 'Enter valid PAN number';
-    }
-
-    if (step === 3) {
-      if (
-        !docs?.pan ||
-        !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(docs.pan.toUpperCase())
-      )
-        e.pan = 'Invalid PAN number';
-
-      if (!docs?.aadhaar || !/^\d{12}$/.test(docs.aadhaar))
-        e.aadhaar = 'Invalid Aadhaar number';
-    }
-
-    setErrors(e);
+    if (!isValid) return; // ⛔ STOP here
 
     if (step < 3) {
+      setErrors({});
       setStep(prev => prev + 1);
     } else {
-      submitFormData(); //  this WILL run now
+      submitFormData(); // ✅ only runs when ALL valid
     }
   };
 
+  const validateStep1 = () => {
+    const newErrors = {};
+
+    if (!personal.name?.trim()) newErrors.name = 'Full name is required';
+    if (!personal.dob) newErrors.dob = 'Date of birth is required';
+
+    if (!personal.phone) {
+      newErrors.phone = 'Mobile number is required';
+    } else if (personal.phone.length !== 10) {
+      newErrors.phone = 'Enter valid 10-digit number';
+    }
+
+    if (!personal.email?.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!/^\S+@\S+\.\S+$/.test(personal.email)) {
+      newErrors.email = 'Enter valid email';
+    }
+
+    if (!personal.panno) {
+      newErrors.panno = 'PAN number is required';
+    } else if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(personal.panno)) {
+      newErrors.panno = 'Invalid PAN format';
+    }
+
+    if (!personal.state) newErrors.state = 'State is required';
+    if (!personal.city) newErrors.city = 'City is required';
+
+    if (!personal.pincode) {
+      newErrors.pincode = 'Pincode is required';
+    } else if (personal.pincode.length !== 6) {
+      newErrors.pincode = 'Enter valid 6-digit pincode';
+    }
+
+    setErrors(newErrors);
+
+    // 🔴 if any error exists → stop next step
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const validateStep2 = () => {
+    const e = {};
+
+    if (!incomeDetails.employmentSector)
+      e.employmentSector = 'Employment sector is required';
+
+    if (!incomeDetails.workExperience.years)
+      e.workExperienceYears = 'Years of experience required';
+
+    if (
+      incomeDetails.workExperience.months === '' ||
+      incomeDetails.workExperience.months === null
+    )
+      e.workExperienceMonths = 'Months of experience required';
+
+    if (!incomeDetails.salaryDetails.grossPay)
+      e.grossPay = 'Gross pay is required';
+
+    if (!incomeDetails.salaryDetails.netPay) e.netPay = 'Net pay is required';
+
+    if (!incomeDetails.yearlyIncomeITR)
+      e.yearlyIncomeITR = 'Yearly income is required';
+
+    if (!incomeDetails.monthlyAvgBalance)
+      e.monthlyAvgBalance = 'Monthly balance is required';
+
+    if (incomeDetails.ongoingEMI && isNaN(Number(incomeDetails.ongoingEMI)))
+      e.ongoingEMI = 'EMI must be numeric';
+
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const validateStep3 = () => {
+    const e = {};
+
+    // PAN image required
+    if (!docs.panImages || docs.panImages.length === 0) {
+      e.panno = 'PAN image is required';
+    }
+
+    // Aadhaar number
+    if (!docs.aadhaar) {
+      e.aadhaar = 'Aadhaar number is required';
+    } else if (docs.aadhaar.length !== 12) {
+      e.aadhaar = 'Enter valid 12 digit Aadhaar number';
+    }
+
+    // Aadhaar images required (front + back)
+    if (!docs.aadhaarImages || docs.aadhaarImages.length < 2) {
+      e.aadhaarImage = 'Upload Front and Back Aadhaar images';
+    }
+
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+  const resetForm = () => {
+    setStep(1);
+    setTab('job');
+    setErrors({});
+
+    setPersonal({
+      name: '',
+      dob: '',
+      phone: '',
+      email: '',
+      state: '',
+      city: '',
+      pincode: '',
+      panno: '',
+    });
+
+    setIncomeDetails({
+      employmentSector: 'Private',
+      workExperience: {years: '', months: ''},
+      salaryType: 'Account',
+      salaryDetails: {grossPay: '', netPay: '', pfDeduction: ''},
+      otherIncomeType: 'Co-applicant',
+      yearlyIncomeITR: '',
+      monthlyAvgBalance: '',
+      ongoingEMI: '',
+    });
+
+    setDocs({
+      pan: '',
+      panImages: [],
+      aadhaar: '',
+      aadhaarImages: [],
+    });
+  };
+
   const submitFormData = async () => {
-    //  Alert.alert('Submitting', 'Please wait while we submit your application.');
     ToastAndroid.show('Submitting your application...', ToastAndroid.LONG);
-    const payload = {
-      fullname: personal.name,
-      employmentType: tab,
-      dateOfBirth: personal.dob,
-      contactNo: personal.phone,
-      email: personal.email,
-      state: personal.state,
-      city: personal.city,
-      pincode: personal.pincode,
-      panNumber: personal.panno,
-      aadhaarNumber: docs.aadhaar,
-      employmentSector: incomeDetails.employmentSector,
-      workexperienceYear: incomeDetails.workExperience.years,
-      workexperienceMonth: incomeDetails.workExperience.months,
-      salaryType: incomeDetails.salaryType,
-      grossPay: incomeDetails.salaryDetails.grossPay,
-      netPay: incomeDetails.salaryDetails.netPay,
-      pfDeduction: incomeDetails.salaryDetails.pfDeduction,
-      otherIncome: incomeDetails.otherIncomeType,
-      yearIncome: incomeDetails.yearlyIncomeITR,
-      monthIncome: incomeDetails.monthlyAvgBalance,
-      ongoingEmi: incomeDetails.ongoingEMI,
-      user_id: user?.id || null,
-      propertyid: propertyid || null,
-    };
+
+    const formData = new FormData();
+
+    // TEXT FIELDS
+    formData.append('fullname', personal.name);
+    formData.append('employmentType', tab);
+    formData.append('dateOfBirth', personal.dob);
+    formData.append('contactNo', personal.phone);
+    formData.append('email', personal.email);
+    formData.append('state', personal.state);
+    formData.append('city', personal.city);
+    formData.append('pincode', personal.pincode);
+    formData.append('panNumber', personal.panno);
+    formData.append('aadhaarNumber', docs.aadhaar);
+
+    formData.append('employmentSector', incomeDetails.employmentSector);
+    formData.append('workexperienceYear', incomeDetails.workExperience.years);
+    formData.append('workexperienceMonth', incomeDetails.workExperience.months);
+    formData.append('salaryType', incomeDetails.salaryType);
+    formData.append('grossPay', incomeDetails.salaryDetails.grossPay);
+    formData.append('netPay', incomeDetails.salaryDetails.netPay);
+    formData.append('pfDeduction', incomeDetails.salaryDetails.pfDeduction);
+    formData.append('otherIncome', incomeDetails.otherIncomeType);
+    formData.append('yearIncome', incomeDetails.yearlyIncomeITR);
+    formData.append('monthIncome', incomeDetails.monthlyAvgBalance);
+    formData.append('ongoingEmi', incomeDetails.ongoingEMI);
+    formData.append('user_id', user?.id);
+    formData.append('propertyid', propertyid);
+
+    // FILES (SINGLE)
+    formData.append('panImage', {
+      uri: docs.panImages[0].uri,
+      type: docs.panImages[0].type,
+      name: 'pan.jpg',
+    });
+
+    formData.append('aadhaarFrontImage', {
+      uri: docs.aadhaarImages[0].uri,
+      type: docs.aadhaarImages[0].type,
+      name: 'aadhaar-front.jpg',
+    });
+    formData.append('aadhaarBackImage', {
+      uri: docs.aadhaarImages[1].uri,
+      type: docs.aadhaarImages[1].type,
+      name: 'aadhaar-back.jpg',
+    });
+
     try {
       const res = await fetch(
         'https://aws-api.reparv.in/customerapp/loans/emiform',
         {
           method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify(payload),
+          body: formData,
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
         },
       );
 
@@ -187,13 +321,12 @@ export default function HomeLoan() {
 
       if (res.ok) {
         Alert.alert('Success', 'Form submitted successfully');
+        resetForm(); // ✅ CLEAR EVERYTHING
         navigation.navigate('HomeLoanDashboard');
       } else {
-        console.log(data.message,'message');
-        
         Alert.alert('Error', data.message || 'Submission failed');
       }
-    } catch {
+    } catch (err) {
       Alert.alert('Network Error', 'Unable to submit form');
     }
   };
@@ -272,6 +405,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'SegoeUI-Bold',
     color: '#000',
+    lineHeight: 30,
   },
   tabContainer: {
     flexDirection: 'row',

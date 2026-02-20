@@ -18,13 +18,15 @@ import Message from '../../assets/image/home/rented-properties-card/message.png'
 import {formatIndianAmount} from '../../utils/formatIndianAmount';
 import {Building2, HeartIcon} from 'lucide-react-native';
 import {useNavigation} from '@react-navigation/native';
+import {checkSubscription} from '../home/RentPropertyCards';
 
 const {width} = Dimensions.get('window');
-const IMAGE_BASE_URL = 'https://aws-api.reparv.in';
+const IMAGE_BASE_URL = 'https://api.reparv.in';
 
 export default function SimilerProperty({filterType, city, budget}) {
   const [flats, setFlats] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [likeCounts, setLikeCounts] = useState({});
   const navigation = useNavigation();
   useEffect(() => {
     fetchFlats();
@@ -45,6 +47,9 @@ export default function SimilerProperty({filterType, city, budget}) {
     }
   };
 
+  /* ---------------------------------------
+     FETCH PROPERTIES
+  --------------------------------------- */
   const fetchFlats = async () => {
     setLoading(true);
     try {
@@ -69,7 +74,6 @@ export default function SimilerProperty({filterType, city, budget}) {
           const assured = item.partnerid
             ? await checkSubscription(item.partnerid)
             : false;
-
           const totalVisitors = await fetchVisits(item.propertyid);
 
           return {
@@ -81,10 +85,39 @@ export default function SimilerProperty({filterType, city, budget}) {
       );
 
       setFlats(updated);
+
+      // 👇 FETCH LIKE COUNTS HERE
+      fetchAllLikes(updated);
     } catch (error) {
       console.error('Error fetching properties:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAllLikes = async properties => {
+    try {
+      const results = await Promise.all(
+        properties.map(async item => {
+          const res = await fetch(
+            `https://aws-api.reparv.in/customerapp/property/likes/${item.propertyid}`,
+          );
+          const data = await res.json();
+          return {
+            propertyId: item.propertyid,
+            likeCount: data?.likeCount || 0,
+          };
+        }),
+      );
+
+      const likeMap = {};
+      results.forEach(r => {
+        likeMap[r.propertyId] = r.likeCount;
+      });
+
+      setLikeCounts(likeMap);
+    } catch (err) {
+      console.log('Like fetch error:', err);
     }
   };
 
@@ -109,13 +142,7 @@ export default function SimilerProperty({filterType, city, budget}) {
     const imageUri = getImage(item);
 
     return (
-      <TouchableOpacity
-        style={styles.card}
-        onPress={() => {
-          navigation.navigate('PropertyDetails', {
-            seoSlug: item?.seoSlug,
-          });
-        }}>
+      <View style={styles.card}>
         {/* IMAGE */}
         <View style={styles.imageContainer}>
           {imageUri ? (
@@ -164,20 +191,24 @@ export default function SimilerProperty({filterType, city, budget}) {
           {/* REPLACED OWNER WITH VISIT COUNT */}
           <View style={styles.ownerRow}>
             <View style={styles.ownerLeft}>
-              <HeartIcon size={20} fill={'#FF3B30'} color="#FF3B30" />
-              <Text style={styles.visitorText}>{item.totalVisitors}</Text>
+              <HeartIcon size={25} fill={'#8A38F5'} color="#8A38F5" />
+              <Text style={styles.visitorText}>
+                {likeCounts[item.propertyid] + item?.totalVisitors ?? 0}
+              </Text>
             </View>
 
-            {/* MESSAGE ICON KEPT SAME */}
-            <View style={styles.chatBtn}>
-              <Image
-                source={Message}
-                style={{width: 20, height: 20, tintColor: '#fff'}}
-              />
-            </View>
+            <TouchableOpacity
+              style={styles.showDetailsBtn}
+              onPress={() =>
+                navigation.navigate('PropertyDetails', {
+                  seoSlug: item?.seoSlug,
+                })
+              }>
+              <Text style={styles.showDetailsText}>Show Details</Text>
+            </TouchableOpacity>
           </View>
         </View>
-      </TouchableOpacity>
+      </View>
     );
   };
 
@@ -306,6 +337,7 @@ const styles = StyleSheet.create({
   image: {
     width: '100%',
     height: '100%',
+    resizeMode: 'contain',
   },
 
   badge: {
@@ -435,5 +467,17 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  showDetailsBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    backgroundColor: '#8A38F5',
+    borderRadius: 8,
+  },
+  showDetailsText: {
+    color: '#fff',
+    fontSize: 14,
+
+    fontWeight: '700',
   },
 });

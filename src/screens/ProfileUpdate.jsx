@@ -12,18 +12,14 @@ import {
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {ArrowLeft, Camera} from 'lucide-react-native';
-import {
-  launchImageLibrary,
-  launchCamera,
-} from 'react-native-image-picker';
+import {launchImageLibrary, launchCamera} from 'react-native-image-picker';
 
 const PURPLE = '#7C3AED';
 const BG = '#FAF8FF';
 
 export default function UpdateProfileScreen({navigation, route}) {
   // route data
-  const {fullname: f, email: e, contact: c, userimage, userid} =
-    route.params;
+  const {fullname: f, email: e, contact: c, userimage, userid} = route.params;
 
   const [fullname, setFullname] = useState(f || '');
   const [email, setEmail] = useState(e || '');
@@ -37,10 +33,7 @@ export default function UpdateProfileScreen({navigation, route}) {
     if (result.didCancel) return;
 
     if (result.errorCode) {
-      Alert.alert(
-        'Image Error',
-        result.errorMessage || 'Something went wrong',
-      );
+      Alert.alert('Image Error', result.errorMessage || 'Something went wrong');
       return;
     }
 
@@ -139,10 +132,7 @@ export default function UpdateProfileScreen({navigation, route}) {
       const data = await response.json();
 
       if (response.ok) {
-        ToastAndroid.show(
-          'Profile updated successfully!',
-          ToastAndroid.LONG,
-        );
+        ToastAndroid.show('Profile updated successfully!', ToastAndroid.LONG);
         navigation.goBack();
       } else {
         ToastAndroid.show(
@@ -152,10 +142,7 @@ export default function UpdateProfileScreen({navigation, route}) {
       }
     } catch (err) {
       console.log('Update profile error:', err);
-      ToastAndroid.show(
-        'Error updating profile',
-        ToastAndroid.LONG,
-      );
+      ToastAndroid.show('Error updating profile', ToastAndroid.LONG);
     }
   };
 
@@ -184,9 +171,7 @@ export default function UpdateProfileScreen({navigation, route}) {
             style={styles.avatar}
           />
 
-          <TouchableOpacity
-            style={styles.cameraBtn}
-            onPress={pickImage}>
+          <TouchableOpacity style={styles.cameraBtn} onPress={pickImage}>
             <Camera size={18} color="#fff" />
           </TouchableOpacity>
         </View>
@@ -200,19 +185,13 @@ export default function UpdateProfileScreen({navigation, route}) {
           <Input value={email} onChangeText={setEmail} />
 
           <Label text="Phone Number" />
-          <Input
-            value={contact}
-            onChangeText={setContact}
-            keyboard="numeric"
-          />
+          <Input value={contact} onChangeText={setContact} keyboard="numeric" />
         </View>
       </ScrollView>
 
       {/* Save Button */}
       <View style={styles.bottom}>
-        <TouchableOpacity
-          style={styles.saveBtn}
-          onPress={updateProfile}>
+        <TouchableOpacity style={styles.saveBtn} onPress={updateProfile}>
           <Text style={styles.saveText}>Save Changes</Text>
         </TouchableOpacity>
       </View>
@@ -222,9 +201,7 @@ export default function UpdateProfileScreen({navigation, route}) {
 
 /* ---------- Reusable ---------- */
 
-const Label = ({text}) => (
-  <Text style={styles.label}>{text}</Text>
-);
+const Label = ({text}) => <Text style={styles.label}>{text}</Text>;
 
 const Input = ({value, onChangeText, keyboard}) => (
   <TextInput

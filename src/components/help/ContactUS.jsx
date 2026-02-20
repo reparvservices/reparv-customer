@@ -11,12 +11,9 @@ import {
 import {X, ChevronDown, HelpCircle} from 'lucide-react-native';
 import {useSelector} from 'react-redux';
 
-const ISSUE_TYPES = ['Technical Issue', 'Property Related', 'App Related'];
-
-const RaiseSupportTicketModal = ({visible, onClose}) => {
+const ContactUs = ({visible, onClose}) => {
   const {user} = useSelector(state => state.auth);
-  const [selectedIssue, setSelectedIssue] = useState('');
-  const [openDropdown, setOpenDropdown] = useState(false);
+
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -26,8 +23,8 @@ const RaiseSupportTicketModal = ({visible, onClose}) => {
   };
 
   const handleSubmit = async () => {
-    if (!selectedIssue || !description) {
-      Alert.alert('Error', 'Please fill all fields');
+    if (!description) {
+      Alert.alert('Error', 'Please enter your question');
       return;
     }
 
@@ -35,16 +32,16 @@ const RaiseSupportTicketModal = ({visible, onClose}) => {
 
     try {
       const response = await fetch(
-        'https://aws-api.reparv.in/customerapp/ticket/add',
+        'https://aws-api.reparv.in/project-partner/profile/contact',
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            user: user?.contact,
-            issue: selectedIssue,
-            details: description,
+            fullName: user?.fullname || 'Reparv User',
+            contact: user?.contact,
+            message: description,
           }),
         },
       );
@@ -54,17 +51,16 @@ const RaiseSupportTicketModal = ({visible, onClose}) => {
       if (response.ok) {
         Alert.alert(
           'Success',
-          `Ticket Created Successfully\nTicket No: ${data.ticketno}`,
+          'Your message has been sent successfully. Our team will contact you soon.',
         );
-        setSelectedIssue('');
         setDescription('');
         onClose();
       } else {
         Alert.alert('Error', data.message || 'Something went wrong');
       }
     } catch (error) {
-      console.log(error);
-      Alert.alert('Error', 'Network error');
+      console.log('Contact form error:', error);
+      Alert.alert('Error', 'Network error. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -81,7 +77,7 @@ const RaiseSupportTicketModal = ({visible, onClose}) => {
           {/* Header */}
           <View style={styles.header}>
             <View>
-              <Text style={styles.title}>Raise Support Ticket</Text>
+              <Text style={styles.title}>Ask Questions </Text>
               <Text style={styles.subtitle}>
                 We will get back to you within 24 hours
               </Text>
@@ -92,43 +88,13 @@ const RaiseSupportTicketModal = ({visible, onClose}) => {
             </TouchableOpacity>
           </View>
 
-          {/* Issue Type */}
-          <Text style={styles.label}>Issue Type</Text>
-
-          <TouchableOpacity
-            style={styles.dropdown}
-            activeOpacity={0.8}
-            onPress={() => setOpenDropdown(!openDropdown)}>
-            <View style={styles.row}>
-              <HelpCircle size={18} color="#8A38F5" />
-              <Text
-                style={[styles.dropdownText, selectedIssue && {color: '#000'}]}>
-                {selectedIssue || 'Select issue type'}
-              </Text>
-            </View>
-            <ChevronDown size={20} color="#888" />
-          </TouchableOpacity>
-
-          {openDropdown && (
-            <View style={styles.dropdownList}>
-              {ISSUE_TYPES.map(item => (
-                <TouchableOpacity
-                  key={item}
-                  style={styles.dropdownItem}
-                  onPress={() => handleSelect(item)}>
-                  <Text style={styles.dropdownItemText}>{item}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-
           {/* Description */}
-          <Text style={styles.label}>Description</Text>
+          <Text style={styles.label}>Enter Question Description</Text>
           <TextInput
             multiline
             value={description}
             onChangeText={setDescription}
-            placeholder="Describe Your issue in Detail. Mention Property details and Transaction ID in detail."
+            placeholder="send your question"
             placeholderTextColor="#999"
             style={styles.textArea}
           />
@@ -139,20 +105,20 @@ const RaiseSupportTicketModal = ({visible, onClose}) => {
             disabled={loading}
             onPress={handleSubmit}>
             <Text style={styles.submitText}>
-              {loading ? 'Submitting...' : 'Submit Ticket'}
+              {loading ? 'Sending...' : 'Send Question'}
             </Text>
           </TouchableOpacity>
 
-          <Text style={styles.footerText}>
+          {/* <Text style={styles.footerText}>
             Your ticket number will be generated instantly
-          </Text>
+          </Text> */}
         </View>
       </View>
     </Modal>
   );
 };
 
-export default RaiseSupportTicketModal;
+export default ContactUs;
 
 const styles = StyleSheet.create({
   overlay: {

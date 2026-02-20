@@ -19,7 +19,11 @@ const OfferedPropertyType = ({propertyType, Imguri}) => {
       <View style={styles.offerHeader}>
         <Text style={styles.offerTitle}>Offered Property Type</Text>
 
-        <TouchableOpacity style={styles.downloadBtn} onPress={()=>{setVisible(true)}}>
+        <TouchableOpacity
+          style={styles.downloadBtn}
+          onPress={() => {
+            setVisible(true);
+          }}>
           <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
             <Path
               d="M12 3V14M12 14L8 10M12 14L16 10M4 17V21H20V17"
@@ -134,7 +138,9 @@ export const Highlights = ({propertyFeatures, propertyData}) => {
       <OfferedPropertyType
         propertyType={propertyData?.propertyType}
         Imguri={
-          propertyData?.brochureFile ? `${baseURL}${propertyData.brochureFile}` : ''
+          propertyData?.brochureFile
+            ? `${baseURL}${propertyData.brochureFile}`
+            : ''
         }
       />
 

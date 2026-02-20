@@ -13,7 +13,10 @@ export const sendOtpAPI = async credentials => {
     body: JSON.stringify(credentials),
   });
 
-  return await res.json(); // { success, message }
+  const data = await res.json(); // read ONCE
+  console.log(data, 'fbbf');
+
+  return data; // { success, message }
 };
 
 /**
@@ -27,6 +30,7 @@ export const verifyOtpAPI = async data => {
   });
 
   const json = await res.json();
+  console.log(json);
 
   if (!res.ok) {
     throw new Error(json?.message || 'OTP verification failed');
@@ -65,6 +69,26 @@ export const googleLoginApi = async idToken => {
   }
 
   return data;
+};
+
+/**
+ * Facebook Login
+ * payload = { uid, email, displayName, photoURL }
+ */
+export const facebookLoginApi = async payload => {
+  const res = await fetch(`${API_URL}/customerapp/user/facebook-login`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(payload),
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data?.message || 'Facebook login failed');
+  }
+
+  return data; // { success, token, user }
 };
 
 export const logoutAPI = async () => {

@@ -128,6 +128,10 @@ export default function UploadDocForm({data, setData, errors}) {
           </Text>
         )}
       </View>
+      {errors.aadhaarImage && (
+  <Text style={styles.error}>{errors.aadhaarImage}</Text>
+)}
+
     </View>
   );
 }

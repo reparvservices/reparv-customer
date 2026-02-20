@@ -53,7 +53,7 @@ const SplashScreen = ({navigation}) => {
 
   const bgColor = bgAnim.interpolate({
     inputRange: [0, 1, 2],
-    outputRange: ['#FFFFFF', '#076300', '#FFFFFF'],
+    outputRange: ['#FFFFFF', '#8200d9', '#FFFFFF'],
   });
 
   return (

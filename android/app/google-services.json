@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "845820282769",
+    "project_id": "reparvcustomer-cc482",
+    "storage_bucket": "reparvcustomer-cc482.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:845820282769:android:4035a17802c48384017c30",
+        "android_client_info": {
+          "package_name": "com.reparvcustomer"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "845820282769-ujr20o4vk4j0gllbd4sf21m2gudhmkkv.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCIYufG7dqHUncZaOw9MNdwnEJ-hGcM-JI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "845820282769-ujr20o4vk4j0gllbd4sf21m2gudhmkkv.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

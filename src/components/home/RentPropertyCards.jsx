@@ -23,7 +23,7 @@ const IMAGE_BASE_URL = 'https://api.reparv.in';
 /* ---------------------------------------
    SUBSCRIPTION CHECK HELPER
 --------------------------------------- */
-const checkSubscription = async partnerid => {
+export const checkSubscription = async partnerid => {
   try {
     const res = await fetch(
       `https://aws-api.reparv.in/projectpartner/subscription/user/${partnerid}`,
@@ -38,6 +38,7 @@ const checkSubscription = async partnerid => {
 export default function RentPropertyCards() {
   const [flats, setFlats] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [likeCounts, setLikeCounts] = useState({});
   const navigation = useNavigation();
   const {user} = useSelector(state => state.auth);
   useEffect(() => {
@@ -73,11 +74,7 @@ export default function RentPropertyCards() {
         item =>
           item.status === 'Active' &&
           item.approve === 'Approved' &&
-          (item.propertyCategory === 'RentalFlat' ||
-            item.propertyCategory === 'RentalPlot' ||
-            item.propertyCategory === 'RentalOffice' ||
-            item.propertyCategory === 'RentalShop' ||
-            item.propertyCategory === 'RentalFarmHouse'),
+          item.propertyCategory?.startsWith('Rental'),
       );
 
       const updated = await Promise.all(
@@ -97,10 +94,39 @@ export default function RentPropertyCards() {
       );
 
       setFlats(updated);
+
+      // 👇 FETCH LIKE COUNTS HERE
+      fetchAllLikes(updated);
     } catch (error) {
       console.error('Error fetching properties:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAllLikes = async properties => {
+    try {
+      const results = await Promise.all(
+        properties.map(async item => {
+          const res = await fetch(
+            `https://aws-api.reparv.in/customerapp/property/likes/${item.propertyid}`,
+          );
+          const data = await res.json();
+          return {
+            propertyId: item.propertyid,
+            likeCount: data?.likeCount || 0,
+          };
+        }),
+      );
+
+      const likeMap = {};
+      results.forEach(r => {
+        likeMap[r.propertyId] = r.likeCount;
+      });
+
+      setLikeCounts(likeMap);
+    } catch (err) {
+      console.log('Like fetch error:', err);
     }
   };
 
@@ -123,13 +149,7 @@ export default function RentPropertyCards() {
     const imageUri = getImage(item);
 
     return (
-      <TouchableOpacity
-        style={styles.card}
-        onPress={() =>
-          navigation.navigate('PropertyDetails', {
-            seoSlug: item?.seoSlug,
-          })
-        }>
+      <View style={styles.card}>
         {/* IMAGE */}
         <View style={styles.imageContainer}>
           {imageUri ? (
@@ -183,19 +203,23 @@ export default function RentPropertyCards() {
           <View style={styles.ownerRow}>
             <View style={styles.ownerLeft}>
               <HeartIcon size={25} fill={'#8A38F5'} color="#8A38F5" />
-              <Text style={styles.visitorText}>{item.totalVisitors}{`\n`}likes</Text>
+              <Text style={styles.visitorText}>
+                {likeCounts[item.propertyid] + item?.totalVisitors ?? 0}
+              </Text>
             </View>
 
-            {/* MESSAGE ICON KEPT SAME */}
-            <View style={styles.chatBtn}>
-              <Image
-                source={Message}
-                style={{width: 20, height: 20, tintColor: '#fff'}}
-              />
-            </View>
+            <TouchableOpacity
+              style={styles.showDetailsBtn}
+              onPress={() =>
+                navigation.navigate('PropertyDetails', {
+                  seoSlug: item?.seoSlug,
+                })
+              }>
+              <Text style={styles.showDetailsText}>Show Details</Text>
+            </TouchableOpacity>
           </View>
         </View>
-      </TouchableOpacity>
+      </View>
     );
   };
 
@@ -259,6 +283,7 @@ const styles = StyleSheet.create({
   image: {
     width: '100%',
     height: '100%',
+    resizeMode: 'contain',
   },
   leftBadge: {
     position: 'absolute',
@@ -356,5 +381,16 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  showDetailsBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    backgroundColor: '#8A38F5',
+    borderRadius: 8,
+  },
+  showDetailsText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '700',
   },
 });

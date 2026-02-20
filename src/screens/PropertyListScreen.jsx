@@ -276,31 +276,24 @@ const PropertyListScreen = () => {
   };
 
   const renderItem = ({item}) => <PropertyCard item={item} />;
- const filteredCategories = React.useMemo(() => {
-  if (!ptype) return propertyCategory;
+  const filteredCategories = React.useMemo(() => {
+    if (!ptype) return propertyCategory;
 
-  // Case 1: Rental
-  if (ptype.startsWith('Rental')) {
-    return propertyCategory.filter(item =>
-      item.startsWith('Rental')
+    // Case 1: Rental
+    if (ptype.startsWith('Rental')) {
+      return propertyCategory.filter(item => item.startsWith('Rental'));
+    }
+
+    // Case 2: Resale
+    if (ptype.startsWith('Resale')) {
+      return propertyCategory.filter(item => item.startsWith('Resale'));
+    }
+
+    // Case 3: Others (exclude Rental & Resale)
+    return propertyCategory.filter(
+      item => !item.startsWith('Rental') && !item.startsWith('Resale'),
     );
-  }
-
-  // Case 2: Resale
-  if (ptype.startsWith('Resale')) {
-    return propertyCategory.filter(item =>
-      item.startsWith('Resale')
-    );
-  }
-
-  // Case 3: Others (exclude Rental & Resale)
-  return propertyCategory.filter(
-    item =>
-      !item.startsWith('Rental') &&
-      !item.startsWith('Resale')
-  );
-}, [ptype, propertyCategory]);
-
+  }, [ptype, propertyCategory]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -447,7 +440,10 @@ const PropertyListScreen = () => {
         <Modal visible={filterVisible} transparent animationType="slide">
           <View style={styles.overlay}>
             <View style={styles.sheet}>
-              <View style={styles.dragHandle} />
+              <TouchableOpacity
+                style={styles.dragHandle}
+                onPress={() => setFilterVisible(false)}
+              />
 
               {/* Header */}
               <View style={styles.headerRow}>
@@ -479,8 +475,8 @@ const PropertyListScreen = () => {
                 {/* Property Category */}
                 <Text style={styles.sectionTitle}>Property Type</Text>
                 <View style={styles.chipWrap}>
-                  {propertyCategory.length > 0 &&
-                    propertyCategory.map(item => (
+                  {filteredCategories.length > 0 &&
+                    filteredCategories.map(item => (
                       <TouchableOpacity
                         key={item}
                         onPress={() => {

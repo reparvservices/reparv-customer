@@ -1,8 +1,12 @@
 <resources>
     <string name="app_name">REPARV</string>
-    <string name="google_client_id">
-  792120488198-62i353dvvbenek3p336vm5p3haoov95t.apps.googleusercontent.com
+  <string name="google_client_id">
+  509544297119-v6vsq7tcba8ukfn9969q930p8jk7iqst.apps.googleusercontent.com
 </string>
+
+<string name="facebook_app_id">1202192512036118</string>
+<string name="facebook_client_token">0a44814ed0b328313f4e98c1899e0a7c</string>
+<string name="fb_login_protocol_scheme">fb1202192512036118</string>
 
 </resources>
 

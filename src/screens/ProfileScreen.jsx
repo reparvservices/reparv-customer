@@ -33,12 +33,15 @@ export default function ProfileScreen() {
   const navigation = useNavigation();
   const [properties, setProperty] = useState(0);
   const [saved, setSaved] = useState(0);
+  const [enquiryCount, setEnquiryCount] = useState(0);
   const [loading, setLoading] = useState(false);
+
   useFocusEffect(
     useCallback(() => {
       fetchProperties();
       fetchWishlist();
       fetchProfile();
+      fetchEnquiries();
     }, []),
   );
 
@@ -100,7 +103,26 @@ export default function ProfileScreen() {
     } finally {
     }
   };
+  const fetchEnquiries = async () => {
+    try {
+      if (!auth?.user?.id) return;
 
+      const res = await fetch(
+        `https://aws-api.reparv.in/customerapp/enquiry/getvisitors/${auth.user.id}`,
+      );
+
+      const data = await res.json();
+
+      if (Array.isArray(data)) {
+        setEnquiryCount(data?.length);
+      } else {
+        setEnquiryCount(0);
+      }
+    } catch (error) {
+      console.log('Enquiry fetch error:', error);
+      setEnquiryCount(0);
+    }
+  };
   if (loading) {
     return (
       <View
@@ -121,12 +143,18 @@ export default function ProfileScreen() {
 
       {/* Header */}
       <View style={styles.header}>
+        {/* Left */}
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <ArrowLeft size={22} color="#111" />
         </TouchableOpacity>
 
-        <Text style={styles.headerTitle}>Profile</Text>
-        <Bell size={22} color="#111" />
+        {/* Center */}
+        <View style={{flex: 1, alignItems: 'center'}}>
+          <Text style={styles.headerTitle}>Profile</Text>
+        </View>
+
+        {/* Right spacer (no bell, but keeps center aligned) */}
+        <View style={{width: 22}} />
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -170,7 +198,7 @@ export default function ProfileScreen() {
                 fullname: user?.fullname,
                 email: user?.email,
                 contact: user?.contact,
-                userid: user?.user_id,
+                userid: user?.id,
                 userimage: user?.userimage
                   ? `https://aws-api.reparv.in/${user.userimage}`
                   : null,
@@ -202,10 +230,12 @@ export default function ProfileScreen() {
 
           <View style={styles.verticalDivider} />
 
-          <TouchableOpacity
-            style={styles.statWrapper}
-            onPress={() => navigation.navigate('Contacted')}>
-            <StatItem icon={PhoneIncoming} label="Contacted" value={0} />
+          <TouchableOpacity style={styles.statWrapper}>
+            <StatItem
+              icon={PhoneIncoming}
+              label="Enquiry"
+              value={enquiryCount}
+            />
           </TouchableOpacity>
         </View>
 
@@ -218,12 +248,12 @@ export default function ProfileScreen() {
             page="mylisting"
             navigation={navigation}
           />
-          <MenuItem
+          {/* <MenuItem
             label="My favourite"
             image={require('../assets/image/Profile/artical.png')}
             page="Activities"
             navigation={navigation}
-          />
+          /> */}
           <MenuItem
             label="My Enquiry"
             image={require('../assets/image/Profile/artical.png')}

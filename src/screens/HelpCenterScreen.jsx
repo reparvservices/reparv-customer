@@ -23,6 +23,7 @@ import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import RaiseSupportTicketModal from '../components/help/RaiseSupportTicketModal';
 import Svg, {Path} from 'react-native-svg';
 import {useSelector} from 'react-redux';
+import ContactUs from '../components/help/ContactUS';
 
 const PURPLE = '#7C3AED';
 const BG = '#F7F7FB';
@@ -32,30 +33,10 @@ export default function HelpCenterScreen() {
   const navigation = useNavigation();
   const {user} = useSelector(state => state.auth);
   const [open, setOpen] = useState(false);
-  const faqs = [
-    {
-      q: 'How do I track my property booking?',
-      a: 'You can track your booking from the My Bookings section in your profile. Status updates are shown in real time.',
-    },
-    {
-      q: 'What if my payment is deducted but not reflected?',
-      a: 'Don’t worry. Our team verifies payments within 24 hours. If not updated, raise a complaint from Help Center.',
-    },
-    {
-      q: 'How can I cancel my booking?',
-      a: 'Go to booking details and select Cancel Booking. Refunds depend on seller policy.',
-    },
-    {
-      q: 'How do I contact customer support?',
-      a: 'You can call us directly or connect via WhatsApp using the options below.',
-    },
-    {
-      q: 'Is customer support available 24/7?',
-      a: 'Yes, our support team is available round-the-clock for urgent help.',
-    },
-  ];
+  const [faqs, setFaqs] = useState([]);
+  const [faqLoading, setFaqLoading] = useState(false);
   const [tickets, setTickets] = useState([]);
-
+  const [contactUs, setContactus] = useState(false);
   const phoneNumber = '8010881965';
 
   const handleCall = () => {
@@ -73,6 +54,7 @@ export default function HelpCenterScreen() {
   useFocusEffect(
     useCallback(() => {
       fetchTickets();
+      fetchFaqs();
     }, []),
   );
 
@@ -89,6 +71,25 @@ export default function HelpCenterScreen() {
       setTickets(data || []);
     } catch (err) {
       console.log('Ticket fetch error', err);
+    }
+  };
+
+  const fetchFaqs = async () => {
+    try {
+      setFaqLoading(true);
+
+      const res = await fetch(
+        'https://aws-api.reparv.in/admin/faqs/active/Reparv Contact Us Page',
+      );
+
+      const data = await res.json();
+
+      // API already returns correct structure
+      setFaqs(data || []);
+    } catch (error) {
+      console.log('FAQ fetch error', error);
+    } finally {
+      setFaqLoading(false);
     }
   };
 
@@ -149,14 +150,14 @@ export default function HelpCenterScreen() {
             icon={<AlertCircle color="#EF4444" size={22} />}
             title="Raise a Complaint"
             subtitle="Report an issue"
-          onPress={()=>setOpen(true)}
-             bg={'#FFE2E2'}
+            onPress={() => setOpen(true)}
+            bg={'#FFE2E2'}
           />
           <ActionCard
             icon={<HelpCircle color="#3B82F6" size={22} />}
             title="General Enquiry"
             subtitle="Ask a question"
-             onPress={()=>setOpen(true)}
+            onPress={() => setContactus(true)}
             bg={'#E3F2FF'}
           />
         </View>
@@ -177,28 +178,36 @@ export default function HelpCenterScreen() {
 
         <Text style={styles.sectionTitle}>Frequently Asked Questions</Text>
 
-        {faqs.map((item, i) => {
-          const isOpen = openFAQ === i;
+        {faqLoading ? (
+          <Text style={{textAlign: 'center', marginTop: 16, color: '#6B7280'}}>
+            Loading FAQs...
+          </Text>
+        ) : (
+          faqs.length > 0 &&
+          faqs.map((item, i) => {
+            const isOpen = openFAQ === i;
 
-          return (
-            <View key={i} style={styles.faqCard}>
-              <TouchableOpacity
-                style={styles.faqHeader}
-                onPress={() => setOpenFAQ(isOpen ? null : i)}>
-                <Text style={styles.faqText}>{item.q}</Text>
+            return (
+              <View key={item.id} style={styles.faqCard}>
+                <TouchableOpacity
+                  style={styles.faqHeader}
+                  onPress={() => setOpenFAQ(isOpen ? null : i)}>
+                  <Text style={styles.faqText}>{item.question}</Text>
 
-                <ChevronDown
-                  size={18}
-                  style={{
-                    transform: [{rotate: isOpen ? '180deg' : '0deg'}],
-                  }}
-                />
-              </TouchableOpacity>
+                  <ChevronDown
+                    size={18}
+                    style={{
+                      transform: [{rotate: isOpen ? '180deg' : '0deg'}],
+                    }}
+                  />
+                </TouchableOpacity>
 
-              {isOpen && <Text style={styles.faqAnswer}>{item.a}</Text>}
-            </View>
-          );
-        })}
+                {isOpen && <Text style={styles.faqAnswer}>{item.answer}</Text>}
+              </View>
+            );
+          })
+        )}
+
         <View style={{height: 200, padding: 10}} />
       </ScrollView>
 
@@ -210,12 +219,18 @@ export default function HelpCenterScreen() {
         <Text style={styles.bottomSub}>Our support team is available 24/7</Text>
 
         <View style={styles.bottomActions}>
-          <TouchableOpacity style={styles.callBtn} onPress={handleCall} pointerEvents="auto">
+          <TouchableOpacity
+            style={styles.callBtn}
+            onPress={handleCall}
+            pointerEvents="auto">
             <Phone size={18} />
             <Text style={styles.callText}>Call Now</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.whatsappBtn} onPress={handleWhatsApp} pointerEvents="auto">
+          <TouchableOpacity
+            style={styles.whatsappBtn}
+            onPress={handleWhatsApp}
+            pointerEvents="auto">
             <MessageCircle size={18} color="#fff" />
             <Text style={styles.whatsappText}>WhatsApp</Text>
           </TouchableOpacity>
@@ -223,56 +238,81 @@ export default function HelpCenterScreen() {
       </View>
 
       <RaiseSupportTicketModal visible={open} onClose={() => setOpen(false)} />
+      <ContactUs visible={contactUs} onClose={() => setContactus(false)} />
     </SafeAreaView>
   );
 }
 
+const getStatusStyle = status => {
+  switch (status) {
+    case 'Resolved':
+    case 'Closed':
+      return {
+        bg: '#DCFCE7',
+        text: '#16A34A',
+      };
+    case 'Pending':
+      return {
+        bg: '#FEF3C7',
+        text: '#D97706',
+      };
+    default:
+      return {
+        bg: '#E5E7EB',
+        text: '#374151',
+      };
+  }
+};
+
 /* ---------------- Components ---------------- */
 
-const ActionCard = ({icon, title, subtitle,onPress,bg}) => (
+const ActionCard = ({icon, title, subtitle, onPress, bg}) => (
   <TouchableOpacity style={styles.actionCard} onPress={onPress}>
-    <View style={[styles.actionIcon,{backgroundColor:bg}]}>{icon}</View>
+    <View style={[styles.actionIcon, {backgroundColor: bg}]}>{icon}</View>
     <Text style={styles.actionTitle}>{title}</Text>
     <Text style={styles.actionSub}>{subtitle}</Text>
   </TouchableOpacity>
 );
-
 const TicketCard = ({ticket}) => {
-  const resolved = ticket.status === 'Resolved';
+  const statusStyle = getStatusStyle(ticket.status);
+  const hasResponse = ticket?.response && ticket.response.trim().length > 0;
 
   return (
-    <TouchableOpacity style={styles.ticketCard}>
+    <TouchableOpacity style={styles.ticketCard} activeOpacity={0.8}>
+      {/* Top Row */}
       <View style={styles.ticketTop}>
-        <View style={styles.chipRow}>
-          <View
-            style={[
-              styles.chip,
-              {backgroundColor: resolved ? '#DCFCE7' : '#FEF3C7'},
-            ]}>
-            <Text
-              style={[
-                styles.chipText,
-                {color: resolved ? '#16A34A' : '#D97706'},
-              ]}>
-              {ticket.status}
-            </Text>
-          </View>
+        <View style={[styles.chip, {backgroundColor: statusStyle.bg}]}>
+          <Text style={[styles.chipText, {color: statusStyle.text}]}>
+            {ticket.status}
+          </Text>
         </View>
 
-        <ChevronRight />
+        <ChevronRight size={18} color="#6B7280" />
       </View>
 
+      {/* Issue */}
       <Text style={styles.ticketTitle}>{ticket.issue}</Text>
 
+      {/* Details */}
       <Text style={styles.ticketDesc} numberOfLines={2}>
         {ticket.details}
       </Text>
 
+      {/* ✅ Response Section (only when exists) */}
+      {hasResponse && (
+        <View style={styles.responseBox}>
+          <Text style={styles.responseLabel}>Response</Text>
+          <Text style={styles.responseText}>{ticket.response}</Text>
+        </View>
+      )}
+
+      {/* Footer */}
       <View style={styles.ticketFooter}>
         <View style={styles.timeRow}>
           <Clock size={14} color="#6B7280" />
           <Text style={styles.timeText}>{ticket.updated_at}</Text>
         </View>
+
         <Text style={styles.ticketId}>#{ticket.ticketno}</Text>
       </View>
     </TouchableOpacity>
@@ -466,4 +506,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   whatsappText: {color: '#fff', fontWeight: '600'},
+  responseBox: {
+    marginTop: 10,
+    padding: 12,
+    borderRadius: 10,
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+  },
+
+  responseLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#15803D',
+    marginBottom: 4,
+  },
+
+  responseText: {
+    fontSize: 13,
+    color: '#065F46',
+    lineHeight: 18,
+  },
 });

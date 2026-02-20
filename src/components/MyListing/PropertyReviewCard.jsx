@@ -21,7 +21,7 @@ import {
 } from 'lucide-react-native';
 import Svg, {ClipPath, Defs, G, Path, Rect} from 'react-native-svg';
 import {useNavigation} from '@react-navigation/native';
-import { getImageUri, parseFrontView } from '../../utils/imageHandle';
+import {getImageUri, parseFrontView} from '../../utils/imageHandle';
 
 const PropertyReviewModal = ({visible, onClose, property}) => {
   const navigation = useNavigation();

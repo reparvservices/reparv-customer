@@ -260,6 +260,7 @@ const styles = StyleSheet.create({
     fontFamily: 'SegoeUI-Bold',
     textAlign: 'center',
     fontSize: 16,
+    lineHeight:20
   },
   error: {color: 'red', fontSize: 10, textAlign: 'center', marginBottom: 5},
 });

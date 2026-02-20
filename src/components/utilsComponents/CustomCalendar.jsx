@@ -37,6 +37,10 @@ export default function CustomCalendar({
       date.getMonth() + 1,
     ).padStart(2, '0')}/${date.getFullYear()}`;
 
+  // ===== Block future dates =====
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
   return (
     <Modal transparent visible={visible} animationType="fade">
       <View style={styles.overlay}>
@@ -74,7 +78,7 @@ export default function CustomCalendar({
             </TouchableOpacity>
 
             <Text style={styles.monthText}>
-              {currentMonth.toLocaleString('default', {month: 'long'})}
+              {currentMonth.toLocaleString('default', { month: 'long' })}
             </Text>
 
             <TouchableOpacity
@@ -97,24 +101,32 @@ export default function CustomCalendar({
 
           {/* ===== Days ===== */}
           <View style={styles.days}>
-            {days.map((date, index) => (
-              <TouchableOpacity
-                key={index}
-                disabled={!date}
-                style={styles.dayBox}
-                onPress={() => {
-                  onSelect(formatDate(date));
-                  onClose();
-                }}>
-                <Text
+            {days.map((date, index) => {
+              const isFuture = date && date > today;
+
+              return (
+                <TouchableOpacity
+                  key={index}
+                  disabled={!date || isFuture}
                   style={[
-                    styles.dayText,
-                    !date && {color: 'transparent'},
-                  ]}>
-                  {date ? date.getDate() : ''}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                    styles.dayBox,
+                    isFuture && styles.disabledDay,
+                  ]}
+                  onPress={() => {
+                    onSelect(formatDate(date));
+                    onClose();
+                  }}>
+                  <Text
+                    style={[
+                      styles.dayText,
+                      !date && { color: 'transparent' },
+                      isFuture && styles.disabledText,
+                    ]}>
+                    {date ? date.getDate() : ''}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
 
           {/* ===== Close ===== */}
@@ -212,6 +224,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     color: '#111827',
+  },
+
+  /* Disabled future date */
+  disabledDay: {
+    opacity: 0.3,
+  },
+  disabledText: {
+    color: '#9CA3AF',
   },
 
   /* Close */

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, {useState, useRef} from 'react';
 import {
   View,
   Text,
@@ -13,17 +13,24 @@ import {
 } from 'react-native';
 import YoutubePlayer from 'react-native-youtube-iframe';
 import LinearGradient from 'react-native-linear-gradient';
-import { X, Play } from 'lucide-react-native';
+import {X, Play} from 'lucide-react-native';
+import {getImageUri} from '../../utils/imageHandle';
 
-const { width, height } = Dimensions.get('window');
+const {width, height} = Dimensions.get('window');
 
-const getYoutubeVideoId = (url) => {
-  const regExp = /(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)([^&?/]+)/;
+const getYoutubeVideoId = url => {
+  const regExp =
+    /(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)([^&?/]+)/;
   const match = url?.match(regExp);
   return match ? match[1] : null;
 };
 
-export default function PropertyVideoModal({ visible, onClose, property,onBook }) {
+export default function PropertyVideoModal({
+  visible,
+  onClose,
+  property,
+  onBook,
+}) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [videoVisible, setVideoVisible] = useState(false);
   const flatListRef = useRef(null);
@@ -32,7 +39,7 @@ export default function PropertyVideoModal({ visible, onClose, property,onBook }
   const videoLink = property?.videoLink;
   const videoId = getYoutubeVideoId(videoLink);
 
-  const scrollToIndex = (index) => {
+  const scrollToIndex = index => {
     if (index >= 0 && index < images.length) {
       flatListRef.current?.scrollToIndex({
         index,
@@ -45,13 +52,13 @@ export default function PropertyVideoModal({ visible, onClose, property,onBook }
   const onNext = () => scrollToIndex(activeIndex + 1);
   const onPrev = () => scrollToIndex(activeIndex - 1);
 
-  const renderItem = ({ item }) => (
-    <View style={{ width, alignItems: 'center' }}>
+  const renderItem = ({item}) => (
+    <View style={{width, alignItems: 'center'}}>
       <View style={styles.imageCard}>
         <Image
-          source={{ uri: `https://aws-api.reparv.in/${item}` }}
+          source={{uri: getImageUri(item)}}
           style={styles.carouselImage}
-          resizeMode="cover"
+          resizeMode="contain"
         />
 
         <LinearGradient
@@ -103,7 +110,7 @@ export default function PropertyVideoModal({ visible, onClose, property,onBook }
           horizontal
           pagingEnabled
           showsHorizontalScrollIndicator={false}
-          onMomentumScrollEnd={(ev) => {
+          onMomentumScrollEnd={ev => {
             const index = Math.round(ev.nativeEvent.contentOffset.x / width);
             setActiveIndex(index);
           }}
@@ -122,9 +129,8 @@ export default function PropertyVideoModal({ visible, onClose, property,onBook }
           {videoLink && (
             <TouchableOpacity
               style={styles.videoCardBtn}
-              onPress={() => setVideoVisible(true)}
-            >
-              <Play color="#fff" size={18} style={{ marginRight: 6 }} />
+              onPress={() => setVideoVisible(true)}>
+              <Play color="#fff" size={18} style={{marginRight: 6}} />
               <Text style={styles.videoBtnText}>Watch Video</Text>
             </TouchableOpacity>
           )}
@@ -137,8 +143,7 @@ export default function PropertyVideoModal({ visible, onClose, property,onBook }
           <View style={styles.videoOverlay}>
             <TouchableOpacity
               style={styles.videoCloseBtn}
-              onPress={() => setVideoVisible(false)}
-            >
+              onPress={() => setVideoVisible(false)}>
               <X color="#fff" size={28} />
             </TouchableOpacity>
 
@@ -226,7 +231,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 10,
     top: '50%',
-    transform: [{ translateY: -20 }],
+    transform: [{translateY: -20}],
     backgroundColor: 'rgba(0,0,0,0.55)',
     width: 40,
     height: 40,
@@ -239,7 +244,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 10,
     top: '50%',
-    transform: [{ translateY: -20 }],
+    transform: [{translateY: -20}],
     backgroundColor: 'rgba(0,0,0,0.55)',
     width: 40,
     height: 40,

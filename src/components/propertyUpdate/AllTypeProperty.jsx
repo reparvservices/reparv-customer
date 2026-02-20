@@ -42,11 +42,38 @@ const PROPERTY_TYPES = [
   //   label: 'Independent',
   //   icon: CommercialPlotIcon,
   // },
-
+ {
+    id: 'IndependentHouse',
+    label: 'Independent House/Villa',
+    icon: IndependentIcon,
+  },
+  {
+    id: 'IndependentFloor',
+    label: 'Independent Floor',
+    icon: IndependentFloorIcon,
+  },
+  {id: 'Duplex', label: 'Duplex', icon: DuplexIcon},
+  {
+    id: 'ResidentialPlot',
+    label: 'Residential Plot',
+    icon: ResidentialPlotIcon,
+  },
+  {id: 'Studio', label: 'Studio', icon: StudioIcon},
+  {id: 'Penthouse', label: 'Penthouse', icon: PenthouseIcon},
+  {id: 'Flat', label: 'Flat / Apartment', icon: FlatIcon},
+  {
+    id: 'CommercialPlot',
+    label: 'Commercial Plot',
+    icon: CommercialPlotIcon,
+  },
+  {id: 'OfficeSpace', label: 'Office Space', icon: OfficeIcon},
+  {id: 'Warehouse', label: 'Warehouse', icon: WarehouseIcon},
+  {id: 'Showrooms', label: 'Showrooms', icon: ShowroomsIcon},
+  {id: 'Shop', label: 'Shop', icon: ShopIcon},
   {id: 'RentalWarehouse', label: 'RentalWarehouse', icon: WarehouseIcon},
 ];
 
-export default function PropertyTypeSelector({value, onChange, error}) {
+export default function AllPropertyTypeSelector({value, onChange, error}) {
   const renderItem = ({item}) => {
     const selected = value === item.id;
 

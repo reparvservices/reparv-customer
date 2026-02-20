@@ -67,13 +67,13 @@ export default function ContactDetails({
       {errors?.phone && <Text style={styles.error}>{errors.phone}</Text>}
 
       {/* Email */}
-      <Text style={styles.label}>Email Address</Text>
+      {/* <Text style={styles.label}>Email Address</Text>
       <TextInput
         placeholder="Enter email (optional)"
         placeholderTextColor="#868686"
         keyboardType="email-address"
         style={styles.input}
-      />
+      /> */}
 
       {/* Info Box */}
       <View style={styles.infoBox}>

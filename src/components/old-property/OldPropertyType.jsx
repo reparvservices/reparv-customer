@@ -22,7 +22,11 @@ import ShowroomsIcon from '../../assets/image/rent-oldnew-property/property-type
 import ShopIcon from '../../assets/image/rent-oldnew-property/property-type/shops.png';
 
 const PROPERTY_TYPES = [
-  {id: 'Independent', label: 'Independent House/Villa', icon: IndependentIcon},
+  {
+    id: 'IndependentHouse',
+    label: 'Independent House/Villa',
+    icon: IndependentIcon,
+  },
   {
     id: 'IndependentFloor',
     label: 'Independent Floor',
@@ -42,7 +46,7 @@ const PROPERTY_TYPES = [
     label: 'Commercial Plot',
     icon: CommercialPlotIcon,
   },
-  {id: 'Office', label: 'Office Space', icon: OfficeIcon},
+  {id: 'OfficeSpace', label: 'Office Space', icon: OfficeIcon},
   {id: 'Warehouse', label: 'Warehouse', icon: WarehouseIcon},
   {id: 'Showrooms', label: 'Showrooms', icon: ShowroomsIcon},
   {id: 'Shop', label: 'Shop', icon: ShopIcon},

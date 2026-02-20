@@ -62,7 +62,7 @@ export default function OldContactDetails({
       </View>
       {errors?.phone && <Text style={styles.error}>{errors.phone}</Text>}
 
-      {/* Email */}
+      {/* Email
       <Text style={styles.label}>Email Address</Text>
       <TextInput
         placeholder="Enter email (optional)"
@@ -70,7 +70,7 @@ export default function OldContactDetails({
         keyboardType="email-address"
         style={[styles.input]}
         selectTextOnFocus={false}
-      />
+      /> */}
 
       {/* Info Box */}
       <View style={styles.infoBox}>

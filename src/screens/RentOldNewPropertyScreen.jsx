@@ -18,19 +18,21 @@ import LinearGradient from 'react-native-linear-gradient';
 import BackIcon from '../assets/image/new-property/back-icon.svg';
 import ArrowIcon from '../assets/image/onboarding/arrow.svg';
 
-import OldPropertyType from '../components/old-property/OldPropertyType';
 import OldPropertyArea from '../components/old-property/OldPropertyArea';
 import OldPriceDetails from '../components/old-property/OldPriceDetails';
 import OldContactDetails from '../components/old-property/OldContactDetails';
 import OldUploadImg from '../components/old-property/OldUploadImg';
 import {MapPin} from 'lucide-react-native';
-import { useSelector } from 'react-redux';
+import {useSelector} from 'react-redux';
+import PropertyTypeSelector from '../components/rent-property/PropertyType';
+import AllPropertyTypeSelector from '../components/propertyUpdate/AllTypeProperty';
 
 export default function RentOldNewPropertyScreen({route}) {
   const navigation = useNavigation();
- const {user}=useSelector(state=>state.auth);
+  const {user} = useSelector(state => state.auth);
   const mode = route?.params?.mode || 'add';
   const propertyData = route?.params?.propertyData || null;
+  console.log(propertyData);
 
   const [showUpload, setShowUpload] = useState(false);
   const [errors, setErrors] = useState({});
@@ -106,7 +108,6 @@ export default function RentOldNewPropertyScreen({route}) {
   useEffect(() => {
     if (state) {
       fetchCities(state);
-      setCity(''); // reset city when state changes
     }
   }, [state]);
 
@@ -122,7 +123,7 @@ export default function RentOldNewPropertyScreen({route}) {
     if (!area) newErrors.area = 'Area required';
     if (!sellingPrice) newErrors.sellingPrice = 'Offer price required';
     if (!totalPrice) newErrors.totalPrice = 'Selling price required';
-  //  if (!ownerName) newErrors.ownerName = 'Owner name required';
+    //  if (!ownerName) newErrors.ownerName = 'Owner name required';
     if (!phone || phone.length !== 10)
       newErrors.phone = 'Valid mobile number required';
 
@@ -151,7 +152,7 @@ export default function RentOldNewPropertyScreen({route}) {
       formData.append('city', city);
       formData.append('customerid', user?.id || '');
       formData.append('ownername', ownerName || '');
-  formData.append('address', address);
+      formData.append('address', address);
       formData.append(
         'areas',
         JSON.stringify([{label: 'Built-up Area', value: area, unit: 'sq.ft.'}]),
@@ -228,7 +229,7 @@ export default function RentOldNewPropertyScreen({route}) {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {!showUpload ? (
           <>
-            <OldPropertyType
+            <AllPropertyTypeSelector
               value={propertyType}
               onChange={setPropertyType}
               error={errors.propertyType}
@@ -509,7 +510,7 @@ const styles = StyleSheet.create({
   error: {color: '#E33629', fontSize: 12, marginBottom: 6},
 
   actionRow: {flexDirection: 'row', gap: 12, paddingHorizontal: 16},
-  actionBtn: {flex: 1, height: 50, borderRadius: 12,lineHeight:22},
+  actionBtn: {flex: 1, height: 50, borderRadius: 12, lineHeight: 22},
   gradient: {
     flex: 1,
     borderRadius: 12,

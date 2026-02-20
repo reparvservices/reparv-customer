@@ -16,21 +16,22 @@ import {formatIndianAmount} from '../../utils/formatIndianAmount';
 import {getImageUri, parseFrontView} from '../../utils/imageHandle';
 
 const {width} = Dimensions.get('window');
-const IMAGE_BASE_URL = 'https://aws-api.reparv.in';
+const IMAGE_BASE_URL = 'https://api.reparv.in';
 
 const PropertyCard = ({item}) => {
   const navigation = useNavigation();
   const {user} = useSelector(state => state.auth);
   const [isLiked, setIsLiked] = useState(false);
   const [reparvAssured, setReparvAssured] = useState(false); //  state for tag
-  const [like, setLike] = useState(0);
+  const [likeCount, setLikeCount] = useState(0);
+  const [visitorCount, setVisitorCount] = useState(0);
   //  Check subscription if partnerid exists
   useEffect(() => {
     const checkSubscription = async () => {
       if (item.projectpartnerid) {
         try {
           const res = await fetch(
-            `https://aws-api.reparv.in/projectpartner/subscription/user/${item?.projectpartnerid}`,
+            `https://api.reparv.in/projectpartner/subscription/user/${item?.projectpartnerid}`,
           );
           const data = await res.json();
           if (data.active) {
@@ -51,6 +52,7 @@ const PropertyCard = ({item}) => {
   }, [item.projectpartnerid]);
 
   useEffect(() => {
+    fetchLikeCount();
     fetchVisits(item?.propertyid);
   }, [item?.propertyid]);
   const handleLikePress = async () => {
@@ -87,9 +89,23 @@ const PropertyCard = ({item}) => {
         `https://aws-api.reparv.in/customerapp/enquiry/getvisits?propertyid=${propertyid}`,
       );
       const data = await res.json();
-      setLike(data?.totalVisitors || 0);
+      setVisitorCount(data?.totalVisitors || 0);
+    } catch (err) {
+      setVisitorCount(0);
+    }
+  };
+
+  const fetchLikeCount = async () => {
+    try {
+      const res = await fetch(
+        `https://aws-api.reparv.in/customerapp/property/likes/count/${item.propertyid}`,
+      );
+      const data = await res.json();
+      console.log(data);
+
+      setLikeCount(data?.likeCount || 0);
     } catch {
-      return 0;
+      setLikeCount(0);
     }
   };
 
@@ -186,7 +202,7 @@ const PropertyCard = ({item}) => {
         <View style={styles.footer}>
           <View style={styles.ownerLeft}>
             <HeartIcon size={25} fill={'#7A2EFF'} color="#7A2EFF" />
-            <Text style={styles.visitorText}>{like}{`\n`} likes</Text>
+            <Text style={styles.visitorText}>{likeCount + visitorCount}</Text>
           </View>
           <TouchableOpacity
             style={styles.detailsBtn}
@@ -195,7 +211,7 @@ const PropertyCard = ({item}) => {
                 seoSlug: item?.seoSlug,
               })
             }>
-            <Text style={styles.detailsText}>View Details</Text>
+            <Text style={styles.detailsText}>Show Details</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -224,6 +240,7 @@ const styles = StyleSheet.create({
   image: {
     width: '100%',
     height: '100%',
+    resizeMode: 'contain',
   },
 
   assuredTag: {
@@ -329,9 +346,9 @@ const styles = StyleSheet.create({
 
   detailsText: {
     color: '#FFF',
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '700',
-    lineHeight: 20,
+    // lineHeight: 20,
   },
   divider: {
     width: '100%', // responsive instead of fixed px
@@ -352,7 +369,7 @@ const styles = StyleSheet.create({
   },
   visitorText: {
     fontSize: 11,
-   
+
     color: '#444',
   },
   chatBtn: {

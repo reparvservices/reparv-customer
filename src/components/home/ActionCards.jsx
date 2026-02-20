@@ -30,6 +30,7 @@ export default function ActionCards() {
       title: 'Sell Old Property',
       icon: SellIcon,
       screen: 'OldProperty',
+      type:'sell',
       mode: 'add',
     },
     {
@@ -41,7 +42,8 @@ export default function ActionCards() {
     {
       title: 'Rent Property',
       icon: RentIcon,
-      screen: 'RentOldNewProperty',
+      screen: 'OldProperty',
+      type:'rent',
       mode: 'add',
     },
     {
@@ -66,6 +68,7 @@ export default function ActionCards() {
   const handleNavigation = item => {
     navigation.navigate(item.screen, {
       mode: item.mode, //  create / update
+      type:item?.type
       // propertyData: {} ← pass this when updating
     });
   };

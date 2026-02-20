@@ -61,7 +61,7 @@ export default function CalculatorScreen() {
         <Text style={styles.headerTitle}>Property Calculator</Text>
 
         <TouchableOpacity>
-          <Bell size={22} color="#111" />
+           {/* <Bell size={22} color="#111" /> */}
         </TouchableOpacity>
       </View>
 

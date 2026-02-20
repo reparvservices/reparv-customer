@@ -12,6 +12,8 @@ import {
   Alert,
   ActivityIndicator,
   ToastAndroid,
+  Image,
+  Button,
 } from 'react-native';
 
 import Bg1 from '../assets/image/login/login1.svg';
@@ -19,6 +21,7 @@ import Bg2 from '../assets/image/login/login2.svg';
 import Bg3 from '../assets/image/login/login3.svg';
 import Hyperbola from '../assets/image/login/hyperbola-shape.svg';
 import Google from '../assets/image/login/devicon_google.svg';
+import Facebook from '../assets/image/login/facebook.svg';
 import Whatsapp from '../assets/image/login/Whatsapp.svg';
 import Logo from '../assets/image/login/logo.svg';
 import DropdownIcon from '../assets/image/login/dropdown.svg';
@@ -27,7 +30,11 @@ import OtpModal from '../components/login/OtpModal';
 import {useNavigation} from '@react-navigation/native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useDispatch, useSelector} from 'react-redux';
-import {sendOtp, verifyOtp} from '../features/auth/authSlice';
+import {
+  facebookLoginSlice,
+  sendOtp,
+  verifyOtp,
+} from '../features/auth/authSlice';
 import {googleLogin} from '../features/auth/authSlice';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {startSignInFlow} from '../utils/googleAuth';
@@ -35,6 +42,7 @@ import {
   GoogleSignin,
   statusCodes,
 } from '@react-native-google-signin/google-signin';
+import {facebookLogin} from '../utils/facebookLogin';
 const {width, height} = Dimensions.get('window');
 
 const bottomCardHeight =
@@ -69,6 +77,7 @@ export default function LoginScreen() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [error, setError] = useState('');
   const [bottomVisible, setBottomVisible] = useState(true);
+  const [loading, setLoading] = useState(false);
   const dispatch = useDispatch();
   const {isLoading, otpSent, isAuthenticated} = useSelector(
     state => state.auth,
@@ -111,19 +120,15 @@ export default function LoginScreen() {
       setOtpVisible(true);
     } catch (err) {
       console.log(err);
-      
+
       ToastAndroid.show(err || 'Failed to send OTP', ToastAndroid.SHORT);
     }
   };
-
-  const [loading, setLoading] = useState(false);
-
   const signInWithGoogle = async () => {
     await GoogleSignin.hasPlayServices();
     const userInfo = await GoogleSignin.signIn();
     return userInfo.data?.idToken; //  send this to backend
   };
-
   const handleGoogleLogin = async () => {
     try {
       const idToken = await signInWithGoogle();
@@ -137,6 +142,10 @@ export default function LoginScreen() {
       //Alert.alert('Login Failed', err);
       console.log('Google Login Error:', err);
     }
+  };
+  const faceBookLogin = async () => {
+    const fbUser = await facebookLogin();
+    dispatch(facebookLoginSlice(fbUser));
   };
   return (
     <SafeAreaView style={styles.container}>
@@ -307,14 +316,21 @@ export default function LoginScreen() {
               <Text style={styles.or}>Or login with</Text>
 
               <View style={styles.socialRow}>
+                {/* Google */}
                 <TouchableOpacity
                   onPress={handleGoogleLogin}
-                  style={styles.socialIconWrapper}>
+                  style={styles.socialIconWrapper}
+                  activeOpacity={0.7}>
                   <Google width={24} height={24} />
                 </TouchableOpacity>
-                {/* <View style={styles.socialIconWrapper}>
-                  <Whatsapp width={24} height={24} />
-                </View> */}
+
+                {/* Facebook */}
+                <TouchableOpacity
+                  onPress={faceBookLogin}
+                  style={styles.socialIconWrapper}
+                  activeOpacity={0.7}>
+                  <Facebook width={26} height={26} />
+                </TouchableOpacity>
               </View>
             </View>
           </View>
@@ -427,7 +443,7 @@ const styles = StyleSheet.create({
   or: {fontSize: 8, marginTop: 8, color: '#868686'},
   socialRow: {
     flexDirection: 'row',
-    //marginTop: 10,
+    marginTop: 2,
     justifyContent: 'center',
     width: '50%',
     justifyContent: 'center',
@@ -437,7 +453,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#B8B8B8',
     borderRadius: 12,
-    padding: 12,
+    padding: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -45,6 +45,7 @@ export default function AddressInfoForm({data, setData, errors}) {
       <View style={styles.row}>
         <TextInput
           placeholder="Years"
+          placeholderTextColor={'gray'}
           keyboardType="number-pad"
           value={data.workExperience.years}
           onChangeText={v =>
@@ -65,6 +66,7 @@ export default function AddressInfoForm({data, setData, errors}) {
 
         <TextInput
           placeholder="Months"
+          placeholderTextColor={'gray'}
           keyboardType="number-pad"
           value={data.workExperience.months}
           onChangeText={v =>
@@ -83,7 +85,12 @@ export default function AddressInfoForm({data, setData, errors}) {
           ]}
         />
       </View>
-
+      {errors?.workExperienceYears && (
+        <Text style={styles.error}>{errors.workExperienceYears}</Text>
+      )}
+      {errors?.workExperienceMonths && (
+        <Text style={styles.error}>{errors.workExperienceMonths}</Text>
+      )}
       {/* ================= Salary Type ================= */}
       <Text style={styles.label}>Salary Type</Text>
       <View style={styles.row}>
@@ -105,6 +112,7 @@ export default function AddressInfoForm({data, setData, errors}) {
 
       <TextInput
         placeholder="Gross Pay"
+        placeholderTextColor={'gray'}
         keyboardType="number-pad"
         value={data.salaryDetails.grossPay}
         onChangeText={v =>
@@ -118,9 +126,11 @@ export default function AddressInfoForm({data, setData, errors}) {
         }
         style={[styles.input, errors?.grossPay && styles.inputError]}
       />
+      {errors?.grossPay && <Text style={styles.error}>{errors.grossPay}</Text>}
 
       <TextInput
         placeholder="Net Pay"
+        placeholderTextColor={'gray'}
         keyboardType="number-pad"
         value={data.salaryDetails.netPay}
         onChangeText={v =>
@@ -134,9 +144,11 @@ export default function AddressInfoForm({data, setData, errors}) {
         }
         style={[styles.input, errors?.netPay && styles.inputError]}
       />
+      {errors?.netPay && <Text style={styles.error}>{errors.netPay}</Text>}
 
       <TextInput
         placeholder="PF Deduction"
+        placeholderTextColor={'gray'}
         keyboardType="number-pad"
         value={data.salaryDetails.pfDeduction}
         onChangeText={v =>
@@ -169,26 +181,35 @@ export default function AddressInfoForm({data, setData, errors}) {
       <Text style={styles.label}>Yearly Income (ITR)</Text>
       <TextInput
         placeholder="Enter Income"
+        placeholderTextColor={'gray'}
         keyboardType="number-pad"
         value={data.yearlyIncomeITR}
         onChangeText={v => setData({...data, yearlyIncomeITR: v})}
         style={[styles.input, errors?.yearlyIncomeITR && styles.inputError]}
       />
+      {errors?.yearlyIncomeITR && (
+        <Text style={styles.error}>{errors.yearlyIncomeITR}</Text>
+      )}
 
       {/* ================= Monthly Avg ================= */}
       <Text style={styles.label}>Monthly Avg. Balance</Text>
       <TextInput
         placeholder="Enter Balance"
+        placeholderTextColor={'gray'}
         keyboardType="number-pad"
         value={data.monthlyAvgBalance}
         onChangeText={v => setData({...data, monthlyAvgBalance: v})}
         style={[styles.input, errors?.monthlyAvgBalance && styles.inputError]}
       />
+      {errors?.monthlyAvgBalance && (
+        <Text style={styles.error}>{errors.monthlyAvgBalance}</Text>
+      )}
 
       {/* ================= EMI ================= */}
       <Text style={styles.label}>Ongoing Loan EMI</Text>
       <TextInput
         placeholder="Enter EMI"
+        placeholderTextColor={'gray'}
         keyboardType="number-pad"
         value={data.ongoingEMI}
         onChangeText={v => setData({...data, ongoingEMI: v})}

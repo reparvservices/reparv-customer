@@ -384,17 +384,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   sectionHeaderRow: {
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  marginBottom: 12,
-},
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
 
-seeAllText: {
-  fontSize: 15,
-  fontWeight: '600',
-  textDecorationLine: 'underline',
-  color: '#8A38F5', // purple color for CTA
-},
-
+  seeAllText: {
+    fontSize: 15,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
+    color: '#8A38F5', // purple color for CTA
+  },
 });

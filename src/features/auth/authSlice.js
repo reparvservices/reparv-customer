@@ -1,173 +1,3 @@
-// import {createSlice, createAsyncThunk} from '@reduxjs/toolkit';
-// import AsyncStorage from '@react-native-async-storage/async-storage';
-// import {googleLoginApi, loginAPI, logoutAPI} from './authService';
-
-// export const loginUser = createAsyncThunk(
-//   'auth/loginUser',
-//   async (credentials, thunkAPI) => {
-//     try {
-//       const res = await loginAPI(credentials);
-
-//       const {token, user} = res || {};
-
-//       if (!token || !user) {
-//         return thunkAPI.rejectWithValue('Invalid login response');
-//       }
-
-//       await AsyncStorage.setItem('Reparvtoken', token);
-//       await AsyncStorage.setItem('Reparvuser', JSON.stringify(user));
-
-//       return {token, user};
-//     } catch {
-//       return thunkAPI.rejectWithValue('Login failed');
-//     }
-//   },
-// );
-
-// //google login thunk
-// export const googleLogin = createAsyncThunk(
-//   'auth/googleLogin',
-//   async (idToken, {rejectWithValue}) => {
-//     console.log(idToken);
-
-//     try {
-//       const response = await googleLoginApi(idToken);
-//       await AsyncStorage.setItem('Reparvtoken', response?.token);
-//       await AsyncStorage.setItem('Reparvuser', JSON.stringify(response?.user));
-
-//       return response;
-//     } catch (error) {
-//       return rejectWithValue(error.message);
-//     }
-//   },
-// );
-
-// export const loadUser = createAsyncThunk(
-//   'auth/loadUser',
-//   async (_, thunkAPI) => {
-//     try {
-//       const token = await AsyncStorage.getItem('Reparvtoken');
-//       const user = await AsyncStorage.getItem('Reparvuser');
-
-//       if (!token || !user) {
-//         return thunkAPI.rejectWithValue(null);
-//       }
-
-//       return {
-//         token,
-//         user: JSON.parse(user),
-//       };
-//     } catch {
-//       return thunkAPI.rejectWithValue(null);
-//     }
-//   },
-// );
-
-// export const logoutUser = createAsyncThunk(
-//   'auth/logoutUser',
-//   async (_, thunkAPI) => {
-//     try {
-//       await logoutAPI();
-//       return true;
-//     } catch {
-//       return thunkAPI.rejectWithValue('Logout failed');
-//     }
-//   },
-// );
-
-// const authSlice = createSlice({
-//   name: 'auth',
-//   initialState: {
-//     isAuthenticated: false,
-//     otpVerified: false,
-//     BASE_URL: 'https://aws-api.reparv.in',
-//     user: null,
-//     token: null,
-//     isLoading: false,
-//     error: null,
-//   },
-//   reducers: {
-//     clearAuthError: state => {
-//       state.error = null;
-//     },
-//   },
-//   extraReducers: builder => {
-//     builder
-//       .addCase(loginUser.pending, state => {
-//         state.isLoading = true;
-//         state.error = null;
-//       })
-//       .addCase(loginUser.fulfilled, (state, action) => {
-//         state.isAuthenticated = true;
-//         state.otpVerified = false;
-//         state.token = action.payload.token;
-//         state.user = action.payload.user;
-//         state.isLoading = false;
-//       })
-//       .addCase(loginUser.rejected, (state, action) => {
-//         state.isLoading = false;
-//         state.error = action.payload;
-//       })
-//       //Google Login Pending
-//       .addCase(googleLogin.pending, state => {
-//         state.isLoading = true;
-//       })
-//       // Google Login Success
-//       .addCase(googleLogin.fulfilled, (state, action) => {
-//         state.isLoading = false;
-//         state.user = action.payload.user;
-//         state.token = action.payload.token;
-//         state.isAuthenticated = true;
-//       })
-
-//       // Google Login Failed
-//       .addCase(googleLogin.rejected, (state, action) => {
-//         state.isLoading = false;
-//         state.error = action.payload;
-//       })
-//       .addCase(loadUser.pending, state => {
-//         state.isLoading = true;
-//       })
-//       .addCase(loadUser.fulfilled, (state, action) => {
-//         state.isAuthenticated = true;
-//         state.token = action.payload.token;
-//         state.user = action.payload.user;
-//         state.isLoading = false;
-//       })
-//       .addCase(loadUser.rejected, state => {
-//         state.isAuthenticated = false;
-//         state.user = null;
-//         state.token = null;
-//         state.isLoading = false;
-//       })
-//       .addCase(logoutUser.pending, state => {
-//         state.isLoading = true;
-//       })
-//       .addCase(logoutUser.fulfilled, state => {
-//         state.isAuthenticated = false;
-//         state.user = null;
-//         state.token = null;
-//         state.isLoading = false;
-//       })
-//       .addCase(logoutUser.rejected, (state, action) => {
-//         state.isLoading = false;
-//         state.error = action.payload;
-//       });
-//   },
-//   reducers: {
-//     clearAuthError: state => {
-//       state.error = null;
-//     },
-//     verifyOtpUI: state => {
-//       state.otpVerified = true;
-//     },
-//   },
-// });
-
-// export const {clearAuthError, verifyOtpUI} = authSlice.actions;
-
-// export default authSlice.reducer;
-
 import {createSlice, createAsyncThunk} from '@reduxjs/toolkit';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
@@ -176,6 +6,7 @@ import {
   resendOtpAPI,
   googleLoginApi,
   logoutAPI,
+  facebookLoginApi,
 } from './authService';
 
 /**
@@ -184,9 +15,12 @@ import {
 export const sendOtp = createAsyncThunk(
   'auth/sendOtp',
   async (credentials, thunkAPI) => {
+    console.log(credentials);
+
     try {
       const res = await sendOtpAPI(credentials);
 
+      console.log(res, 'rrr');
       if (!res.success) {
         return thunkAPI.rejectWithValue(res.message);
       }
@@ -245,6 +79,23 @@ export const googleLogin = createAsyncThunk(
   async (idToken, {rejectWithValue}) => {
     try {
       const response = await googleLoginApi(idToken);
+      await AsyncStorage.setItem('Reparvtoken', response.token);
+      await AsyncStorage.setItem('Reparvuser', JSON.stringify(response.user));
+
+      return response;
+    } catch (error) {
+      return rejectWithValue(error.message);
+    }
+  },
+);
+/**
+ * Facebook Login (UNCHANGED)
+ */
+export const facebookLoginSlice = createAsyncThunk(
+  'auth/facebookLogin',
+  async (facebookUser, {rejectWithValue}) => {
+    try {
+      const response = await facebookLoginApi(facebookUser);
 
       await AsyncStorage.setItem('Reparvtoken', response.token);
       await AsyncStorage.setItem('Reparvuser', JSON.stringify(response.user));
@@ -347,7 +198,20 @@ const authSlice = createSlice({
         state.user = action.payload.user;
         state.isLoading = false;
       })
-
+      // FACEBOOK LOGIN
+      .addCase(facebookLoginSlice.pending, state => {
+        state.isLoading = true;
+      })
+      .addCase(facebookLoginSlice.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.isAuthenticated = true;
+        state.token = action.payload.token;
+        state.user = action.payload.user;
+      })
+      .addCase(facebookLoginSlice.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+      })
       // LOGOUT
       .addCase(logoutUser.fulfilled, state => {
         state.isAuthenticated = false;

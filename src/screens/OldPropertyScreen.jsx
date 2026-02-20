@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {use, useEffect, useState} from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,7 @@ import {
   Pressable,
   Modal,
 } from 'react-native';
-import {useNavigation} from '@react-navigation/native';
+import {useNavigation, useRoute} from '@react-navigation/native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 
@@ -28,9 +28,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {useSelector} from 'react-redux';
 import PropertyTypeSelector from '../components/rent-property/PropertyType';
 
-export default function OldPropertyScreen() {
+export default function OldPropertyScreen({route}) {
   const navigation = useNavigation();
   const {user} = useSelector(state => state.auth);
+  const type = route?.params?.type || 'sell';
   const [showUpload, setShowUpload] = useState(false);
   const [errors, setErrors] = useState({});
   const [sellType, setSellType] = useState('rent'); // rent | resale
@@ -111,6 +112,7 @@ export default function OldPropertyScreen() {
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
+  console.log(user, 'user', type);
 
   const getTotalImageCount = () =>
     Object.values(imageFiles).reduce((sum, arr) => sum + arr.length, 0);
@@ -239,12 +241,21 @@ export default function OldPropertyScreen() {
             </View> */}
 
             {/* PROPERTY TYPE (UNCHANGED COMPONENT) */}
-            <OldPropertyType
-              value={propertyType}
-              onChange={setPropertyType}
-              error={errors.propertyType}
-              mode={sellType}
-            />
+            {type === 'sell' ? (
+              <OldPropertyType
+                value={propertyType}
+                onChange={setPropertyType}
+                error={errors.propertyType}
+                mode={sellType}
+              />
+            ) : (
+              <PropertyTypeSelector
+                value={propertyType}
+                onChange={setPropertyType}
+                error={errors.propertyType}
+                mode={sellType}
+              />
+            )}
 
             {/* PROPERTY NAME */}
             <View style={styles.section}>

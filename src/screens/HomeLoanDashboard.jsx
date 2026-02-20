@@ -104,7 +104,7 @@ export default function HomeLoanDashboard() {
 
           try {
             const propertyRes = await fetch(
-              `https://aws-api.reparv.in/user/properties/${loan?.propertyid}`,
+              `https://aws-api.reparv.in/customerapp/property/${loan?.propertyid}`,
             );
 
             const propertyJson = await propertyRes.json();
@@ -138,8 +138,6 @@ export default function HomeLoanDashboard() {
       setLoading(false);
     }
   };
-
-  console.log(loans, 'loanss');
 
   useEffect(() => {
     fetchLoanCounts();
