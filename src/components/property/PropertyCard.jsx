@@ -1,5 +1,5 @@
 import {useNavigation} from '@react-navigation/native';
-import {Building2, Heart, HeartIcon, MapPin} from 'lucide-react-native';
+import {Building2, Eye, Heart, HeartIcon, MapPin} from 'lucide-react-native';
 import React, {useState, useEffect} from 'react';
 import {
   View,
@@ -101,7 +101,7 @@ const PropertyCard = ({item}) => {
         `https://aws-api.reparv.in/customerapp/property/likes/count/${item.propertyid}`,
       );
       const data = await res.json();
-      console.log(data);
+      console.log(data, 'ddddsss');
 
       setLikeCount(data?.likeCount || 0);
     } catch {
@@ -200,9 +200,19 @@ const PropertyCard = ({item}) => {
 
         {/* FOOTER */}
         <View style={styles.footer}>
-          <View style={styles.ownerLeft}>
-            <HeartIcon size={25} fill={'#7A2EFF'} color="#7A2EFF" />
-            <Text style={styles.visitorText}>{likeCount + visitorCount}</Text>
+          <View style={{gap: 10, flexDirection: 'row'}}>
+            {likeCount > 0 && (
+              <View style={styles.ownerLeft}>
+                <HeartIcon size={25} fill={'#7A2EFF'} color="#7A2EFF" />
+                <Text style={styles.visitorText}>{likeCount}</Text>
+              </View>
+            )}
+            {visitorCount > 0 && (
+              <View style={styles.ownerLeft}>
+                <Eye size={25} color="#7A2EFF" />
+                <Text style={styles.visitorText}>{visitorCount}</Text>
+              </View>
+            )}
           </View>
           <TouchableOpacity
             style={styles.detailsBtn}

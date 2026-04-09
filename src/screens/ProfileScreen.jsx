@@ -199,6 +199,8 @@ export default function ProfileScreen() {
                 email: user?.email,
                 contact: user?.contact,
                 userid: user?.id,
+                state: user?.state,
+                city: user?.city,
                 userimage: user?.userimage
                   ? `https://aws-api.reparv.in/${user.userimage}`
                   : null,

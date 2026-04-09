@@ -1,7 +1,8 @@
-import React from 'react';
+import React, {useEffect} from 'react';
 import {NavigationContainer} from '@react-navigation/native';
 import {createStackNavigator} from '@react-navigation/stack';
-import {useSelector} from 'react-redux';
+import {useSelector, useDispatch} from 'react-redux';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import SplashScreen from '../screens/SplashScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
@@ -24,6 +25,11 @@ import UpdateProfileScreen from '../screens/ProfileUpdate';
 import TermsPrivacyScreen from '../screens/TermsPrivacyScreen';
 import BlogDetailScreen from '../screens/BlogDetailScreen';
 import HighlightedPropertyListScreen from '../screens/HighlightedPropertyListner';
+import CompleteProfileScreen from '../screens/CompleteProfileScreen';
+import {setUser} from '../features/auth/authSlice';
+import {navigationRef} from './Navigationref';
+
+//import {setUser} from '../redux/slices/authSlice'; // adjust path as needed
 
 const Stack = createStackNavigator();
 
@@ -34,12 +40,47 @@ function AuthStack() {
       <Stack.Screen name="Splash" component={SplashScreen} />
       <Stack.Screen name="Onboarding" component={OnboardingScreen} />
       <Stack.Screen name="Login" component={LoginScreen} />
-         <Stack.Screen name='TermsPrivacyScreen' component={TermsPrivacyScreen}/>
+      <Stack.Screen name="TermsPrivacyScreen" component={TermsPrivacyScreen} />
     </Stack.Navigator>
   );
 }
 
-// App stack (after login)
+// Complete Profile stack — mandatory state/city setup
+function CompleteProfileStack() {
+  return (
+    <Stack.Navigator screenOptions={{headerShown: false}}>
+      <Stack.Screen name="CompleteProfile" component={CompleteProfileScreen} />
+      {/* Also include MainTabs here so CompleteProfileScreen can navigate.replace('MainTabs') */}
+      <Stack.Screen name="MainTabs" component={BottomTabNavigator} />
+      <Stack.Screen name="OldProperty" component={OldPropertyScreen} />
+      <Stack.Screen name="NewProperty" component={NewPropertyScreen} />
+      <Stack.Screen
+        name="RentOldNewProperty"
+        component={RentOldNewPropertyScreen}
+      />
+      <Stack.Screen name="RentProperty" component={RentPropertyScreen} />
+      <Stack.Screen name="ResaleProperty" component={ResalePropertyScreen} />
+      <Stack.Screen name="HomeLoan" component={HomeLoan} />
+      <Stack.Screen name="PropertyListScreen" component={PropertyListScreen} />
+      <Stack.Screen
+        name="HighlightedPropertyListScreen"
+        component={HighlightedPropertyListScreen}
+      />
+      <Stack.Screen name="PropertyDetails" component={PropertyDetailsScreen} />
+      <Stack.Screen
+        name="PropertyBookDetails"
+        component={PropertyBookDetails}
+      />
+      <Stack.Screen name="mylisting" component={MyListingsScreen} />
+      <Stack.Screen name="HomeLoanDashboard" component={HomeLoanDashboard} />
+      <Stack.Screen name="HelpCenter" component={HelpCenterScreen} />
+      <Stack.Screen name="UpdateProfile" component={UpdateProfileScreen} />
+      <Stack.Screen name="BlogDetails" component={BlogDetailScreen} />
+    </Stack.Navigator>
+  );
+}
+
+// App stack (after login + profile complete)
 function AppStack() {
   return (
     <Stack.Navigator screenOptions={{headerShown: false}}>
@@ -54,7 +95,10 @@ function AppStack() {
       <Stack.Screen name="ResaleProperty" component={ResalePropertyScreen} />
       <Stack.Screen name="HomeLoan" component={HomeLoan} />
       <Stack.Screen name="PropertyListScreen" component={PropertyListScreen} />
-       <Stack.Screen name="HighlightedPropertyListScreen" component={HighlightedPropertyListScreen} />
+      <Stack.Screen
+        name="HighlightedPropertyListScreen"
+        component={HighlightedPropertyListScreen}
+      />
       <Stack.Screen name="PropertyDetails" component={PropertyDetailsScreen} />
       <Stack.Screen
         name="PropertyBookDetails"
@@ -64,17 +108,78 @@ function AppStack() {
       <Stack.Screen name="HomeLoanDashboard" component={HomeLoanDashboard} />
       <Stack.Screen name="HelpCenter" component={HelpCenterScreen} />
       <Stack.Screen name="UpdateProfile" component={UpdateProfileScreen} />
-      <Stack.Screen name='BlogDetails' component={BlogDetailScreen}/>
+      <Stack.Screen name="BlogDetails" component={BlogDetailScreen} />
     </Stack.Navigator>
   );
 }
 
+/**
+ * Checks if user profile has state and city filled in.
+ * Returns true only if both are non-null, non-empty strings.
+ */
+function isLocationComplete(user) {
+  if (!user || !user.id) return false;
+  const hasState =
+    user.state !== null &&
+    user.state !== undefined &&
+    String(user.state).trim() !== '';
+  const hasCity =
+    user.city !== null &&
+    user.city !== undefined &&
+    String(user.city).trim() !== '';
+  return hasState && hasCity;
+}
+
 export default function AppNavigator() {
-  const {isAuthenticated, otpVerified} = useSelector(state => state.auth);
+  const dispatch = useDispatch();
+  const {isAuthenticated, user} = useSelector(state => state.auth);
+
+  // On mount (or when auth changes), fetch fresh profile from server
+  // so we always have the latest state/city values
+  useEffect(() => {
+    if (isAuthenticated && user?.id) {
+      fetchProfile(user.id);
+    }
+  }, [isAuthenticated, user?.id]);
+
+  const fetchProfile = async userId => {
+    try {
+      const res = await fetch(
+        `https://aws-api.reparv.in/customerapp/user/profile?id=${userId}`,
+      );
+      const data = await res.json();
+
+      if (res.ok && data?.data) {
+        // Update AsyncStorage with latest profile data
+        await AsyncStorage.setItem('Reparvuser', JSON.stringify(data.data));
+        // Push fresh profile into Redux so navigator re-renders with latest state/city
+        dispatch(setUser(data.data));
+      }
+    } catch (err) {
+      console.log('Profile fetch error:', err);
+    }
+  };
+
+  /**
+   * Navigation decision tree:
+   *  - Not authenticated → AuthStack
+   *  - Authenticated + user has no id → AuthStack (safety fallback)
+   *  - Authenticated + user.id exists + state/city missing → CompleteProfileStack
+   *  - Authenticated + user.id exists + state/city present → AppStack
+   */
+  const renderStack = () => {
+    if (!isAuthenticated) return <AuthStack />;
+
+    if (!user?.id) return <AuthStack />;
+
+    if (!isLocationComplete(user)) return <CompleteProfileStack />;
+
+    return <AppStack />;
+  };
 
   return (
-    <NavigationContainer>
-      {isAuthenticated ? <AppStack /> : <AuthStack />}
+    <NavigationContainer ref={navigationRef}>
+      {renderStack()}
     </NavigationContainer>
   );
 }

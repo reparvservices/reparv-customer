@@ -8,11 +8,35 @@ import {
   Image,
   Linking,
 } from 'react-native';
-import { X, Download, FileText } from 'lucide-react-native';
+import {X, Download, FileText} from 'lucide-react-native';
 
-const MediaPreviewModal = ({ visible, onClose, uri }) => {
+const MediaPreviewModal = ({visible, onClose, uri}) => {
   const isPdf = uri?.toLowerCase().endsWith('.pdf');
+  const handleOpen = url => {
+    if (!url) {
+      // replace with your toast util
+      console.warn('No file URL available');
+      return;
+    }
+    Linking.openURL(url);
+  };
 
+  if (!uri) {
+    return (
+      <Modal visible={visible} transparent animationType="fade">
+        <View style={styles.overlay}>
+          <View style={styles.card}>
+            <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
+              <X size={22} color="#fff" />
+            </TouchableOpacity>
+            <Text style={{color: '#6B7280', marginTop: 30}}>
+              No file available
+            </Text>
+          </View>
+        </View>
+      </Modal>
+    );
+  }
   return (
     <Modal visible={visible} transparent animationType="fade">
       <View style={styles.overlay}>
@@ -33,24 +57,18 @@ const MediaPreviewModal = ({ visible, onClose, uri }) => {
 
               <TouchableOpacity
                 style={styles.primaryBtn}
-                onPress={() => Linking.openURL(uri)}
-              >
+                onPress={() => handleOpen(uri)}>
                 <Download size={18} color="#fff" />
                 <Text style={styles.btnText}>Open PDF</Text>
               </TouchableOpacity>
             </View>
           ) : (
             <>
-              <Image
-                source={{ uri }}
-                style={styles.image}
-                resizeMode="contain"
-              />
+              <Image source={{uri}} style={styles.image} resizeMode="contain" />
 
               <TouchableOpacity
                 style={styles.primaryBtn}
-                onPress={() => Linking.openURL(uri)}
-              >
+                onPress={() => handleOpen(uri)}>
                 <Download size={18} color="#fff" />
                 <Text style={styles.btnText}>Download</Text>
               </TouchableOpacity>

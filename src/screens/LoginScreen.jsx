@@ -204,7 +204,7 @@ export default function LoginScreen() {
               <Logo width={84} height={35} />
 
               <Text style={styles.mainTitle}>
-                Your <Text style={{color: '#000'}}>All In One</Text> property
+                Your <Text style={{color: '#000'}}>All In One</Text> Property
                 Solution
               </Text>
               <View

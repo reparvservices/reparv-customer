@@ -23,6 +23,7 @@ import {useNavigation, useRoute} from '@react-navigation/native';
 import SearchIcon from '../assets/image/home/search.png';
 import {Filter, ListFilter} from 'lucide-react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
+import {parseBhkList} from '../utils/parseBhk';
 
 const {width} = Dimensions.get('window');
 const CARD_WIDTH = width - 32;
@@ -171,19 +172,17 @@ const PropertyListScreen = () => {
       setFilteredFlats(activeApproved);
       setResultCount(activeApproved.length);
 
-      //  UNIQUE PROPERTY TYPE
-      setBhk(getUniqueCleanValues(activeApproved, 'propertyType'));
+      // ✅ Parse and clean before setting state
+      const rawBhk = getUniqueCleanValues(activeApproved, 'propertyType');
+      setBhk(parseBhkList(rawBhk)); // ← cleaned here
 
-      //  UNIQUE PROPERTY CATEGORY
       setPropertyCategory(
         getUniqueCleanValues(activeApproved, 'propertyCategory'),
       );
-      // Unique Cities
+
       const uniqueCities = [
         ...new Set(activeApproved.map(item => item.city).filter(Boolean)),
       ];
-      console.log(uniqueCities);
-
       setCities(uniqueCities);
     } catch (error) {
       console.error('Error fetching properties:', error);
@@ -294,6 +293,9 @@ const PropertyListScreen = () => {
       item => !item.startsWith('Rental') && !item.startsWith('Resale'),
     );
   }, [ptype, propertyCategory]);
+
+  console.log(filteredCategories, 'giii');
+  console.log(bhk, 'd', filterbhk);
 
   return (
     <SafeAreaView style={styles.safeArea}>

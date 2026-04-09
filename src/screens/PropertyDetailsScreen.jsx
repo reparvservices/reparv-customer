@@ -235,7 +235,7 @@ const PropertyDetailsScreen = () => {
 • ${data?.furnishing || 'Well maintained'}
 • ${data?.propertyFacing || 'Good ventilation'}
 
-🔗 *View complete details, photos & book a site visit:*
+🔗 *View complete details, photos & book a site visit *
 https://www.reparv.in/property-info/${data?.seoSlug}
 
 📞 *Interested? Enquire now before it’s gone!*`;
@@ -249,7 +249,7 @@ https://www.reparv.in/property-info/${data?.seoSlug}
       await Share.share(
         {
           message,
-          url: logoUrl,
+          url: 'https://reparv-assets.s3.ap-south-1.amazonaws.com/uploads/1773144039671-rn_image_picker_lib_temp_5e7368a9-bdef-4c87-8d8d-6ea88f300bed.webp',
         },
         {
           dialogTitle: 'Share Property',
@@ -1050,7 +1050,7 @@ Best regards,
             {/* CTA Buttons */}
             <View style={styles.actionRow}>
               <ActionButton
-                label="Call Agent"
+                label="call promoter"
                 iconButton={'call'}
                 onPress={() => {
                   Linking.openURL(`tel:${8010881965}`);

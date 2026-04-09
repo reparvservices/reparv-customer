@@ -16,7 +16,7 @@ import Bedroom from '../../assets/image/home/rented-properties-card/bedroom.png'
 import UserIcon from '../../assets/image/home/rented-properties-card/user-icon.png';
 import Message from '../../assets/image/home/rented-properties-card/message.png';
 import {formatIndianAmount} from '../../utils/formatIndianAmount';
-import {Building2, HeartIcon} from 'lucide-react-native';
+import {Building2, Eye, HeartIcon} from 'lucide-react-native';
 import {useNavigation} from '@react-navigation/native';
 import {checkSubscription} from '../home/RentPropertyCards';
 
@@ -190,11 +190,21 @@ export default function SimilerProperty({filterType, city, budget}) {
 
           {/* REPLACED OWNER WITH VISIT COUNT */}
           <View style={styles.ownerRow}>
-            <View style={styles.ownerLeft}>
-              <HeartIcon size={25} fill={'#8A38F5'} color="#8A38F5" />
-              <Text style={styles.visitorText}>
-                {likeCounts[item.propertyid] + item?.totalVisitors ?? 0}
-              </Text>
+            <View style={{flexDirection: 'row', gap: 4}}>
+              {likeCounts[item.propertyid] > 0 && (
+                <View style={styles.ownerLeft}>
+                  <HeartIcon size={25} fill={'#8A38F5'} color="#8A38F5" />
+                  <Text style={styles.visitorText}>
+                    {likeCounts[item.propertyid] ?? 0}
+                  </Text>
+                </View>
+              )}
+              {item?.totalVisitors > 0 && (
+                <View style={styles.ownerLeft}>
+                  <Eye size={25} color="#7A2EFF" />
+                  <Text style={styles.visitorText}>{item?.totalVisitors}</Text>
+                </View>
+              )}
             </View>
 
             <TouchableOpacity

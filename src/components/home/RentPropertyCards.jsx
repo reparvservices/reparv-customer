@@ -10,7 +10,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
-import {Building2, Heart, HeartIcon} from 'lucide-react-native';
+import {Building2, Eye, Heart, HeartIcon} from 'lucide-react-native';
 import {useNavigation} from '@react-navigation/native';
 import {useSelector} from 'react-redux';
 import Location from '../../assets/image/home/rented-properties-card/location.png';
@@ -201,13 +201,23 @@ export default function RentPropertyCards() {
 
           {/* REPLACED OWNER WITH VISIT COUNT */}
           <View style={styles.ownerRow}>
-            <View style={styles.ownerLeft}>
-              <HeartIcon size={25} fill={'#8A38F5'} color="#8A38F5" />
-              <Text style={styles.visitorText}>
-                {likeCounts[item.propertyid] + item?.totalVisitors ?? 0}
-              </Text>
+            \\
+            <View style={{flexDirection: 'row', gap: 4}}>
+              {likeCounts[item.propertyid] > 0 && (
+                <View style={styles.ownerLeft}>
+                  <HeartIcon size={25} fill={'#8A38F5'} color="#8A38F5" />
+                  <Text style={styles.visitorText}>
+                    {likeCounts[item.propertyid] ?? 0}
+                  </Text>
+                </View>
+              )}
+              {item?.totalVisitors > 0 && (
+                <View style={styles.ownerLeft}>
+                  <Eye size={25} color="#7A2EFF" />
+                  <Text style={styles.visitorText}>{item?.totalVisitors}</Text>
+                </View>
+              )}
             </View>
-
             <TouchableOpacity
               style={styles.showDetailsBtn}
               onPress={() =>
