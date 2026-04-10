@@ -201,7 +201,6 @@ export default function RentPropertyCards() {
 
           {/* REPLACED OWNER WITH VISIT COUNT */}
           <View style={styles.ownerRow}>
-            \\
             <View style={{flexDirection: 'row', gap: 4}}>
               {likeCounts[item.propertyid] > 0 && (
                 <View style={styles.ownerLeft}>

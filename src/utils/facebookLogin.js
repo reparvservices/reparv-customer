@@ -24,8 +24,9 @@ export const facebookLogin = async () => {
     }
 
     // Create Firebase credential
-    const facebookCredential =
-      auth.FacebookAuthProvider.credential(data.accessToken);
+    const facebookCredential = auth.FacebookAuthProvider.credential(
+      data.accessToken,
+    );
 
     // Sign in to Firebase
     const userCredential = await auth().signInWithCredential(
@@ -33,7 +34,7 @@ export const facebookLogin = async () => {
     );
 
     const user = userCredential.user;
-console.log(user);
+    console.log(user);
 
     // 🔥 Return ONLY required fields (backend-friendly)
     return {

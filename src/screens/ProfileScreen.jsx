@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useState} from 'react';
+import React, {useCallback, useState} from 'react';
 import {
   View,
   Text,
@@ -15,7 +15,6 @@ import {useDispatch, useSelector} from 'react-redux';
 import {logoutUser} from '../features/auth/authSlice';
 import {
   ArrowLeft,
-  Bell,
   ChevronRight,
   Heart,
   LogOut,
@@ -36,23 +35,20 @@ export default function ProfileScreen() {
   const [enquiryCount, setEnquiryCount] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchProperties();
-      fetchWishlist();
-      fetchProfile();
-      fetchEnquiries();
-    }, []),
-  );
-
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     try {
       setLoading(true);
       const userData = await AsyncStorage.getItem('Reparvuser');
-      if (!userData) return;
+      if (!userData) {
+        setLoading(false);
+        return;
+      }
 
       const parsedUser = JSON.parse(userData);
-      if (!parsedUser?.id) return;
+      if (!parsedUser?.id) {
+        setLoading(false);
+        return;
+      }
 
       const res = await fetch(
         `https://aws-api.reparv.in/customerapp/user/profile?id=${parsedUser.id}`,
@@ -61,15 +57,15 @@ export default function ProfileScreen() {
 
       if (res.ok) {
         setUser(data?.data);
-        setLoading(false);
       }
+      setLoading(false);
     } catch (err) {
       setLoading(false);
       console.log('Profile fetch error:', err);
     }
-  };
+  }, []);
 
-  const fetchProperties = async () => {
+  const fetchProperties = useCallback(async () => {
     try {
       if (!auth?.user?.id) {
         ToastAndroid.show(
@@ -85,15 +81,15 @@ export default function ProfileScreen() {
 
       const data = await res.json();
 
-      const properties = Array.isArray(data) ? data : [];
-      setProperty(properties.length);
+      const propertyItems = Array.isArray(data) ? data : [];
+      setProperty(propertyItems.length);
     } catch (error) {
       console.log('Fetch Error:', error);
       ToastAndroid.show('Failed to load properties.', ToastAndroid.SHORT);
     }
-  };
+  }, [auth?.user?.id]);
 
-  const fetchWishlist = async () => {
+  const fetchWishlist = useCallback(async () => {
     try {
       const res = await fetch(
         `https://aws-api.reparv.in/customerapp/property/get-wishlist/${auth?.user?.id}`,
@@ -102,10 +98,13 @@ export default function ProfileScreen() {
       setSaved(json?.data?.length);
     } finally {
     }
-  };
-  const fetchEnquiries = async () => {
+  }, [auth?.user?.id]);
+
+  const fetchEnquiries = useCallback(async () => {
     try {
-      if (!auth?.user?.id) return;
+      if (!auth?.user?.id) {
+        return;
+      }
 
       const res = await fetch(
         `https://aws-api.reparv.in/customerapp/enquiry/getvisitors/${auth.user.id}`,
@@ -122,7 +121,16 @@ export default function ProfileScreen() {
       console.log('Enquiry fetch error:', error);
       setEnquiryCount(0);
     }
-  };
+  }, [auth?.user?.id]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchProperties();
+      fetchWishlist();
+      fetchProfile();
+      fetchEnquiries();
+    }, [fetchEnquiries, fetchProfile, fetchProperties, fetchWishlist]),
+  );
   if (loading) {
     return (
       <View
@@ -153,8 +161,11 @@ export default function ProfileScreen() {
           <Text style={styles.headerTitle}>Profile</Text>
         </View>
 
-        {/* Right spacer (no bell, but keeps center aligned) */}
-        <View style={{width: 22}} />
+        <TouchableOpacity
+          style={styles.manageDeviceBtn}
+          onPress={() => navigation.navigate('TuyaDashboard')}>
+          <Text style={styles.manageDeviceBtnText}>Manage Device</Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -381,6 +392,17 @@ const styles = StyleSheet.create({
     lineHeight: 26,
     fontFamily: 'SegoeUI-Bold',
     color: '#111',
+  },
+  manageDeviceBtn: {
+    backgroundColor: '#6D28D9',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  manageDeviceBtnText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
   },
 
   profileRow: {

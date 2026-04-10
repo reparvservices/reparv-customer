@@ -7,6 +7,7 @@ import {
   Linking,
   Platform,
   PermissionsAndroid,
+  AppState,
 } from 'react-native';
 import {Provider, useDispatch, useSelector} from 'react-redux';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
@@ -20,6 +21,8 @@ import {Settings} from 'react-native-fbsdk-next';
 import {getApps} from '@react-native-firebase/app';
 import messaging from '@react-native-firebase/messaging';
 import {navigationRef} from './src/navigation/Navigationref';
+import {refreshTuyaSessionOnLaunch} from './src/services/tuyaApi';
+import {tuyaApi} from './src/features/tuya/tuyaApiSlice';
 
 Settings.initializeSDK();
 
@@ -101,6 +104,22 @@ const Root = () => {
         '509544297119-v6vsq7tcba8ukfn9969q930p8jk7iqst.apps.googleusercontent.com',
     });
     dispatch(loadUser());
+  }, [dispatch]);
+
+  useEffect(() => {
+    const syncTuya = () =>
+      refreshTuyaSessionOnLaunch()
+        .then(() => {
+          dispatch(tuyaApi.util.invalidateTags(['TuyaDevice']));
+        })
+        .catch(() => {});
+    syncTuya();
+    const sub = AppState.addEventListener('change', next => {
+      if (next === 'active') {
+        syncTuya();
+      }
+    });
+    return () => sub.remove();
   }, [dispatch]);
 
   useEffect(() => {

@@ -1,4 +1,4 @@
-import React, {useEffect} from 'react';
+import React, {useCallback, useEffect} from 'react';
 import {NavigationContainer} from '@react-navigation/native';
 import {createStackNavigator} from '@react-navigation/stack';
 import {useSelector, useDispatch} from 'react-redux';
@@ -26,8 +26,10 @@ import TermsPrivacyScreen from '../screens/TermsPrivacyScreen';
 import BlogDetailScreen from '../screens/BlogDetailScreen';
 import HighlightedPropertyListScreen from '../screens/HighlightedPropertyListner';
 import CompleteProfileScreen from '../screens/CompleteProfileScreen';
+import DashboardScreen from '../features/tuya/screens/DashboardScreen';
 import {setUser} from '../features/auth/authSlice';
 import {navigationRef} from './Navigationref';
+import {devLog} from '../utils/devLog';
 
 //import {setUser} from '../redux/slices/authSlice'; // adjust path as needed
 
@@ -76,6 +78,7 @@ function CompleteProfileStack() {
       <Stack.Screen name="HelpCenter" component={HelpCenterScreen} />
       <Stack.Screen name="UpdateProfile" component={UpdateProfileScreen} />
       <Stack.Screen name="BlogDetails" component={BlogDetailScreen} />
+      <Stack.Screen name="TuyaDashboard" component={DashboardScreen} />
     </Stack.Navigator>
   );
 }
@@ -109,6 +112,7 @@ function AppStack() {
       <Stack.Screen name="HelpCenter" component={HelpCenterScreen} />
       <Stack.Screen name="UpdateProfile" component={UpdateProfileScreen} />
       <Stack.Screen name="BlogDetails" component={BlogDetailScreen} />
+      <Stack.Screen name="TuyaDashboard" component={DashboardScreen} />
     </Stack.Navigator>
   );
 }
@@ -134,31 +138,34 @@ export default function AppNavigator() {
   const dispatch = useDispatch();
   const {isAuthenticated, user} = useSelector(state => state.auth);
 
+  const fetchProfile = useCallback(
+    async userId => {
+      try {
+        const res = await fetch(
+          `https://aws-api.reparv.in/customerapp/user/profile?id=${userId}`,
+        );
+        const data = await res.json();
+
+        if (res.ok && data?.data) {
+          // Update AsyncStorage with latest profile data
+          await AsyncStorage.setItem('Reparvuser', JSON.stringify(data.data));
+          // Push fresh profile into Redux so navigator re-renders with latest state/city
+          dispatch(setUser(data.data));
+        }
+      } catch (err) {
+        devLog('Profile fetch error:', err?.message);
+      }
+    },
+    [dispatch],
+  );
+
   // On mount (or when auth changes), fetch fresh profile from server
   // so we always have the latest state/city values
   useEffect(() => {
     if (isAuthenticated && user?.id) {
       fetchProfile(user.id);
     }
-  }, [isAuthenticated, user?.id]);
-
-  const fetchProfile = async userId => {
-    try {
-      const res = await fetch(
-        `https://aws-api.reparv.in/customerapp/user/profile?id=${userId}`,
-      );
-      const data = await res.json();
-
-      if (res.ok && data?.data) {
-        // Update AsyncStorage with latest profile data
-        await AsyncStorage.setItem('Reparvuser', JSON.stringify(data.data));
-        // Push fresh profile into Redux so navigator re-renders with latest state/city
-        dispatch(setUser(data.data));
-      }
-    } catch (err) {
-      console.log('Profile fetch error:', err);
-    }
-  };
+  }, [fetchProfile, isAuthenticated, user?.id]);
 
   /**
    * Navigation decision tree:

@@ -6,12 +6,14 @@ import HomeIcon from '../assets/image/common/homeIcon.svg';
 const {width} = Dimensions.get('window');
 
 const SplashScreen = ({navigation}) => {
-  const bgAnim = useRef(new Animated.Value(0)).current; 
-  const homeOpacity = useRef(new Animated.Value(1)).current; 
-  const logoX = useRef(new Animated.Value(width)).current; 
+  const bgAnim = useRef(new Animated.Value(0)).current;
+  const homeOpacity = useRef(new Animated.Value(1)).current;
+  const logoX = useRef(new Animated.Value(width)).current;
   const logoOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    let cancelled = false;
+
     Animated.sequence([
       Animated.delay(400),
 
@@ -46,10 +48,26 @@ const SplashScreen = ({navigation}) => {
           useNativeDriver: true,
         }),
       ]),
-    ]).start(() => {
-      navigation.replace('Onboarding');
+    ]).start(({finished}) => {
+      if (!finished || cancelled) {
+        return;
+      }
+      try {
+        const state = navigation.getState();
+        const names = state?.routeNames;
+        if (!Array.isArray(names) || !names.includes('Onboarding')) {
+          return;
+        }
+        navigation.replace('Onboarding');
+      } catch {
+        // Navigator may already be unmounted (e.g. auth loaded → root stack switched).
+      }
     });
-  }, []);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [navigation]);
 
   const bgColor = bgAnim.interpolate({
     inputRange: [0, 1, 2],
