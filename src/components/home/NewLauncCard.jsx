@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useMemo, useCallback, useState, useEffect} from 'react';
 import {
   View,
   Text,
@@ -7,230 +7,240 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Dimensions,
+  Platform,
 } from 'react-native';
-import {useNavigation} from '@react-navigation/native';
 import {ChevronRight} from 'lucide-react-native';
-import {formatIndianAmount} from '../../utils/formatIndianAmount';
+import {useNavigation} from '@react-navigation/native';
 import {getImageUri, parseFrontView} from '../../utils/imageHandle';
+import {formatIndianAmount} from '../../utils/formatIndianAmount';
+import {useAllPropertiesCache} from '../../hooks/useAllPropertiesCache';
 
 const {width} = Dimensions.get('window');
 
 export default function NewLaunchShowcase() {
   const navigation = useNavigation();
-  const [flats, setFlats] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const {data, loading} = useAllPropertiesCache();
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  useEffect(() => {
-    fetchFlats();
-  }, []);
-
-  const fetchFlats = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch(
-        'https://aws-api.reparv.in/frontend/all-properties',
-      );
-      const data = await response.json();
-      const filtered = data.filter(
+  const flats = useMemo(
+    () =>
+      (data || []).filter(
         item =>
           item.status === 'Active' &&
           item.approve === 'Approved' &&
           item.topPicksStatus !== 'Inactive',
-      );
-      setFlats(filtered);
-    } catch (error) {
-      console.error('Error fetching properties:', error);
-    } finally {
-      setLoading(false);
+      ),
+    [data],
+  );
+
+  useEffect(() => {
+    if (!flats.length) {
+      return;
     }
-  };
+    setCurrentIndex(i => i % flats.length);
+  }, [flats.length]);
 
-  const handleNext = () => {
+  const handleNext = useCallback(() => {
+    if (flats.length === 0) {
+      return;
+    }
     setCurrentIndex(prev => (prev + 1) % flats.length);
-  };
+  }, [flats.length]);
 
-  if (loading) {
+  const openDetails = useCallback(() => {
+    if (!flats.length) {
+      return;
+    }
+    const flat = flats[currentIndex % flats.length];
+    navigation.navigate('PropertyDetails', {
+      seoSlug: flat?.seoSlug,
+    });
+  }, [flats, currentIndex, navigation]);
+
+  if (loading && flats.length === 0) {
     return (
-      <ActivityIndicator size="large" style={{marginTop: 30}} color="#8A38F5" />
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>New Launches</Text>
+        <View style={styles.loaderBox}>
+          <ActivityIndicator size="small" color="#6E56CF" />
+        </View>
+      </View>
     );
   }
 
-  if (flats.length === 0) return null;
+  if (flats.length === 0) {
+    return null;
+  }
 
-  const currentFlat = flats[currentIndex];
+  const safeIndex = currentIndex % flats.length;
+  const currentFlat = flats[safeIndex];
+  const paths = parseFrontView(currentFlat?.frontView);
+  const imgUri = paths[0] ? getImageUri(paths[0]) : null;
+  const priceLabel = currentFlat?.totalOfferPrice
+    ? `Starting at ₹${formatIndianAmount(currentFlat.totalOfferPrice)}`
+    : 'View pricing';
 
   return (
     <View style={styles.section}>
-      {/* ── Section Header ── */}
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>New Launches</Text>
+      <Text style={styles.sectionTitle}>New Launches</Text>
+      <View style={styles.cardOuter}>
+        <View style={styles.cardInner}>
         <TouchableOpacity
-          style={styles.seeAll}
-          onPress={() => navigation.navigate('PropertyListScreen')}>
-          <Text style={styles.seeAllText}>See All</Text>
-          <ChevronRight size={14} color="#8A38F5" strokeWidth={2.5} />
-        </TouchableOpacity>
-      </View>
-
-      {/* ── Launch Card ── */}
-      <TouchableOpacity
-        style={styles.card}
-        activeOpacity={0.95}
-        onPress={() =>
-          navigation.navigate('PropertyDetails', {
-            seoSlug: currentFlat?.seoSlug,
-          })
-        }>
-        {/* Top: Property Image */}
-        <View style={styles.imageWrap}>
-          <Image
-            source={
-              currentFlat?.topPicksBanner
-                ? {uri: currentFlat?.topPicksBanner}
-                : require('../../assets/image/home/defaultProject.png')
-            }
-            style={styles.cardImage}
-            resizeMode="cover"
-          />
-          {/* Pre-Launch badge */}
-          <View style={styles.preLaunchBadge}>
+          style={styles.imageBox}
+          activeOpacity={0.95}
+          onPress={openDetails}>
+          {currentFlat?.topPicksBanner ? (
+            <Image
+              source={{uri: currentFlat.topPicksBanner}}
+              style={styles.image}
+              resizeMode="cover"
+            />
+          ) : imgUri ? (
+            <Image
+              source={{uri: imgUri}}
+              style={styles.image}
+              resizeMode="cover"
+            />
+          ) : (
+            <Image
+              source={require('../../assets/image/home/defaultProject.png')}
+              style={styles.image}
+              resizeMode="cover"
+            />
+          )}
+          <View style={styles.preLaunchTag}>
             <Text style={styles.preLaunchText}>Pre-Launch</Text>
           </View>
-        </View>
+        </TouchableOpacity>
 
-        {/* Bottom: White info panel */}
-        <View style={styles.infoPanel}>
-          <View style={styles.infoLeft}>
-            <Text style={styles.projectName} numberOfLines={1}>
-              {currentFlat?.propertyName || 'Aurora Grand Heights'}
+        <View style={styles.footer}>
+          <TouchableOpacity
+            style={styles.footerText}
+            activeOpacity={0.85}
+            onPress={openDetails}>
+            <Text style={styles.projectTitle} numberOfLines={1}>
+              {currentFlat?.propertyName || 'Premium project'}
             </Text>
-            <Text style={styles.projectDesc} numberOfLines={1}>
-              {currentFlat?.propertyCategory || 'Premium 3 & 4 BHK Residences'}
+            <Text style={styles.projectSub} numberOfLines={2}>
+              {currentFlat?.propertyCategory
+                ? `Premium ${currentFlat.propertyCategory}`
+                : 'Premium 3 & 4 BHK Residences'}
             </Text>
-            <Text style={styles.projectPrice}>
-              Starting at ₹
-              {formatIndianAmount(currentFlat?.totalOfferPrice) || '9,50,000'}
-            </Text>
-          </View>
-
-          {/* Next Arrow */}
-          <TouchableOpacity style={styles.arrowBtn} onPress={handleNext}>
-            <ChevronRight size={20} color="#8A38F5" strokeWidth={2.5} />
+            <Text style={styles.price}>{priceLabel}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.arrowBtn}
+            onPress={handleNext}
+            hitSlop={12}>
+            <ChevronRight size={22} color="#FFFFFF" strokeWidth={2.5} />
           </TouchableOpacity>
         </View>
-      </TouchableOpacity>
+        </View>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   section: {
-    marginTop: 28,
-    paddingHorizontal: 16,
-  },
-
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 14,
-    paddingHorizontal: 4,
+    paddingHorizontal: 20,
+    marginTop: 24,
+    marginBottom: 28,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#1A1A2E',
-    letterSpacing: -0.3,
+    fontFamily: 'SegoeUI-Bold',
+    color: '#111827',
+    marginBottom: 14,
   },
-  seeAll: {
-    flexDirection: 'row',
+  loaderBox: {
+    paddingVertical: 32,
     alignItems: 'center',
-    gap: 2,
   },
-  seeAllText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#8A38F5',
+  cardOuter: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.08)',
+    ...Platform.select({
+      android: {elevation: 0},
+      default: {},
+    }),
   },
-
-  /* CARD — white bg, rounded, shadow */
-  card: {
-    width: '100%',
-    borderRadius: 20,
+  cardInner: {
+    borderRadius: 22,
     overflow: 'hidden',
     backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    shadowOffset: {width: 0, height: 4},
   },
-
-  /* TOP IMAGE */
-  imageWrap: {
-    width: '100%',
-    height: 210,
+  imageBox: {
+    width: width - 40,
+    height: 200,
+    backgroundColor: '#E5E7EB',
+    position: 'relative',
   },
-  cardImage: {
+  image: {
     width: '100%',
     height: '100%',
   },
-  preLaunchBadge: {
+  preLaunchTag: {
     position: 'absolute',
     top: 14,
     left: 14,
-    backgroundColor: '#8A38F5',
+    backgroundColor: '#6E56CF',
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.08)',
+    ...Platform.select({
+      android: {elevation: 0},
+      default: {},
+    }),
   },
   preLaunchText: {
     color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 12,
+    fontFamily: 'SegoeUI-Bold',
   },
-
-  /* BOTTOM WHITE PANEL */
-  infoPanel: {
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+  footer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
   },
-  infoLeft: {
+  footerText: {
     flex: 1,
-    gap: 4,
+    paddingRight: 12,
   },
-  projectName: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#1A1A2E',
-    letterSpacing: -0.3,
+  projectTitle: {
+    fontSize: 17,
+    fontFamily: 'SegoeUI-Bold',
+    color: '#111827',
+    marginBottom: 4,
   },
-  projectDesc: {
-    fontSize: 14,
-    color: '#6B7280',
-    fontWeight: '400',
+  projectSub: {
+    fontSize: 13,
+    color: '#868686',
+    lineHeight: 18,
+    marginBottom: 8,
   },
-  projectPrice: {
-    fontSize: 15,
-    color: '#8A38F5',
-    fontWeight: '700',
-    marginTop: 2,
+  price: {
+    fontSize: 16,
+    fontFamily: 'SegoeUI-Bold',
+    color: '#6E56CF',
   },
-
-  /* CIRCLE ARROW */
   arrowBtn: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    borderWidth: 1.5,
-    borderColor: '#8A38F5',
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
+    backgroundColor: '#6E56CF',
     alignItems: 'center',
-    marginLeft: 12,
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.08)',
+    ...Platform.select({
+      android: {elevation: 0},
+      default: {},
+    }),
   },
 });

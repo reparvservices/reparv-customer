@@ -11,7 +11,17 @@ import {
   Platform,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
+<<<<<<< HEAD
 import {BedDouble, Bath, Maximize2, MapPin, Heart} from 'lucide-react-native';
+=======
+import {
+  BedDouble,
+  Bath,
+  Maximize2,
+  MapPin,
+  Heart,
+} from 'lucide-react-native';
+>>>>>>> c97ae5fe9b1141d2e925d73b2359185946777473
 import {formatIndianAmount} from '../../utils/formatIndianAmount';
 import {getImageUri, parseFrontView} from '../../utils/imageHandle';
 import {useAllPropertiesCache} from '../../hooks/useAllPropertiesCache';
@@ -91,7 +101,15 @@ export default function HomePropertyCarousel({title, variant = 'sale'}) {
             }>
             <View style={styles.imageWrap}>
               {uri ? (
+<<<<<<< HEAD
                 <Image source={{uri}} style={styles.image} resizeMode="cover" />
+=======
+                <Image
+                  source={{uri}}
+                  style={styles.image}
+                  resizeMode="cover"
+                />
+>>>>>>> c97ae5fe9b1141d2e925d73b2359185946777473
               ) : (
                 <View style={[styles.image, styles.imagePlaceholder]} />
               )}
@@ -103,7 +121,13 @@ export default function HomePropertyCarousel({title, variant = 'sale'}) {
                 <Text
                   style={[
                     styles.tagText,
+<<<<<<< HEAD
                     variant === 'rent' ? styles.tagTextRent : styles.tagTextBuy,
+=======
+                    variant === 'rent'
+                      ? styles.tagTextRent
+                      : styles.tagTextBuy,
+>>>>>>> c97ae5fe9b1141d2e925d73b2359185946777473
                   ]}>
                   {variant === 'rent' ? 'For Rent' : 'Buy'}
                 </Text>

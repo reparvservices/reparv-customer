@@ -1,3 +1,4 @@
+import {useNavigation} from '@react-navigation/native';
 import React from 'react';
 import {
   View,
@@ -6,9 +7,8 @@ import {
   Image,
   TouchableOpacity,
   Dimensions,
+  Platform,
 } from 'react-native';
-import {useNavigation} from '@react-navigation/native';
-import LinearGradient from 'react-native-linear-gradient';
 
 const {width} = Dimensions.get('window');
 
@@ -16,120 +16,98 @@ export default function HomeLoan() {
   const navigation = useNavigation();
 
   return (
-    <View style={styles.wrapper}>
-      <LinearGradient
-        colors={['#EBF4FF', '#E0F2FE']}
-        start={{x: 0, y: 0}}
-        end={{x: 1, y: 1}}
-        style={styles.card}>
-        {/* Decorative circle */}
-        <View style={styles.decorCircle} />
-
-        {/* Left content */}
-        <View style={styles.left}>
+    <View style={styles.container}>
+      <View style={styles.cardShell}>
+        <View style={styles.card}>
+          <View style={styles.leftCol}>
           <Text style={styles.title}>
-            Home Loans That Fit{'\n'}
-            Your Life, Seamlessly.
+            Home Loans That Fit Your Life, Seamlessly.
           </Text>
-
           <TouchableOpacity
-            style={styles.btn}
-            onPress={() => navigation.navigate('HomeLoan', {propertyid: null})}>
-            <Text style={styles.btnText}>Start Application</Text>
+            style={styles.button}
+            onPress={() =>
+              navigation.navigate('HomeLoan', {
+                propertyid: null,
+              })
+            }>
+            <Text style={styles.buttonText}>Start Application</Text>
           </TouchableOpacity>
         </View>
-
-        {/* Right Illustration */}
-        <View style={styles.right}>
+        <View style={styles.artCol}>
           <Image
             source={require('../../assets/image/home/illustration1.png')}
-            style={styles.illustration}
+            style={styles.rightImage}
             resizeMode="contain"
           />
         </View>
-      </LinearGradient>
+        </View>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrapper: {
+  container: {
     paddingHorizontal: 20,
-    marginTop: 24,
+    paddingTop: 24,
+    paddingBottom: 8,
   },
-
+  cardShell: {
+    width: width - 40,
+    borderRadius: 22,
+    backgroundColor: '#D6F0FA',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.08)',
+    ...Platform.select({
+      android: {elevation: 0},
+      default: {},
+    }),
+  },
   card: {
-    borderRadius: 20,
+    borderRadius: 22,
+    overflow: 'hidden',
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 20,
-    overflow: 'hidden',
-    minHeight: 140,
-    borderWidth: 1,
-    borderColor: '#E0F2FE',
-    shadowColor: '#0284C7',
+    paddingVertical: 18,
+    paddingHorizontal: 16,
+    backgroundColor: '#D6F0FA',
   },
-
-  decorCircle: {
-    position: 'absolute',
-    top: -40,
-    right: 80,
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: 'rgba(255,255,255,0.3)',
+  leftCol: {
+    flex: 1,
+    paddingRight: 8,
   },
-
-  left: {flex: 1, zIndex: 1},
-
-  label: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#0369A1',
-    letterSpacing: 1.2,
-    marginBottom: 6,
-  },
-
   title: {
     fontSize: 17,
-    fontWeight: '700',
-    color: '#0369A1',
-    lineHeight: 23,
+    fontFamily: 'SegoeUI-Bold',
+    color: '#0F2942',
+    lineHeight: 24,
+    marginBottom: 14,
   },
-
-  titleAccent: {
-    color: '#0284C7',
-  },
-
-  btn: {
-    marginTop: 14,
-    backgroundColor: '#0284C7',
-    paddingVertical: 10,
-    paddingHorizontal: 18,
-    borderRadius: 10,
+  button: {
+    backgroundColor: '#2563EB',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 24,
     alignSelf: 'flex-start',
-    shadowColor: '#0284C7',
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    shadowOffset: {width: 0, height: 4},
-    elevation: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.08)',
+    ...Platform.select({
+      android: {elevation: 0},
+      default: {},
+    }),
   },
-
-  btnText: {
+  buttonText: {
     color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '700',
+    fontFamily: 'SegoeUI-Bold',
+    fontSize: 14,
   },
-
-  right: {
-    width: 120,
-    height: 120,
-    justifyContent: 'center',
+  artCol: {
+    width: width * 0.34,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-
-  illustration: {
-    width: 110,
-    height: 110,
+  rightImage: {
+    width: '100%',
+    height: 108,
   },
 });

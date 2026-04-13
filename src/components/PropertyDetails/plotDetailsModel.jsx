@@ -81,7 +81,7 @@ export default function PropertyPlotDetailsView({
     // For numbers less than 1000
     return `₹${num}`;
   };
-  const BASE_IMAGE_URL = 'https://api.reparv.in';
+  const BASE_IMAGE_URL = 'https://aws-api.reparv.in';
 
   const parseFrontView = value => {
     if (!value) return [];
@@ -170,14 +170,14 @@ export default function PropertyPlotDetailsView({
                   key={index}
                   source={{uri: getImageUri(img)}}
                   style={styles.image}
-                  resizeMode="contain"
+                  resizeMode="cover"
                 />
               ))
             ) : (
               <Image
                 source={require('../../assets/image/property/building.png')}
                 style={styles.image}
-                resizeMode="contain"
+                resizeMode="cover"
               />
             )}
           </ScrollView>

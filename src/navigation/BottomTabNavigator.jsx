@@ -12,14 +12,13 @@ import TrendsIcon from '../assets/image/bottom-navigator/trends.png';
 import ActivitiesIcon from '../assets/image/bottom-navigator/activities.png';
 import CalculatorIcon from '../assets/image/bottom-navigator/calculator.png';
 import ProfileIcon from '../assets/image/bottom-navigator/profile.png';
-import BlogScreen from '../screens/BlogScreen';
 
 const Tab = createBottomTabNavigator();
 
 function CustomTabBar({state, navigation}) {
   const tabs = [
     {label: 'Home', icon: HomeIcon, route: 'Home'},
-    // {label: 'Blogs', icon: TrendsIcon, route: 'Blogs'},
+    {label: 'Trends', icon: TrendsIcon, route: 'Trends'},
     {label: 'Activities', icon: ActivitiesIcon, route: 'Activities'},
     {label: 'Calculator', icon: CalculatorIcon, route: 'Calculator'},
     {label: 'Profile', icon: ProfileIcon, route: 'Profile'},
@@ -80,10 +79,10 @@ function CustomTabBar({state, navigation}) {
 export default function BottomTabNavigator() {
   return (
     <Tab.Navigator
-      screenOptions={{headerShown: false}}
+      screenOptions={{headerShown: false, lazy: true}}
       tabBar={props => <CustomTabBar {...props} />}>
       <Tab.Screen name="Home" component={HomeScreen} />
-      {/* <Tab.Screen name="Blogs" component={BlogScreen} /> */}
+      <Tab.Screen name="Trends" component={TrendsScreen} />
       <Tab.Screen name="Activities" component={ActivitiesScreen} />
       <Tab.Screen name="Calculator" component={CalculatorScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />

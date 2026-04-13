@@ -110,7 +110,7 @@ export default function RentPropertyScreen() {
               source={BgImg}
               style={styles.cardBg}
               imageStyle={styles.cardBgImage}
-              resizeMode="contain">
+              resizeMode="cover">
               <View style={styles.row1}>
                 <Text style={styles.title}>{formatTitle(item.title)}</Text>
                 <View style={styles.circle}>
@@ -135,7 +135,7 @@ export default function RentPropertyScreen() {
             source={BottomBgImg}
             style={styles.bottomBg}
             imageStyle={styles.bottomBgImg}
-            resizeMode="contain">
+            resizeMode="cover">
             <View style={styles.bottomLeft}>
               <LinearGradient
                 colors={['#EDE0FF', '#DFCEF4']}

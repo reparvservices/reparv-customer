@@ -16,9 +16,9 @@ import {formatIndianAmount} from '../../utils/formatIndianAmount';
 import {getImageUri, parseFrontView} from '../../utils/imageHandle';
 
 const {width} = Dimensions.get('window');
-const IMAGE_BASE_URL = 'https://api.reparv.in';
+const IMAGE_BASE_URL = 'https://reparv-assets.s3.ap-south-1.amazonaws.com';
 
-const PropertyCard = ({item}) => {
+function PropertyCard({item}) {
   const navigation = useNavigation();
   const {user} = useSelector(state => state.auth);
   const [isLiked, setIsLiked] = useState(false);
@@ -31,7 +31,7 @@ const PropertyCard = ({item}) => {
       if (item.projectpartnerid) {
         try {
           const res = await fetch(
-            `https://api.reparv.in/projectpartner/subscription/user/${item?.projectpartnerid}`,
+            `https://aws-api.reparv.in/projectpartner/subscription/user/${item?.projectpartnerid}`,
           );
           const data = await res.json();
           if (data.active) {
@@ -227,9 +227,9 @@ const PropertyCard = ({item}) => {
       </View>
     </View>
   );
-};
+}
 
-export default PropertyCard;
+export default React.memo(PropertyCard);
 
 const styles = StyleSheet.create({
   card: {

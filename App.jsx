@@ -23,6 +23,7 @@ import messaging from '@react-native-firebase/messaging';
 import {navigationRef} from './src/navigation/Navigationref';
 import {refreshTuyaSessionOnLaunch} from './src/services/tuyaApi';
 import {tuyaApi} from './src/features/tuya/tuyaApiSlice';
+import {devLog} from './src/utils/devLog';
 
 Settings.initializeSDK();
 
@@ -76,7 +77,7 @@ const Root = () => {
 
       if (enabled) {
         const token = await messaging().getToken();
-        console.log('🔥 FCM TOKEN:', token);
+        devLog('🔥 FCM TOKEN:', token);
 
         if (!userId) return;
 
@@ -93,7 +94,7 @@ const Root = () => {
         );
       }
     } catch (error) {
-      console.log('Notification permission error:', error);
+      devLog('Notification permission error:', error);
     }
   };
 
@@ -131,7 +132,7 @@ const Root = () => {
   // 🔔 Foreground — app is open, notification arrives
   useEffect(() => {
     const unsubscribe = messaging().onMessage(async remoteMessage => {
-      console.log('📩 Foreground Notification:', remoteMessage);
+      devLog('📩 Foreground Notification:', remoteMessage);
       // Navigator is already ready in foreground — navigate directly
       handleNotificationNavigation(remoteMessage.data);
     });
@@ -141,7 +142,7 @@ const Root = () => {
   // 🔔 Background tap — user taps notification while app is in background
   useEffect(() => {
     const unsubscribe = messaging().onNotificationOpenedApp(remoteMessage => {
-      console.log('📲 Background notification tap:', remoteMessage);
+      devLog('📲 Background notification tap:', remoteMessage);
       // Navigator may need a moment — tryNavigate handles it
       handleNotificationNavigation(remoteMessage.data);
     });
@@ -155,7 +156,7 @@ const Root = () => {
       .getInitialNotification()
       .then(remoteMessage => {
         if (!remoteMessage) return;
-        console.log('🚀 Quit state notification tap:', remoteMessage);
+        devLog('🚀 Quit state notification tap:', remoteMessage);
         handleNotificationNavigation(remoteMessage.data);
       });
   }, []);
@@ -170,7 +171,7 @@ const Root = () => {
           setShowUpdate(true);
         }
       } catch (err) {
-        console.log('Version check failed', err);
+        devLog('Version check failed', err);
       }
     };
     checkForUpdate();

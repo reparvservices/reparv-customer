@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useState, useCallback} from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   Image,
   ActivityIndicator,
   StatusBar,
+  Platform,
 } from 'react-native';
 import PropertyCard from '../components/property/PropertyCard';
 import CustomSlider from '../components/utilsComponents/CustomSlider';
@@ -24,6 +25,7 @@ import SearchIcon from '../assets/image/home/search.png';
 import {Filter, ListFilter} from 'lucide-react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {parseBhkList} from '../utils/parseBhk';
+import {fetchAllPropertiesCached} from '../services/allPropertiesCache';
 
 const {width} = Dimensions.get('window');
 const CARD_WIDTH = width - 32;
@@ -159,10 +161,7 @@ const PropertyListScreen = () => {
   const fetchFlats = async () => {
     setLoading(true);
     try {
-      const response = await fetch(
-        'https://aws-api.reparv.in/frontend/all-properties',
-      );
-      const data = await response.json();
+      const data = await fetchAllPropertiesCached();
 
       const activeApproved = data.filter(
         item => item.status === 'Active' && item.approve === 'Approved',
@@ -274,7 +273,7 @@ const PropertyListScreen = () => {
     setFilterVisible(false);
   };
 
-  const renderItem = ({item}) => <PropertyCard item={item} />;
+  const renderItem = useCallback(({item}) => <PropertyCard item={item} />, []);
   const filteredCategories = React.useMemo(() => {
     if (!ptype) return propertyCategory;
 
@@ -293,9 +292,6 @@ const PropertyListScreen = () => {
       item => !item.startsWith('Rental') && !item.startsWith('Resale'),
     );
   }, [ptype, propertyCategory]);
-
-  console.log(filteredCategories, 'giii');
-  console.log(bhk, 'd', filterbhk);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -435,6 +431,11 @@ const PropertyListScreen = () => {
             renderItem={renderItem}
             keyExtractor={item => item.propertyid.toString()}
             showsVerticalScrollIndicator={false}
+            removeClippedSubviews={Platform.OS === 'android'}
+            initialNumToRender={8}
+            maxToRenderPerBatch={10}
+            windowSize={10}
+            updateCellsBatchingPeriod={50}
           />
         )}
 

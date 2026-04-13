@@ -587,7 +587,7 @@ Best regards,
               //     uri: `https://aws-api.reparv.in${selectedImage[currentIndex]}`,
               //   }}
               //   style={styles.heroImage}
-              //   resizeMode="contain"
+              //   resizeMode="cover"
               // />
               <Image
                 source={{

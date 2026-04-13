@@ -5,8 +5,11 @@ import {
   StyleSheet,
   TouchableOpacity,
   Dimensions,
+  Image,
 } from 'react-native';
-import {Zap, ChevronRight} from 'lucide-react-native';
+
+import RentPropertyIllustration from '../../assets/image/home/property-on-rent.png';
+import ArrowIcon from '../../assets/image/home/actioncard/arrow.svg';
 import LinearGradient from 'react-native-linear-gradient';
 import RentPropertyCards from './RentPropertyCards';
 import {useNavigation} from '@react-navigation/native';
@@ -18,97 +21,164 @@ export default function RentProperty() {
 
   return (
     <>
-      {/* ── Section Header ── */}
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Explore Rentals</Text>
-        <TouchableOpacity
-          style={styles.seeAll}
-          onPress={() => navigation.navigate('RentProperty')}>
-          <Text style={styles.seeAllText}>See All</Text>
-          <ChevronRight size={14} color="#8A38F5" strokeWidth={2.5} />
-        </TouchableOpacity>
+      <View style={styles.card}>
+        {/* Left Illustration */}
+        <View style={styles.leftWrap}>
+          <Image
+            source={RentPropertyIllustration}
+            style={styles.leftImage}
+            resizeMode="contain"
+          />
+        </View>
+
+        {/* Content */}
+        <View style={styles.content}>
+          {/* Title Row */}
+          <View style={styles.titleRow}>
+            <Text style={styles.title}>Property On Rent</Text>
+
+            <View style={styles.arrowCircle}>
+              <ArrowIcon width={18} height={18} />
+            </View>
+          </View>
+
+          {/* Subtitle – SINGLE LINE */}
+          <Text
+            style={styles.sub}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.85}>
+            Verified Listings • Easy Move-In
+          </Text>
+
+          {/* Tag */}
+          <LinearGradient
+            colors={['#8A38F5', '#FDFEFE']}
+            start={{x: 0, y: 0}}
+            end={{x: 1, y: 0}}
+            style={styles.tag}>
+            <Text
+              style={styles.tagText}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.85}>
+              Zero Brokerage Options
+            </Text>
+          </LinearGradient>
+
+          {/* CTA BUTTON – SINGLE LINE */}
+          <TouchableOpacity
+            style={styles.ctaBtn}
+            onPress={() => navigation.navigate('RentProperty')}>
+            <Text
+              style={styles.ctaText}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.85}>
+              Find Rental Property
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {/* ── Horizontal Rent Cards ── */}
       <RentPropertyCards />
-
-      {/* ── Zero Brokerage Banner ── */}
-      <LinearGradient
-        colors={['#FFF3E0', '#FFCC80']}
-        start={{x: 0, y: 0}}
-        end={{x: 1, y: 0}}
-        style={styles.zeroBanner}>
-        <View style={styles.zeroLeft}>
-          <Text style={styles.zeroTitle}>Zero Brokerage</Text>
-          <Text style={styles.zeroSub}>List your property for free today.</Text>
-        </View>
-        <View style={styles.zapCircle}>
-          <Zap size={26} color="#E65100" fill="#E65100" />
-        </View>
-      </LinearGradient>
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  sectionHeader: {
+  card: {
+    width: width - 32,
+    alignSelf: 'center',
+    borderRadius: 12,
+    backgroundColor: '#FDFEFE',
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+    marginTop: 10,
     alignItems: 'center',
-    paddingHorizontal: 20,
-    marginTop: 28,
-    marginBottom: 2,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1A1A2E',
-    letterSpacing: -0.3,
-  },
-  seeAll: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-  },
-  seeAllText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#8A38F5',
+    elevation: 6, // Android shadow
   },
 
-  /* ZERO BROKERAGE */
-  zeroBanner: {
-    marginHorizontal: 16,
-    marginTop: 20,
-    borderRadius: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 24,
-    paddingVertical: 22,
-  },
-  zeroLeft: {gap: 6},
-  zeroTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#BF360C',
-  },
-  zeroSub: {
-    fontSize: 14,
-    color: '#BF360C',
-    fontWeight: '400',
-    opacity: 0.85,
-  },
-  zapCircle: {
-    width: 46,
-    height: 46,
-    borderRadius: 28,
-    backgroundColor: '#FFFFFF',
+  leftWrap: {
+    width: 130,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#E65100',
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 3,
+  },
+
+  leftImage: {
+    width: 120,
+    height: 150,
+  },
+
+  content: {
+    flex: 1,
+    marginLeft: 12,
+  },
+
+  titleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+
+  title: {
+    fontSize: 16,
+    fontFamily: 'SegoeUI-Bold',
+    color: '#3F2D62',
+    lineHeight:20
+  },
+
+  arrowCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#F1EAFE',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  /* SINGLE LINE SUBTITLE */
+  sub: {
+    color: '#868686',
+    marginTop: 4,
+    fontSize: 12,
+    lineHeight: 16,
+  },
+
+  tag: {
+    alignSelf: 'flex-start',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    marginTop: 10,
+    maxWidth: '100%',
+  },
+
+  tagText: {
+    color: '#fff',
+    fontFamily: 'SegoeUI-Bold',
+    fontSize: 12,
+    includeFontPadding: false, // Android fix
+    textAlignVertical: 'center',
+  },
+
+  /* CTA BUTTON */
+  ctaBtn: {
+    backgroundColor: '#5E23DC',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+    marginTop: 14,
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    minWidth: '90%', // ensures one-line space
+  },
+
+  ctaText: {
+    color: '#FFF',
+    fontFamily: 'SegoeUI-Bold',
+    fontSize: 13,
+    textAlign: 'center',
   },
 });

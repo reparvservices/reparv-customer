@@ -11,9 +11,7 @@ export default function ZeroBrokerageBanner() {
     <TouchableOpacity
       style={styles.wrap}
       activeOpacity={0.92}
-      onPress={() =>
-        navigation.navigate('OldProperty', {mode: 'add', type: 'sell'})
-      }>
+      onPress={() => navigation.navigate('OldProperty', {mode: 'add', type: 'sell'})}>
       <LinearGradient
         colors={['#FFF4E8', '#FFE8CC']}
         start={{x: 0, y: 0}}

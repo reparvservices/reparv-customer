@@ -19,9 +19,10 @@ import {formatIndianAmount} from '../../utils/formatIndianAmount';
 import {Building2, Eye, HeartIcon} from 'lucide-react-native';
 import {useNavigation} from '@react-navigation/native';
 import {checkSubscription} from '../home/RentPropertyCards';
+import {fetchAllPropertiesCached} from '../../services/allPropertiesCache';
 
 const {width} = Dimensions.get('window');
-const IMAGE_BASE_URL = 'https://api.reparv.in';
+const IMAGE_BASE_URL = 'https://reparv-assets.s3.ap-south-1.amazonaws.com';
 
 export default function SimilerProperty({filterType, city, budget}) {
   const [flats, setFlats] = useState([]);
@@ -53,10 +54,7 @@ export default function SimilerProperty({filterType, city, budget}) {
   const fetchFlats = async () => {
     setLoading(true);
     try {
-      const response = await fetch(
-        'https://aws-api.reparv.in/frontend/all-properties',
-      );
-      const data = await response.json();
+      const data = await fetchAllPropertiesCached();
 
       const filtered = data.filter(
         item => item.status === 'Active' && item.approve === 'Approved',
