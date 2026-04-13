@@ -18,6 +18,7 @@ import Location from '../../assets/image/home/rented-properties-card/location.pn
 import Message from '../../assets/image/home/rented-properties-card/message.png';
 import {formatIndianAmount} from '../../utils/formatIndianAmount';
 import {fetchAllPropertiesCached} from '../../services/allPropertiesCache';
+import {getImageUri} from '../../utils/imageHandle';
 
 const {width} = Dimensions.get('window');
 const IMAGE_BASE_URL = 'https://reparv-assets.s3.ap-south-1.amazonaws.com';
@@ -133,6 +134,7 @@ export default function RentPropertyCards() {
     try {
       if (item.frontView) {
         const parsed = JSON.parse(item.frontView);
+        console.log(IMAGE_BASE_URL + parsed[0], 'image url');
         return IMAGE_BASE_URL + parsed[0];
       }
       return null;
@@ -145,7 +147,10 @@ export default function RentPropertyCards() {
      CARD UI
   --------------------------------------- */
   const renderItem = ({item}) => {
-    const imageUri = getImage(item);
+    const imageUri = getImageUri(
+      item.frontView ? JSON.parse(item.frontView)[0] : null,
+    );
+    console.log(imageUri);
 
     return (
       <View style={styles.card}>
