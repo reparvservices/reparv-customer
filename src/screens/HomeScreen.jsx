@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect} from 'react';
+import React, {useCallback} from 'react';
 import {
   View,
   StyleSheet,
@@ -6,14 +6,14 @@ import {
   BackHandler,
   StatusBar,
 } from 'react-native';
+import {SafeAreaView} from 'react-native-safe-area-context';
 import HomeHeader from '../components/home/HomeHeader';
 import ActionCards from '../components/home/ActionCards';
-import RentProperty from '../components/home/RentProperty';
 import HomeLoan from '../components/home/HomeLoan';
-import {useFocusEffect} from '@react-navigation/native';
-import { useDispatch } from 'react-redux';
-import { loadUser } from '../features/auth/authSlice';
+import HomePropertyCarousel from '../components/home/HomePropertyCarousel';
+import ZeroBrokerageBanner from '../components/home/ZeroBrokerageBanner';
 import NewLaunchShowcaseBanner from '../components/home/NewLauncCard';
+import {useFocusEffect} from '@react-navigation/native';
 
 export default function HomeScreen() {
   useFocusEffect(
@@ -31,37 +31,43 @@ export default function HomeScreen() {
       return () => sub.remove();
     }, []),
   );
-const dispatch=useDispatch()
-  useEffect(()=>{
-    dispatch(loadUser())
-  },[])
   return (
     <>
-     <StatusBar
-        backgroundColor="#4a2c6a"
-        barStyle="light-content"
+      <StatusBar
+        backgroundColor="#F7F6FF"
+        barStyle="dark-content"
         translucent={false}
       />
-    
-    <View style={styles.container}>
-     
-
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <HomeHeader />
-        <ActionCards />
-        <RentProperty />
-        <HomeLoan />
-        <NewLaunchShowcaseBanner/>
-        <View style={{height:0,padding:10}}/>
-      </ScrollView>
-    </View>
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <View style={styles.container}>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={styles.scrollContent}>
+            <HomeHeader />
+            <ActionCards />
+            <HomeLoan />
+            <HomePropertyCarousel title="Trending Properties" variant="sale" />
+            <HomePropertyCarousel title="Explore Rentals" variant="rent" />
+            <ZeroBrokerageBanner />
+            <NewLaunchShowcaseBanner />
+          </ScrollView>
+        </View>
+      </SafeAreaView>
     </>
   );
 }
 
 const styles = StyleSheet.create({
+  safe: {
+    flex: 1,
+    backgroundColor: '#F7F6FF',
+  },
   container: {
     flex: 1,
-    backgroundColor: '#FAF8FF',
+    backgroundColor: '#F7F6FF',
+  },
+  scrollContent: {
+    paddingBottom: 24,
   },
 });

@@ -1,18 +1,25 @@
 import React, {useEffect, useState} from 'react';
-import {View, Text, StyleSheet, Image, TouchableOpacity} from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
-import {ArrowRight} from 'lucide-react-native';
-import logo from '../../assets/image/common/logo.png';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Image,
+  TouchableOpacity,
+  ActivityIndicator,
+  Dimensions,
+} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
-import {ActivityIndicator} from 'react-native';
+import {ChevronRight} from 'lucide-react-native';
 import {formatIndianAmount} from '../../utils/formatIndianAmount';
 import {getImageUri, parseFrontView} from '../../utils/imageHandle';
+
+const {width} = Dimensions.get('window');
 
 export default function NewLaunchShowcase() {
   const navigation = useNavigation();
   const [flats, setFlats] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [currentIndex, setCurrentIndex] = useState(0); // current property index
+  const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
     fetchFlats();
@@ -25,7 +32,6 @@ export default function NewLaunchShowcase() {
         'https://aws-api.reparv.in/frontend/all-properties',
       );
       const data = await response.json();
-
       const filtered = data.filter(
         item =>
           item.status === 'Active' &&
@@ -40,232 +46,191 @@ export default function NewLaunchShowcase() {
     }
   };
 
+  const handleNext = () => {
+    setCurrentIndex(prev => (prev + 1) % flats.length);
+  };
+
   if (loading) {
     return (
-      <View
-        style={{
-          flex: 1,
-          justifyContent: 'center',
-          alignItems: 'center',
-          backgroundColor: '#ffffff',
-        }}>
-        <ActivityIndicator size="large" color="#a545ee" />
-      </View>
+      <ActivityIndicator size="large" style={{marginTop: 30}} color="#8A38F5" />
     );
   }
-
-  const getImageUrl = img => {
-    try {
-      const parsed = JSON.parse(img);
-      return parsed?.[0] ? `https://aws-api.reparv.in${parsed[0]}` : null;
-    } catch {
-      return null;
-    }
-  };
-
-  const formatPrice = price => {
-    if (!price) return '';
-    const num = Number(price);
-    if (num >= 10000000) return `₹${(num / 10000000).toFixed(2)} Cr`;
-    if (num >= 100000) return `₹${(num / 100000).toFixed(2)} L`;
-    return `₹${num}`;
-  };
-
-  const handleNext = () => {
-    setCurrentIndex(prev => (prev + 1) % flats.length); // loop back to first property
-  };
 
   if (flats.length === 0) return null;
 
   const currentFlat = flats[currentIndex];
-  const imgUrl = getImageUri(parseFrontView(currentFlat?.frontView)[0]);
 
   return (
-    <View style={styles.frame}>
-      <LinearGradient
-        colors={['#F1E6FF', '#FFFFFF']}
-        start={{x: 0, y: 0}}
-        end={{x: 1, y: 1}}
-        style={styles.card}>
-        {/* Header */}
-        <View style={styles.header}>
-          <LinearGradient
-            colors={['#8A38F5', '#FAF8FF']}
-            start={{x: 0, y: 0}}
-            end={{x: 1, y: 0}}
-            style={styles.line}
-          />
-          <Text style={styles.headerText}>
-            New Launch <Text style={styles.highlight}>Showcase</Text>
-          </Text>
-          <LinearGradient
-            colors={['#8A38F5', '#FAF8FF']}
-            start={{x: 0, y: 0}}
-            end={{x: 1, y: 0}}
-            style={styles.line}
-          />
-        </View>
-
-        {/* Title */}
-        <View style={styles.titleRow}>
-          <Image
-            source={require('../../assets/image/home/building.png')}
-            style={[styles.icon]}
-          />
-          <Text style={styles.title}>
-            <Text style={styles.highlight}>Most Popular{'\n'}</Text>
-            New Projects in{'\n'}
-            Nagpur
-          </Text>
-        </View>
-
-        {/* Company */}
-        <View style={styles.companyRow}>
-          <View style={styles.logoBox}>
-            <Image
-              source={logo}
-              style={styles.logoImage}
-              resizeMode="contain"
-            />
-          </View>
-          <View>
-            <Text style={styles.company}>
-              {currentFlat?.projectBy || 'Reparv'}
-            </Text>
-            <TouchableOpacity
-              style={styles.cta}
-              onPress={() =>
-                navigation.navigate('PropertyDetails', {
-                  seoSlug: currentFlat?.seoSlug,
-                })
-              }>
-              <Text style={styles.ctaText}>View Project</Text>
-              <ArrowRight size={20} color="#fff" />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Current Property */}
-        {/* Current Property */}
+    <View style={styles.section}>
+      {/* ── Section Header ── */}
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>New Launches</Text>
         <TouchableOpacity
-          style={[styles.imageBox, {borderRadius: 24}]}
-          onPress={() =>
-            navigation.navigate('PropertyDetails', {
-              seoSlug: currentFlat?.seoSlug,
-            })
-          }>
+          style={styles.seeAll}
+          onPress={() => navigation.navigate('PropertyListScreen')}>
+          <Text style={styles.seeAllText}>See All</Text>
+          <ChevronRight size={14} color="#8A38F5" strokeWidth={2.5} />
+        </TouchableOpacity>
+      </View>
+
+      {/* ── Launch Card ── */}
+      <TouchableOpacity
+        style={styles.card}
+        activeOpacity={0.95}
+        onPress={() =>
+          navigation.navigate('PropertyDetails', {
+            seoSlug: currentFlat?.seoSlug,
+          })
+        }>
+        {/* Top: Property Image */}
+        <View style={styles.imageWrap}>
           <Image
             source={
               currentFlat?.topPicksBanner
                 ? {uri: currentFlat?.topPicksBanner}
                 : require('../../assets/image/home/defaultProject.png')
             }
-            style={styles.image}
-            resizeMode="contain"
+            style={styles.cardImage}
+            resizeMode="cover"
           />
+          {/* Pre-Launch badge */}
+          <View style={styles.preLaunchBadge}>
+            <Text style={styles.preLaunchText}>Pre-Launch</Text>
+          </View>
+        </View>
 
-          {/* Only Arrow Button */}
+        {/* Bottom: White info panel */}
+        <View style={styles.infoPanel}>
+          <View style={styles.infoLeft}>
+            <Text style={styles.projectName} numberOfLines={1}>
+              {currentFlat?.propertyName || 'Aurora Grand Heights'}
+            </Text>
+            <Text style={styles.projectDesc} numberOfLines={1}>
+              {currentFlat?.propertyCategory || 'Premium 3 & 4 BHK Residences'}
+            </Text>
+            <Text style={styles.projectPrice}>
+              Starting at ₹
+              {formatIndianAmount(currentFlat?.totalOfferPrice) || '9,50,000'}
+            </Text>
+          </View>
+
+          {/* Next Arrow */}
           <TouchableOpacity style={styles.arrowBtn} onPress={handleNext}>
-            <ArrowRight size={14} color="#8A38F5" />
+            <ChevronRight size={20} color="#8A38F5" strokeWidth={2.5} />
           </TouchableOpacity>
-        </TouchableOpacity>
-      </LinearGradient>
+        </View>
+      </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  frame: {
-    width: '95%',
-    height: 529,
-    margin: 'auto',
-  },
-  card: {
-    flex: 1,
-    borderRadius: 24,
-    borderColor: '#C8C8C8',
-    shadowColor: '#000',
-    paddingTop: 24,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  section: {
+    marginTop: 28,
     paddingHorizontal: 16,
   },
-  headerText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#000',
-  },
-  highlight: {color: '#8A38F5', fontWeight: '700'},
-  line: {
-    width: 66,
-    height: 1,
-    backgroundColor: '#8A38F5',
-  },
-  titleRow: {
-    flexDirection: 'row',
-    marginTop: 16,
-    paddingHorizontal: 16,
-  },
-  icon: {width: 105, height: 85, marginRight: 12},
-  title: {fontSize: 22, lineHeight: 32, fontWeight: '700', color: '#000'},
-  companyRow: {flexDirection: 'row', marginTop: 16, paddingHorizontal: 16},
-  logoBox: {
-    width: 76,
-    height: 76,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    marginRight: 16,
-  },
-  logoImage: {width: 60, height: 60},
-  company: {fontSize: 16, fontWeight: '700', marginBottom: 8},
-  cta: {
-    height: 40,
-    backgroundColor: '#5E23DC',
-    borderRadius: 6,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    width: 150,
-  },
-  ctaText: {color: '#FFF', fontSize: 16, fontWeight: '600'},
-  imageBox: {
-    marginTop: 16,
-    height: 260,
 
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 14,
+    paddingHorizontal: 4,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1A1A2E',
+    letterSpacing: -0.3,
+  },
+  seeAll: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  seeAllText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#8A38F5',
+  },
+
+  /* CARD — white bg, rounded, shadow */
+  card: {
+    width: '100%',
+    borderRadius: 20,
     overflow: 'hidden',
-    borderRadius: 24,
-    borderColor: '#C8C8C8',
+    backgroundColor: '#FFFFFF',
     shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    shadowOffset: {width: 0, height: 4},
   },
-  image: {width: '100%', height: '100%'},
-  imageOverlay: {...StyleSheet.absoluteFillObject},
-  imageText: {
+
+  /* TOP IMAGE */
+  imageWrap: {
+    width: '100%',
+    height: 210,
+  },
+  cardImage: {
+    width: '100%',
+    height: '100%',
+  },
+  preLaunchBadge: {
     position: 'absolute',
-    bottom: 20,
-    left: 16,
-    right: 60,
+    top: 14,
+    left: 14,
+    backgroundColor: '#8A38F5',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
   },
-  projectName: {fontSize: 24, fontWeight: '700', color: '#FFF'},
-  location: {fontSize: 16, fontWeight: '700', color: '#FFF'},
-  price: {fontSize: 16, fontWeight: '700', color: '#FFF', marginTop: 8},
-  config: {fontSize: 12, fontWeight: '700', color: '#FFF', marginTop: 4},
+  preLaunchText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+
+  /* BOTTOM WHITE PANEL */
+  infoPanel: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  infoLeft: {
+    flex: 1,
+    gap: 4,
+  },
+  projectName: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#1A1A2E',
+    letterSpacing: -0.3,
+  },
+  projectDesc: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontWeight: '400',
+  },
+  projectPrice: {
+    fontSize: 15,
+    color: '#8A38F5',
+    fontWeight: '700',
+    marginTop: 2,
+  },
+
+  /* CIRCLE ARROW */
   arrowBtn: {
-    position: 'absolute',
-    right: 12,
-    top: 112,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#FFF',
-    borderWidth: 1,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1.5,
     borderColor: '#8A38F5',
+    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
+    marginLeft: 12,
   },
 });

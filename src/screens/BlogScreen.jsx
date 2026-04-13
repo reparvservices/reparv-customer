@@ -94,7 +94,7 @@ const BlogScreen = () => {
       <ImageBackground
         source={require('../assets/image/blogs/pn.jpg')}
         style={styles.hero}
-        resizeMode="cover">
+        resizeMode="contain">
         <LinearGradient
           colors={['rgba(0,0,0,0)', '#3F2D62']}
           locations={[0, 0.8]}

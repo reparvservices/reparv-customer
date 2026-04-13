@@ -170,14 +170,14 @@ export default function PropertyPlotDetailsView({
                   key={index}
                   source={{uri: getImageUri(img)}}
                   style={styles.image}
-                  resizeMode="cover"
+                  resizeMode="contain"
                 />
               ))
             ) : (
               <Image
                 source={require('../../assets/image/property/building.png')}
                 style={styles.image}
-                resizeMode="cover"
+                resizeMode="contain"
               />
             )}
           </ScrollView>

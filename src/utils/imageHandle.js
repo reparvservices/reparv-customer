@@ -7,7 +7,7 @@ export const getImageUri = path => {
   }
 
   // Local server image
-  return `https://api.reparv.in/${path}`;
+  return `https://reparv-assets.s3.ap-south-1.amazonaws.com${path}`;
 };
 export const parseFrontView = frontView => {
   try {
