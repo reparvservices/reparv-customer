@@ -47,7 +47,11 @@ export default function HomeHeader() {
             <TouchableOpacity
               style={styles.locationLineRow}
               activeOpacity={0.7}
-              onPress={() => navigation.navigate('PropertyListScreen')}>
+              onPress={() =>
+                navigation.navigate('PropertyListScreen', {
+                  city: user?.city || '',
+                })
+              }>
               <Text style={styles.locationMain} numberOfLines={1}>
                 {locationLine}
               </Text>
@@ -81,7 +85,7 @@ export default function HomeHeader() {
       <Image
         source={heroBanner}
         style={styles.heroImage}
-        resizeMode="cover"
+        resizeMode="contain"
         accessibilityRole="image"
         accessibilityLabel="Find, buy, or list properties"
       />
@@ -195,6 +199,6 @@ const styles = StyleSheet.create({
   },
   heroImage: {
     width: '100%',
-    height: 168,
+    height: 188,
   },
 });

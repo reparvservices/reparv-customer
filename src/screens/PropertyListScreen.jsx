@@ -64,6 +64,7 @@ const PropertyListScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const ptype = route?.params?.ptype;
+  const initialCity = route?.params?.city;
   const [flats, setFlats] = useState([]);
   const [filteredFlats, setFilteredFlats] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -96,6 +97,12 @@ const PropertyListScreen = () => {
       setSelectedTab(ptype);
     }
   }, [ptype]);
+
+  useEffect(() => {
+    if (initialCity) {
+      setSelectedCity(initialCity);
+    }
+  }, [initialCity]);
 
   useEffect(() => {
     if (flats.length > 0) {
@@ -144,6 +151,8 @@ const PropertyListScreen = () => {
     ];
   };
 
+  const normalizeCity = value => String(value || '').trim().toLowerCase();
+
   const getPropertyAmenities = item => {
     const list = [];
 
@@ -180,8 +189,10 @@ const PropertyListScreen = () => {
       );
 
       const uniqueCities = [
-        ...new Set(activeApproved.map(item => item.city).filter(Boolean)),
-      ];
+        ...new Set(
+          activeApproved.map(item => item.city?.trim()).filter(Boolean),
+        ),
+      ].sort((a, b) => a.localeCompare(b));
       setCities(uniqueCities);
     } catch (error) {
       console.error('Error fetching properties:', error);
@@ -256,7 +267,9 @@ const PropertyListScreen = () => {
           ? true
           : Number(item.distanceFromCityCenter) <= radius;
 
-      const matchCity = !selectedCity || item.city === selectedCity;
+      const matchCity =
+        !selectedCity ||
+        normalizeCity(item.city) === normalizeCity(selectedCity);
 
       return (
         matchCategory &&
@@ -324,8 +337,8 @@ const PropertyListScreen = () => {
             />
 
             <TextInput
-              placeholder="Search by location, city, project..."
-              placeholderTextColor="#999"
+              placeholder={'Search "Apartments in NY"'}
+              placeholderTextColor="#9CA3AF"
               value={searchText}
               onChangeText={text => setSearchText(text)}
               style={styles.searchInput}
@@ -413,6 +426,15 @@ const PropertyListScreen = () => {
         ) : filteredFlats.length === 0 ? (
           <EmptyState
             city={selectedCity || 'your city'}
+            suggestedCities={cities
+              .filter(
+                city => normalizeCity(city) !== normalizeCity(selectedCity),
+              )
+              .slice(0, 8)}
+            onSelectCity={city => {
+              setSelectedCity(city);
+              setSearchText('');
+            }}
             onReset={() => {
               setFilterPropertyCategory([]);
               setFilterBhk([]);
@@ -642,15 +664,15 @@ const styles = StyleSheet.create({
   },
 
   searchBox: {
-    flex: 1, // take remaining space
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
-    borderRadius: 10,
-    borderColor: '#DDD',
-    paddingHorizontal: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 28,
+    borderColor: 'rgba(0, 0, 0, 0.08)',
+    paddingHorizontal: 18,
     borderWidth: 1,
-    height: 44,
+    height: 56,
   },
 
   filterBtn: {
@@ -658,26 +680,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 10,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: '#7A2EFF',
-    height: 44,
+    height: 56,
     marginLeft: 8,
   },
 
   searchIcon: {
-    width: 16,
-    height: 16,
-    tintColor: '#868686', // optional (works if PNG is single-color)
+    width: 20,
+    height: 20,
+    tintColor: '#9CA3AF',
   },
 
   searchInput: {
     flex: 1,
-    marginTop: 2,
-    marginLeft: 8,
-    fontSize: 14,
-    color: '#000',
-    fontFamily: 'SegoeUI-Bold',
+    marginLeft: 10,
+    fontSize: 15,
+    color: '#111827',
+    padding: 0,
   },
 
   placeholder: {

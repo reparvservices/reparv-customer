@@ -6,7 +6,6 @@ import {
   Image,
   TouchableOpacity,
   ActivityIndicator,
-  Dimensions,
   Platform,
 } from 'react-native';
 import {ChevronRight} from 'lucide-react-native';
@@ -15,7 +14,7 @@ import {getImageUri, parseFrontView} from '../../utils/imageHandle';
 import {formatIndianAmount} from '../../utils/formatIndianAmount';
 import {useAllPropertiesCache} from '../../hooks/useAllPropertiesCache';
 
-const {width} = Dimensions.get('window');
+const LAUNCH_BANNER_ASPECT_RATIO = 16 / 9;
 
 export default function NewLaunchShowcase() {
   const navigation = useNavigation();
@@ -173,8 +172,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   imageBox: {
-    width: width - 40,
-    height: 200,
+    width: '100%',
+    aspectRatio: LAUNCH_BANNER_ASPECT_RATIO,
     backgroundColor: '#E5E7EB',
     position: 'relative',
   },

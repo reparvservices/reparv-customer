@@ -1050,7 +1050,7 @@ Best regards,
             {/* CTA Buttons */}
             <View style={styles.actionRow}>
               <ActionButton
-                label="call promoter"
+                label="Call Promoter"
                 iconButton={'call'}
                 onPress={() => {
                   Linking.openURL(`tel:${8010881965}`);

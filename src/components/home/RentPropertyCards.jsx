@@ -44,9 +44,30 @@ export default function RentPropertyCards() {
   const [likeCounts, setLikeCounts] = useState({});
   const navigation = useNavigation();
   const {user} = useSelector(state => state.auth);
+  const selectedCity = (user?.city || '').trim().toLowerCase();
+
+  const isCityMatch = item => {
+    if (!selectedCity) {
+      return true;
+    }
+
+    const propertyCity = String(item?.city || '')
+      .trim()
+      .toLowerCase();
+    const propertyLocation = String(item?.location || '')
+      .trim()
+      .toLowerCase();
+
+    return (
+      propertyCity === selectedCity ||
+      propertyLocation.includes(selectedCity) ||
+      selectedCity.includes(propertyCity)
+    );
+  };
+
   useEffect(() => {
     fetchFlats();
-  }, []);
+  }, [selectedCity]);
   /* ---------------------------------------
      FETCH VISITS
   --------------------------------------- */
@@ -74,7 +95,8 @@ export default function RentPropertyCards() {
         item =>
           item.status === 'Active' &&
           item.approve === 'Approved' &&
-          item.propertyCategory?.startsWith('Rental'),
+          item.propertyCategory?.startsWith('Rental') &&
+          isCityMatch(item),
       );
 
       const updated = await Promise.all(
@@ -240,6 +262,10 @@ export default function RentPropertyCards() {
     return (
       <ActivityIndicator size="large" style={{marginTop: 40}} color="#8A38F5" />
     );
+  }
+
+  if (!flats.length) {
+    return null;
   }
 
   return (

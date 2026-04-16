@@ -3,12 +3,10 @@ import {View, Text, Image, TouchableOpacity, StyleSheet} from 'react-native';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 
 import HomeScreen from '../screens/HomeScreen';
-import TrendsScreen from '../screens/TrendsScreen';
 import ActivitiesScreen from '../screens/ActivitiesScreen';
 import CalculatorScreen from '../screens/CalculatorScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import HomeIcon from '../assets/image/bottom-navigator/home.png';
-import TrendsIcon from '../assets/image/bottom-navigator/trends.png';
 import ActivitiesIcon from '../assets/image/bottom-navigator/activities.png';
 import CalculatorIcon from '../assets/image/bottom-navigator/calculator.png';
 import ProfileIcon from '../assets/image/bottom-navigator/profile.png';
@@ -18,7 +16,6 @@ const Tab = createBottomTabNavigator();
 function CustomTabBar({state, navigation}) {
   const tabs = [
     {label: 'Home', icon: HomeIcon, route: 'Home'},
-    {label: 'Trends', icon: TrendsIcon, route: 'Trends'},
     {label: 'Activities', icon: ActivitiesIcon, route: 'Activities'},
     {label: 'Calculator', icon: CalculatorIcon, route: 'Calculator'},
     {label: 'Profile', icon: ProfileIcon, route: 'Profile'},
@@ -82,7 +79,6 @@ export default function BottomTabNavigator() {
       screenOptions={{headerShown: false, lazy: true}}
       tabBar={props => <CustomTabBar {...props} />}>
       <Tab.Screen name="Home" component={HomeScreen} />
-      <Tab.Screen name="Trends" component={TrendsScreen} />
       <Tab.Screen name="Activities" component={ActivitiesScreen} />
       <Tab.Screen name="Calculator" component={CalculatorScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />

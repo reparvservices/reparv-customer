@@ -121,12 +121,15 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 16,
     fontFamily: 'SegoeUI-Bold',
+    lineHeight: 22,
     color: '#111827',
+    flexShrink: 1,
     marginBottom: 6,
   },
   cardSub: {
     fontSize: 13,
     color: '#868686',
-    lineHeight: 18,
+    lineHeight: 20,
+    flexShrink: 1,
   },
 });
