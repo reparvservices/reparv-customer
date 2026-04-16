@@ -71,7 +71,7 @@ const LoanTabs = ({active, onChange}) => (
 export default function HomeLoan() {
   const navigation = useNavigation();
   const route = useRoute();
-  const {propertyid} = route.params;
+  const {propertyid} = route.params || {};
   const {user} = useSelector(state => state.auth);
   const [tab, setTab] = useState('job');
   const [step, setStep] = useState(1);

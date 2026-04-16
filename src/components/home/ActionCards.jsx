@@ -84,12 +84,13 @@ export default function ActionCards() {
 const styles = StyleSheet.create({
   section: {
     paddingHorizontal: 20,
-    marginTop: 24,
+    marginTop: 5,
   },
   sectionTitle: {
     fontSize: 18,
-    fontFamily: 'SegoeUI-Bold',
+    fontFamily: 'Inter-Bold',
     color: '#111827',
+    fontWeight: '700',
     marginBottom: 16,
   },
   grid: {
@@ -119,8 +120,9 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   cardTitle: {
-    fontSize: 16,
-    fontFamily: 'SegoeUI-Bold',
+    fontSize: 17,
+    fontFamily: 'Inter-Bold',
+    fontWeight: '800',
     lineHeight: 22,
     color: '#111827',
     flexShrink: 1,

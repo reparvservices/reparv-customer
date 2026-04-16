@@ -1,6 +1,7 @@
 import React, {useEffect, useState} from 'react';
 import {
   Text,
+  TextInput,
   View,
   Modal,
   Button,
@@ -29,7 +30,10 @@ Settings.initializeSDK();
 
 /* Set global font once */
 Text.defaultProps = Text.defaultProps || {};
-Text.defaultProps.style = {fontFamily: 'SegoeUI-Regular'};
+Text.defaultProps.style = {fontFamily: 'Inter-Regular'};
+
+TextInput.defaultProps = TextInput.defaultProps || {};
+TextInput.defaultProps.style = {fontFamily: 'Inter-Regular'};
 
 // ── Helper: navigate to PropertyDetails from notification data ────────────────
 // Polls navigationRef.isReady() every 200ms until navigator is mounted,

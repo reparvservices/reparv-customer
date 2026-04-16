@@ -81,7 +81,6 @@ export default function HomeHeader() {
         />
       </TouchableOpacity>
 
-      {/* <View style={styles.heroOuter}> */}
       <Image
         source={heroBanner}
         style={styles.heroImage}
@@ -89,7 +88,6 @@ export default function HomeHeader() {
         accessibilityRole="image"
         accessibilityLabel="Find, buy, or list properties"
       />
-      {/* </View> */}
     </View>
   );
 }
@@ -98,7 +96,6 @@ const styles = StyleSheet.create({
   topBlock: {
     paddingHorizontal: 20,
     paddingTop: 8,
-    paddingBottom: 8,
   },
   row: {
     flexDirection: 'row',
@@ -169,7 +166,6 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     paddingHorizontal: 18,
     paddingVertical: Platform.OS === 'ios' ? 14 : 12,
-    marginBottom: 20,
     borderWidth: 1,
     borderColor: 'rgba(0, 0, 0, 0.08)',
     ...Platform.select({
@@ -184,19 +180,7 @@ const styles = StyleSheet.create({
     color: '#111827',
     padding: 0,
   },
-  heroOuter: {
-    width: width - 40,
-    alignSelf: 'center',
-    borderRadius: 24,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.08)',
-    backgroundColor: '#E8E4FF',
-    ...Platform.select({
-      android: {elevation: 0},
-      default: {},
-    }),
-  },
+
   heroImage: {
     width: '100%',
     height: 188,

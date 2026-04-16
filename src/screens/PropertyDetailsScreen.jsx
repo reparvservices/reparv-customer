@@ -87,7 +87,7 @@ const PropertyDetailsScreen = () => {
   const scrollRef = useRef(null);
   const thumbnailRef = useRef(null);
   const navigation = useNavigation();
-  const {seoSlug} = route.params;
+  const {seoSlug} = route.params || {};
   const [selectedImage, setImages] = useState(() => {
     const rawValue = propertyData?.['frontView'];
     const imagesArray = rawValue ? JSON.parse(rawValue) : [];

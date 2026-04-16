@@ -229,7 +229,7 @@ export default function ProfileScreen() {
         <View style={styles.statsCard}>
           <TouchableOpacity
             style={styles.statWrapper}
-            onPress={() => navigation.navigate('MyListings')}>
+            onPress={() => navigation.navigate('mylisting')}>
             <StatItem icon={Building2} label="My Listings" value={properties} />
           </TouchableOpacity>
 

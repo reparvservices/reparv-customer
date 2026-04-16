@@ -12,9 +12,17 @@ import {
   Image,
 } from 'react-native';
 import {ArrowDown, ArrowRight, MapPin, X} from 'lucide-react-native';
-import Geolocation from '@react-native-community/geolocation';
 const {width} = Dimensions.get('window');
 const cardWidth = (width - 60) / 3; // 3 cards in a row with padding
+
+const getGeolocationModule = () => {
+  try {
+    // Lazy require prevents app crash when native module is not linked.
+    return require('@react-native-community/geolocation').default;
+  } catch (error) {
+    return null;
+  }
+};
 
 const citiesImages = {
   Delhi: require('../../assets/image/citiies/dilhi.jpg'),
@@ -63,6 +71,12 @@ const CustomePicker = ({cities = [], selectedCity, onSelect}) => {
   );
 
   const getCurrentLocationCity = async () => {
+    const Geolocation = getGeolocationModule();
+    if (!Geolocation?.getCurrentPosition) {
+      alert('Location service is unavailable. Please reinstall and rebuild the app.');
+      return;
+    }
+
     Geolocation.getCurrentPosition(
       async position => {
         const {latitude, longitude} = position.coords;
