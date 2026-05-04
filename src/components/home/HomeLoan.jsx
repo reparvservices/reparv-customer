@@ -76,17 +76,23 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     paddingRight: 12,
+    paddingBottom: 2,
   },
   title: {
     fontSize: 16,
+    lineHeight: 24,
     fontFamily: 'SegoeUI-Bold',
     color: '#0F2942',
     flexShrink: 1,
     marginBottom: 14,
+    ...Platform.select({
+      android: {includeFontPadding: false},
+      default: {},
+    }),
   },
   button: {
     backgroundColor: '#2563EB',
-    paddingVertical: 12,
+    paddingVertical: 13,
     paddingHorizontal: 20,
     borderRadius: 24,
     alignSelf: 'flex-start',
@@ -101,6 +107,11 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontFamily: 'SegoeUI-Bold',
     fontSize: 14,
+    lineHeight: 20,
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
   artCol: {
     width: width * 0.3,

@@ -1,4 +1,4 @@
-import React, {useCallback, useState} from 'react';
+import React, {useCallback, useMemo, useState} from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   ScrollView,
   ToastAndroid,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useDispatch, useSelector} from 'react-redux';
@@ -25,6 +26,31 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {useFocusEffect, useNavigation} from '@react-navigation/native';
 
+const MANAGE_DEVICE_ALLOWED_CONTACTS = new Set([
+  '9322396236',
+  '7410756686',
+  '9552224626',
+]);
+
+function normalizePhoneDigits(value) {
+  if (value == null || value === '') {
+    return '';
+  }
+  return String(value).replace(/\D/g, '');
+}
+
+function isManageDeviceContact(contact) {
+  const digits = normalizePhoneDigits(contact);
+  if (!digits) {
+    return false;
+  }
+  const last10 = digits.length > 10 ? digits.slice(-10) : digits;
+  return (
+    MANAGE_DEVICE_ALLOWED_CONTACTS.has(digits) ||
+    MANAGE_DEVICE_ALLOWED_CONTACTS.has(last10)
+  );
+}
+
 export default function ProfileScreen() {
   const dispatch = useDispatch();
   const auth = useSelector(state => state.auth);
@@ -34,6 +60,16 @@ export default function ProfileScreen() {
   const [saved, setSaved] = useState(0);
   const [enquiryCount, setEnquiryCount] = useState(0);
   const [loading, setLoading] = useState(false);
+
+  const showManageDevice = useMemo(() => {
+    const loginPhone =
+      user?.contact ??
+      user?.phone ??
+      auth?.user?.contact ??
+      auth?.user?.phone ??
+      '';
+    return isManageDeviceContact(loginPhone);
+  }, [user?.contact, user?.phone, auth?.user?.contact, auth?.user?.phone]);
 
   const fetchProfile = useCallback(async () => {
     try {
@@ -161,11 +197,15 @@ export default function ProfileScreen() {
           <Text style={styles.headerTitle}>Profile</Text>
         </View>
 
-        <TouchableOpacity
-          style={styles.manageDeviceBtn}
-          onPress={() => navigation.navigate('TuyaDashboard')}>
-          <Text style={styles.manageDeviceBtnText}>Manage Device</Text>
-        </TouchableOpacity>
+        {showManageDevice ? (
+          <TouchableOpacity
+            style={styles.manageDeviceBtn}
+            onPress={() => navigation.navigate('TuyaDashboard')}>
+            <Text style={styles.manageDeviceBtnText}>Manage Device</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.headerRightSpacer} />
+        )}
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -389,19 +429,34 @@ const styles = StyleSheet.create({
 
   headerTitle: {
     fontSize: 18,
+    lineHeight: 24,
     fontFamily: 'SegoeUI-Bold',
     color: '#111',
+    ...Platform.select({
+      android: {includeFontPadding: false},
+      default: {},
+    }),
   },
+  headerRightSpacer: {
+    minWidth: 44,
+    minHeight: 44,
+  },
+
   manageDeviceBtn: {
     backgroundColor: '#6D28D9',
     paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingVertical: 8,
     borderRadius: 16,
   },
   manageDeviceBtnText: {
     color: '#FFFFFF',
     fontSize: 11,
+    lineHeight: 15,
     fontWeight: '700',
+    ...Platform.select({
+      android: {includeFontPadding: false},
+      default: {},
+    }),
   },
 
   profileRow: {
@@ -409,13 +464,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     marginTop: 10,
-    alignItems: 'center',
+    alignItems: 'flex-start',
   },
   profileLeft: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: 12,
     flex: 1,
+    minWidth: 0,
   },
 
   avatarWrapper: {
@@ -432,25 +488,43 @@ const styles = StyleSheet.create({
   },
 
   userInfo: {
+    flex: 1,
+    minWidth: 0,
     justifyContent: 'center',
+    paddingTop: 2,
   },
 
   userName: {
     fontSize: 16,
-    width: 200,
+    lineHeight: 22,
     fontWeight: '700',
     color: '#111827',
-    maxWidth: '100%',
+    ...Platform.select({
+      android: {includeFontPadding: false},
+      default: {},
+    }),
   },
 
   userContact: {
     fontSize: 13,
+    lineHeight: 18,
+    marginTop: 2,
     color: '#6B7280',
+    ...Platform.select({
+      android: {includeFontPadding: false},
+      default: {},
+    }),
   },
 
   userEmail: {
     fontSize: 12,
+    lineHeight: 17,
+    marginTop: 2,
     color: '#9CA3AF',
+    ...Platform.select({
+      android: {includeFontPadding: false},
+      default: {},
+    }),
   },
 
   editBtn: {
@@ -459,6 +533,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 20,
     flexShrink: 0,
+    marginTop: 4,
   },
 
   editText: {
@@ -485,6 +560,7 @@ const styles = StyleSheet.create({
   statItem: {
     flex: 1,
     alignItems: 'center',
+    paddingHorizontal: 6,
   },
   statWrapper: {
     flex: 1,
@@ -500,12 +576,23 @@ const styles = StyleSheet.create({
 
   statValue: {
     fontSize: 22,
+    lineHeight: 28,
     fontWeight: '700',
+    ...Platform.select({
+      android: {includeFontPadding: false},
+      default: {},
+    }),
   },
 
   statLabel: {
     fontSize: 12,
+    lineHeight: 16,
     color: '#9CA3AF',
+    textAlign: 'center',
+    ...Platform.select({
+      android: {includeFontPadding: false},
+      default: {},
+    }),
   },
 
   verticalDivider: {
@@ -546,11 +633,15 @@ const styles = StyleSheet.create({
   },
 
   menuText: {
-    flex: 1, //  FIX
+    flex: 1,
     fontFamily: 'SegoeUI-Bold',
     fontSize: 14,
-    paddingBottom: 1,
+    lineHeight: 20,
     color: '#111',
+    ...Platform.select({
+      android: {includeFontPadding: false},
+      default: {},
+    }),
   },
 
   logoutBtn: {
@@ -568,14 +659,24 @@ const styles = StyleSheet.create({
 
   logoutText: {
     fontSize: 16,
+    lineHeight: 22,
     fontWeight: '600',
     color: '#EF4444',
+    ...Platform.select({
+      android: {includeFontPadding: false},
+      default: {},
+    }),
   },
 
   version: {
     textAlign: 'center',
     fontSize: 12,
+    lineHeight: 16,
     color: '#9CA3AF',
     marginVertical: 20,
+    ...Platform.select({
+      android: {includeFontPadding: false},
+      default: {},
+    }),
   },
 });

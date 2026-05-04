@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Dimensions,
   Image,
+  Platform,
 } from 'react-native';
 
 import RentPropertyIllustration from '../../assets/image/home/property-on-rent.png';
@@ -53,7 +54,7 @@ export default function RentProperty() {
 
           {/* Tag */}
           <LinearGradient
-            colors={['#8A38F5', '#FDFEFE']}
+            colors={['#6D28D9', '#A78BFA']}
             start={{x: 0, y: 0}}
             end={{x: 1, y: 0}}
             style={styles.tag}>
@@ -61,7 +62,7 @@ export default function RentProperty() {
               style={styles.tagText}
               numberOfLines={1}
               adjustsFontSizeToFit
-              minimumFontScale={0.85}>
+              minimumFontScale={0.8}>
               Zero Brokerage Options
             </Text>
           </LinearGradient>
@@ -123,9 +124,16 @@ const styles = StyleSheet.create({
   },
 
   title: {
+    flex: 1,
+    marginRight: 8,
     fontSize: 16,
+    lineHeight: 22,
     fontFamily: 'SegoeUI-Bold',
     color: '#3F2D62',
+    ...Platform.select({
+      android: {includeFontPadding: false},
+      default: {},
+    }),
   },
 
   arrowCircle: {
@@ -142,11 +150,16 @@ const styles = StyleSheet.create({
     color: '#868686',
     marginTop: 4,
     fontSize: 12,
+    lineHeight: 16,
+    ...Platform.select({
+      android: {includeFontPadding: false},
+      default: {},
+    }),
   },
 
   tag: {
-    alignSelf: 'flex-start',
-    paddingVertical: 6,
+    alignSelf: 'stretch',
+    paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 6,
     marginTop: 10,
@@ -157,8 +170,12 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontFamily: 'SegoeUI-Bold',
     fontSize: 12,
-    includeFontPadding: false, // Android fix
-    textAlignVertical: 'center',
+    lineHeight: 16,
+    textAlign: 'center',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
 
   /* CTA BUTTON */
@@ -177,6 +194,11 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontFamily: 'SegoeUI-Bold',
     fontSize: 13,
+    lineHeight: 18,
     textAlign: 'center',
+    ...Platform.select({
+      android: {includeFontPadding: false},
+      default: {},
+    }),
   },
 });
