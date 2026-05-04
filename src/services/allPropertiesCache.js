@@ -1,5 +1,4 @@
-const ALL_PROPERTIES_URL =
-  'https://aws-api.reparv.in/frontend/all-properties';
+const ALL_PROPERTIES_URL = 'https://aws-api.reparv.in/frontend/all-properties';
 
 const TTL_MS = 2 * 60 * 1000;
 
@@ -8,9 +7,7 @@ let cachedAt = 0;
 let inflight = null;
 
 export function isAllPropertiesCacheFresh() {
-  return (
-    Array.isArray(cachedList) && Date.now() - cachedAt < TTL_MS
-  );
+  return Array.isArray(cachedList) && Date.now() - cachedAt < TTL_MS;
 }
 
 /** Synchronous read when TTL valid (for initial state). */

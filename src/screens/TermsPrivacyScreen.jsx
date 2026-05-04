@@ -1,5 +1,5 @@
-import { ArrowLeft } from 'lucide-react-native';
-import React, { useState } from 'react';
+import {ArrowLeft} from 'lucide-react-native';
+import React, {useState} from 'react';
 import {
   View,
   Text,
@@ -11,30 +11,26 @@ import {
   Platform,
 } from 'react-native';
 
-const TermsPrivacyScreen = ({ navigation }) => {
+const TermsPrivacyScreen = ({navigation}) => {
   const [activeTab, setActiveTab] = useState('terms');
 
   return (
     <SafeAreaView style={styles.safeArea}>
       {/* Status Bar */}
-      <StatusBar
-        barStyle="dark-content"
-        backgroundColor="#FFFFFF"
-      />
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity
             onPress={() => navigation.goBack()}
-            style={styles.backBtn}
-          >
+            style={styles.backBtn}>
             <ArrowLeft size={22} color="#000" />
           </TouchableOpacity>
 
           <Text style={styles.headerTitle}>Terms & Privacy</Text>
 
-          <View style={{ width: 22 }} />
+          <View style={{width: 22}} />
         </View>
 
         {/* Tabs */}
@@ -44,14 +40,12 @@ const TermsPrivacyScreen = ({ navigation }) => {
               styles.tabButton,
               activeTab === 'terms' && styles.activeTab,
             ]}
-            onPress={() => setActiveTab('terms')}
-          >
+            onPress={() => setActiveTab('terms')}>
             <Text
               style={[
                 styles.tabText,
                 activeTab === 'terms' && styles.activeTabText,
-              ]}
-            >
+              ]}>
               Terms of Service
             </Text>
           </TouchableOpacity>
@@ -61,14 +55,12 @@ const TermsPrivacyScreen = ({ navigation }) => {
               styles.tabButton,
               activeTab === 'privacy' && styles.activeTab,
             ]}
-            onPress={() => setActiveTab('privacy')}
-          >
+            onPress={() => setActiveTab('privacy')}>
             <Text
               style={[
                 styles.tabText,
                 activeTab === 'privacy' && styles.activeTabText,
-              ]}
-            >
+              ]}>
               Privacy Policy
             </Text>
           </TouchableOpacity>
@@ -77,16 +69,15 @@ const TermsPrivacyScreen = ({ navigation }) => {
         {/* Content */}
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.content}
-        >
+          contentContainerStyle={styles.content}>
           {activeTab === 'terms' ? (
             <>
               <Text style={styles.sectionTitle}>Terms and Conditions</Text>
 
               <Text style={styles.paragraph}>
-                Welcome to Reparv Services Private Limited ("Reparv", "we", "our",
-                or "us"). These Terms and Conditions govern your use of our
-                website www.reparv.in.
+                Welcome to Reparv Services Private Limited ("Reparv", "we",
+                "our", or "us"). These Terms and Conditions govern your use of
+                our website www.reparv.in.
               </Text>
 
               <Text style={styles.subTitle}>1. Eligibility</Text>
@@ -96,9 +87,9 @@ const TermsPrivacyScreen = ({ navigation }) => {
 
               <Text style={styles.subTitle}>2. Platform Overview</Text>
               <Text style={styles.paragraph}>
-                • Browse and inquire real estate properties{'\n'}
-                • Register brokers as freelance partners{'\n'}
-                • Connect buyers with verified sellers
+                • Browse and inquire real estate properties{'\n'}• Register
+                brokers as freelance partners{'\n'}• Connect buyers with
+                verified sellers
               </Text>
 
               <Text style={styles.subTitle}>3. User Accounts</Text>
@@ -118,7 +109,8 @@ const TermsPrivacyScreen = ({ navigation }) => {
 
               <Text style={styles.subTitle}>6. Limitation of Liability</Text>
               <Text style={styles.paragraph}>
-                Reparv shall not be liable for indirect or consequential damages.
+                Reparv shall not be liable for indirect or consequential
+                damages.
               </Text>
 
               <Text style={styles.subTitle}>15. Contact Us</Text>
@@ -228,7 +220,7 @@ const styles = StyleSheet.create({
 
   paragraph: {
     fontSize: 14,
-    lineHeight: 22,
+
     color: '#4A4A4A',
     marginBottom: 12,
   },

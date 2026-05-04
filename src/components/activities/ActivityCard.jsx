@@ -1,4 +1,4 @@
-import { useNavigation } from '@react-navigation/native';
+import {useNavigation} from '@react-navigation/native';
 import React from 'react';
 import {View, Text, StyleSheet, Image, TouchableOpacity} from 'react-native';
 import Svg, {Circle, Path} from 'react-native-svg';
@@ -27,7 +27,7 @@ export default function ActivityCard({
   onView,
 }) {
   const statusStyle = STATUS_CONFIG[status];
-  const navigation=useNavigation();
+  const navigation = useNavigation();
   const renderStatusIcon = () => {
     switch (status) {
       case 'Confirmed':
@@ -220,7 +220,6 @@ const styles = StyleSheet.create({
     color: '#374151',
     fontWeight: '500',
     fontFamily: 'SegoeUI-Bold',
-    lineHeight: 20,
   },
 
   viewBtn: {

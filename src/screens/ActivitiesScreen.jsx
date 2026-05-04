@@ -402,7 +402,6 @@ const styles = StyleSheet.create({
     fontFamily: 'SegoeUI-Bold',
     color: '#374151',
     fontWeight: '600',
-    lineHeight: 25,
   },
 
   activeTabText: {

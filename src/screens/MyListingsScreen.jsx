@@ -873,7 +873,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Segoe UI',
     //fontWeight: '400',
     fontSize: 12,
-    lineHeight: 12, // 100% of font size
+    // 100% of font size
     letterSpacing: 0,
     color: '#9CA3AF',
   },

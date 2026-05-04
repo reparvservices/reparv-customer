@@ -30,10 +30,7 @@ const BlogDetailScreen = ({route}) => {
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       {/* ---------- HERO IMAGE ---------- */}
       <View>
-        <Image
-          source={{uri: blog?.image}}
-          style={styles.heroImage}
-        />
+        <Image source={{uri: blog?.image}} style={styles.heroImage} />
         <LinearGradient
           colors={['rgba(0,0,0,0)', '#000']}
           style={styles.heroOverlay}
@@ -75,17 +72,13 @@ const BlogDetailScreen = ({route}) => {
           </View>
         </View>
 
-       
         {/* ---------- RELATED BLOGS ---------- */}
         <Text style={styles.relatedTitle}>Related Articles</Text>
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           {[1, 2].map(item => (
             <View key={item} style={styles.relatedCard}>
-              <Image
-                source={{uri: blog?.image}}
-                style={styles.relatedImage}
-              />
+              <Image source={{uri: blog?.image}} style={styles.relatedImage} />
               <Text style={styles.relatedText} numberOfLines={2}>
                 Top 10 Real Estate Investment Strategies for 2024
               </Text>
@@ -121,7 +114,7 @@ const styles = StyleSheet.create({
   title: {fontSize: 22, fontWeight: '800', marginBottom: 6},
   metaRow: {flexDirection: 'row', alignItems: 'center', gap: 6},
   metaText: {fontSize: 12, color: '#777'},
-  description: {fontSize: 14, lineHeight: 22, marginTop: 12, color: '#333'},
+  description: {fontSize: 14, marginTop: 12, color: '#333'},
 
   authorCard: {
     flexDirection: 'row',

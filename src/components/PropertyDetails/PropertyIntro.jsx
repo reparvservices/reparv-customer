@@ -38,7 +38,7 @@ const styles = StyleSheet.create({
 
   description: {
     fontSize: 14,
-    lineHeight: 20,
+
     color: '#555',
   },
 

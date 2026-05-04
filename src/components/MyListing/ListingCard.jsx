@@ -68,6 +68,7 @@ export const ListingCard = ({propertyData}) => {
     fetchWishlist();
   }, []);
 
+  console.log(propertyData, 'ddd');
   return (
     <View style={styles.listingCard}>
       {/* Image */}

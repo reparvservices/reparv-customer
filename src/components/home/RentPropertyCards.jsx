@@ -9,19 +9,67 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   Platform,
+  ScrollView,
+  Animated,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
-import {Building2, Eye, Heart, HeartIcon} from 'lucide-react-native';
+import {Building2, Eye, HeartIcon, Home} from 'lucide-react-native';
 import {useNavigation} from '@react-navigation/native';
 import {useSelector} from 'react-redux';
 import Location from '../../assets/image/home/rented-properties-card/location.png';
-import Message from '../../assets/image/home/rented-properties-card/message.png';
 import {formatIndianAmount} from '../../utils/formatIndianAmount';
 import {fetchAllPropertiesCached} from '../../services/allPropertiesCache';
 import {getImageUri} from '../../utils/imageHandle';
 
 const {width} = Dimensions.get('window');
-const IMAGE_BASE_URL = 'https://reparv-assets.s3.ap-south-1.amazonaws.com';
+
+/* ---------------------------------------
+   SKELETON CARD COMPONENT
+--------------------------------------- */
+const RentSkeletonCard = () => {
+  const shimmerAnim = React.useRef(new Animated.Value(0)).current;
+
+  React.useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(shimmerAnim, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(shimmerAnim, {
+          toValue: 0,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ]),
+    ).start();
+  }, []);
+
+  const opacity = shimmerAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.3, 0.7],
+  });
+
+  return (
+    <View style={styles.card}>
+      <Animated.View style={[styles.skeletonImage, {opacity}]} />
+      <View style={styles.bottom}>
+        <Animated.View style={[styles.skeletonLocation, {opacity}]} />
+        <Animated.View style={[styles.skeletonTitle, {opacity}]} />
+        <View style={styles.skeletonRow}>
+          <Animated.View style={[styles.skeletonFeature, {opacity}]} />
+          <Animated.View style={[styles.skeletonPrice, {opacity}]} />
+        </View>
+        <View style={styles.divider} />
+        <View style={styles.skeletonFooter}>
+          <Animated.View style={[styles.skeletonIcon, {opacity}]} />
+          <Animated.View style={[styles.skeletonButton, {opacity}]} />
+        </View>
+      </View>
+    </View>
+  );
+};
 
 /* ---------------------------------------
    SUBSCRIPTION CHECK HELPER
@@ -43,21 +91,21 @@ export default function RentPropertyCards() {
   const [loading, setLoading] = useState(false);
   const [likeCounts, setLikeCounts] = useState({});
   const navigation = useNavigation();
+
   const {user} = useSelector(state => state.auth);
   const selectedCity = (user?.city || '').trim().toLowerCase();
 
+  /* ---------------------------------------
+     CITY MATCH HELPER
+  --------------------------------------- */
   const isCityMatch = item => {
-    if (!selectedCity) {
-      return true;
-    }
-
+    if (!selectedCity) return true;
     const propertyCity = String(item?.city || '')
       .trim()
       .toLowerCase();
     const propertyLocation = String(item?.location || '')
       .trim()
       .toLowerCase();
-
     return (
       propertyCity === selectedCity ||
       propertyLocation.includes(selectedCity) ||
@@ -67,7 +115,9 @@ export default function RentPropertyCards() {
 
   useEffect(() => {
     fetchFlats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCity]);
+
   /* ---------------------------------------
      FETCH VISITS
   --------------------------------------- */
@@ -84,7 +134,7 @@ export default function RentPropertyCards() {
   };
 
   /* ---------------------------------------
-     FETCH PROPERTIES
+     FETCH & FILTER PROPERTIES
   --------------------------------------- */
   const fetchFlats = async () => {
     setLoading(true);
@@ -104,28 +154,23 @@ export default function RentPropertyCards() {
           const assured = item.partnerid
             ? await checkSubscription(item.partnerid)
             : false;
-
           const totalVisitors = await fetchVisits(item.propertyid);
-
-          return {
-            ...item,
-            reparvAssured: assured,
-            totalVisitors,
-          };
+          return {...item, reparvAssured: assured, totalVisitors};
         }),
       );
 
       setFlats(updated);
-
-      // 👇 FETCH LIKE COUNTS HERE
       fetchAllLikes(updated);
     } catch (error) {
-      console.error('Error fetching properties:', error);
+      console.error('Error fetching rental properties:', error);
     } finally {
       setLoading(false);
     }
   };
 
+  /* ---------------------------------------
+     FETCH LIKES
+  --------------------------------------- */
   const fetchAllLikes = async properties => {
     try {
       const results = await Promise.all(
@@ -134,34 +179,16 @@ export default function RentPropertyCards() {
             `https://aws-api.reparv.in/customerapp/property/likes/${item.propertyid}`,
           );
           const data = await res.json();
-          return {
-            propertyId: item.propertyid,
-            likeCount: data?.likeCount || 0,
-          };
+          return {propertyId: item.propertyid, likeCount: data?.likeCount || 0};
         }),
       );
-
       const likeMap = {};
       results.forEach(r => {
         likeMap[r.propertyId] = r.likeCount;
       });
-
       setLikeCounts(likeMap);
     } catch (err) {
       console.log('Like fetch error:', err);
-    }
-  };
-
-  const getImage = item => {
-    try {
-      if (item.frontView) {
-        const parsed = JSON.parse(item.frontView);
-        console.log(IMAGE_BASE_URL + parsed[0], 'image url');
-        return IMAGE_BASE_URL + parsed[0];
-      }
-      return null;
-    } catch {
-      return null;
     }
   };
 
@@ -172,12 +199,15 @@ export default function RentPropertyCards() {
     const imageUri = getImageUri(
       item.frontView ? JSON.parse(item.frontView)[0] : null,
     );
-    console.log(imageUri);
 
     return (
       <View style={styles.card}>
         {/* IMAGE */}
-        <View style={styles.imageContainer}>
+        <TouchableOpacity
+          onPress={() =>
+            navigation.navigate('PropertyDetails', {seoSlug: item?.seoSlug})
+          }
+          style={styles.imageContainer}>
           {imageUri ? (
             <Image source={{uri: imageUri}} style={styles.image} />
           ) : (
@@ -189,19 +219,18 @@ export default function RentPropertyCards() {
               <Text style={styles.badgeText}>REPARV Assured</Text>
             </View>
           )}
-
           {item?.hotDeal === 'Active' && (
             <View style={styles.rightBadge}>
               <Text style={styles.badgeText}>HOT DEAL</Text>
             </View>
           )}
-        </View>
+        </TouchableOpacity>
 
         {/* CONTENT */}
         <View style={styles.bottom}>
           <View style={styles.propertyRow}>
             <Image source={Location} style={styles.icon} />
-            <Text style={styles.propertyType}>
+            <Text style={styles.propertyType} numberOfLines={1}>
               {item.location} ({item.distanceFromCityCenter} KM)
             </Text>
           </View>
@@ -217,7 +246,6 @@ export default function RentPropertyCards() {
               </View>
               <Text style={styles.featureText}>{item?.propertyCategory}</Text>
             </View>
-
             <Text style={styles.price}>
               ₹{formatIndianAmount(item?.totalOfferPrice)}
             </Text>
@@ -225,12 +253,11 @@ export default function RentPropertyCards() {
 
           <View style={styles.divider} />
 
-          {/* REPLACED OWNER WITH VISIT COUNT */}
           <View style={styles.ownerRow}>
             <View style={{flexDirection: 'row', gap: 4}}>
               {likeCounts[item.propertyid] > 0 && (
                 <View style={styles.ownerLeft}>
-                  <HeartIcon size={25} fill={'#8A38F5'} color="#8A38F5" />
+                  <HeartIcon size={25} fill="#8A38F5" color="#8A38F5" />
                   <Text style={styles.visitorText}>
                     {likeCounts[item.propertyid] ?? 0}
                   </Text>
@@ -246,9 +273,7 @@ export default function RentPropertyCards() {
             <TouchableOpacity
               style={styles.showDetailsBtn}
               onPress={() =>
-                navigation.navigate('PropertyDetails', {
-                  seoSlug: item?.seoSlug,
-                })
+                navigation.navigate('PropertyDetails', {seoSlug: item?.seoSlug})
               }>
               <Text style={styles.showDetailsText}>Show Details</Text>
             </TouchableOpacity>
@@ -258,14 +283,53 @@ export default function RentPropertyCards() {
     );
   };
 
+  const displayCity = selectedCity
+    ? selectedCity.charAt(0).toUpperCase() + selectedCity.slice(1)
+    : 'your city';
+
   if (loading) {
     return (
-      <ActivityIndicator size="large" style={{marginTop: 40}} color="#8A38F5" />
+      <View>
+        <View style={styles.sectionHeader}>
+          <LinearGradient colors={['#8A38F5', '#FAF8FF']} style={styles.line} />
+          <Text style={styles.titleText}>Properties on Rents</Text>
+          <LinearGradient colors={['#FAF8FF', '#8A38F5']} style={styles.line} />
+        </View>
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.listContent}>
+          <RentSkeletonCard />
+          <RentSkeletonCard />
+          <RentSkeletonCard />
+        </ScrollView>
+      </View>
     );
   }
 
   if (!flats.length) {
-    return null;
+    return (
+      <View style={styles.emptyWrapper}>
+        <View style={styles.sectionHeader}>
+          <LinearGradient colors={['#8A38F5', '#FAF8FF']} style={styles.line} />
+          <Text style={styles.titleText}>Properties on Rents</Text>
+          <LinearGradient colors={['#FAF8FF', '#8A38F5']} style={styles.line} />
+        </View>
+
+        <View style={styles.emptyContainer}>
+          <View style={styles.emptyIconWrapper}>
+            <Home size={40} color="#D1D5DB" strokeWidth={1.5} />
+          </View>
+          <Text style={styles.emptyTitle}>No Rental Properties Found</Text>
+          <Text style={styles.emptyText}>
+            {selectedCity
+              ? `No rental properties available in ${displayCity}`
+              : 'No rental properties available at the moment'}
+          </Text>
+        </View>
+      </View>
+    );
   }
 
   return (
@@ -296,10 +360,7 @@ export default function RentPropertyCards() {
    STYLES
 --------------------------------------- */
 const styles = StyleSheet.create({
-  listContent: {
-    paddingHorizontal: 18,
-    marginTop: 14,
-  },
+  listContent: {paddingHorizontal: 18, marginTop: 14},
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -307,15 +368,96 @@ const styles = StyleSheet.create({
     gap: 12,
     marginVertical: 16,
   },
-  titleText: {
-    fontSize: 17,
+  titleText: {fontSize: 17, fontWeight: '700'},
+  line: {width: '25%', height: 3, borderRadius: 1},
+
+  // Skeleton styles
+  skeletonImage: {
+    width: '100%',
+    height: 130,
+    backgroundColor: '#E5E7EB',
+  },
+  skeletonLocation: {
+    width: '70%',
+    height: 14,
+    backgroundColor: '#E5E7EB',
+    borderRadius: 4,
+    marginBottom: 6,
+  },
+  skeletonTitle: {
+    width: '90%',
+    height: 16,
+    backgroundColor: '#E5E7EB',
+    borderRadius: 4,
+    marginBottom: 8,
+  },
+  skeletonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  skeletonFeature: {
+    width: 100,
+    height: 20,
+    backgroundColor: '#E5E7EB',
+    borderRadius: 4,
+  },
+  skeletonPrice: {
+    width: 60,
+    height: 18,
+    backgroundColor: '#E5E7EB',
+    borderRadius: 4,
+  },
+  skeletonFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  skeletonIcon: {
+    width: 40,
+    height: 25,
+    backgroundColor: '#E5E7EB',
+    borderRadius: 4,
+  },
+  skeletonButton: {
+    width: 100,
+    height: 32,
+    backgroundColor: '#E5E7EB',
+    borderRadius: 8,
+  },
+
+  emptyWrapper: {
+    marginVertical: 20,
+  },
+  emptyContainer: {
+    paddingVertical: 40,
+    paddingHorizontal: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+  },
+  emptyIconWrapper: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  emptyTitle: {
+    fontSize: 16,
     fontWeight: '700',
+    color: '#374151',
   },
-  line: {
-    width: '25%',
-    height: 3,
-    borderRadius: 1,
+  emptyText: {
+    fontSize: 13,
+    color: '#9CA3AF',
+    fontWeight: '500',
+    textAlign: 'center',
+    lineHeight: 20,
   },
+
   card: {
     width: width * 0.65,
     backgroundColor: '#fff',
@@ -323,15 +465,8 @@ const styles = StyleSheet.create({
     marginRight: 14,
     overflow: 'hidden',
   },
-  imageContainer: {
-    height: 130,
-    backgroundColor: '#F3F3F3',
-  },
-  image: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'contain',
-  },
+  imageContainer: {height: 130, backgroundColor: '#F3F3F3'},
+  image: {width: '100%', height: '100%', resizeMode: 'contain'},
   leftBadge: {
     position: 'absolute',
     top: 8,
@@ -350,41 +485,18 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 10,
   },
-  badgeText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  bottom: {
-    padding: 10,
-  },
-  propertyRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  icon: {
-    width: 16,
-    height: 16,
-    marginRight: 4,
-  },
-  propertyType: {
-    fontSize: 11,
-    color: '#868686',
-  },
-  cardTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    marginTop: 4,
-  },
+  badgeText: {color: '#fff', fontSize: 10, fontWeight: '700'},
+  bottom: {padding: 10},
+  propertyRow: {flexDirection: 'row', alignItems: 'center'},
+  icon: {width: 16, height: 16, marginRight: 4},
+  propertyType: {fontSize: 11, color: '#868686', flex: 1},
+  cardTitle: {fontSize: 12, fontWeight: '700', marginTop: 4},
   featuresPriceRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 6,
   },
-  featureRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
+  featureRow: {flexDirection: 'row', alignItems: 'center'},
   featureCircle: {
     width: 22,
     height: 22,
@@ -394,50 +506,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 6,
   },
-  featureText: {
-    fontSize: 11,
-  },
-  price: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#E3E3E3',
-    marginVertical: 8,
-  },
+  featureText: {fontSize: 11},
+  price: {fontSize: 12, fontWeight: '700'},
+  divider: {height: 1, backgroundColor: '#E3E3E3', marginVertical: 8},
   ownerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  ownerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  visitorText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#444',
-  },
-  chatBtn: {
-    width: 34,
-    height: 28,
-    backgroundColor: '#8A38F5',
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  ownerLeft: {flexDirection: 'row', alignItems: 'center', gap: 6},
+  visitorText: {fontSize: 11, fontWeight: '600', color: '#444'},
   showDetailsBtn: {
     paddingVertical: 6,
     paddingHorizontal: 12,
     backgroundColor: '#8A38F5',
     borderRadius: 8,
   },
-  showDetailsText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '700',
-  },
+  showDetailsText: {color: '#fff', fontSize: 14, fontWeight: '700'},
 });

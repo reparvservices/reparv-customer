@@ -458,7 +458,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 13,
     color: '#6B7280',
-    lineHeight: 18,
   },
 
   bottomHelp: {
@@ -525,6 +524,5 @@ const styles = StyleSheet.create({
   responseText: {
     fontSize: 13,
     color: '#065F46',
-    lineHeight: 18,
   },
 });

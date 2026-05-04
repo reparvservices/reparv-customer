@@ -803,11 +803,11 @@ const s = StyleSheet.create({
     fontSize: 32,
     fontWeight: '800',
     color: C.ink,
-    lineHeight: 42,
+
     letterSpacing: -0.6,
     marginBottom: 10,
   },
-  sub: {fontSize: 14, color: C.inkMid, lineHeight: 22},
+  sub: {fontSize: 14, color: C.inkMid},
 
   // Field
   fieldWrap: {marginBottom: 16},
@@ -976,7 +976,6 @@ const s = StyleSheet.create({
     fontSize: 12,
     color: C.inkFaint,
     marginTop: 14,
-    lineHeight: 18,
   },
 
   // Backdrop

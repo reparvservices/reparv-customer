@@ -405,7 +405,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'SegoeUI-Bold',
     color: '#000',
-    lineHeight: 30,
   },
   tabContainer: {
     flexDirection: 'row',
@@ -433,7 +432,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontFamily: 'SegoeUI-Bold',
-    lineHeight: 30,
   },
   footerRow: {
     flexDirection: 'row',

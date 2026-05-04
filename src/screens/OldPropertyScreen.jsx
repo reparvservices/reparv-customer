@@ -1,4 +1,4 @@
-import React, {use, useEffect, useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   View,
   Text,
@@ -24,7 +24,6 @@ import OldPriceDetails from '../components/old-property/OldPriceDetails';
 import OldContactDetails from '../components/old-property/OldContactDetails';
 import OldUploadImg from '../components/old-property/OldUploadImg';
 import {MapPin} from 'lucide-react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import {useSelector} from 'react-redux';
 import PropertyTypeSelector from '../components/rent-property/PropertyType';
 
@@ -34,7 +33,7 @@ export default function OldPropertyScreen({route}) {
   const type = route?.params?.type || 'sell';
   const [showUpload, setShowUpload] = useState(false);
   const [errors, setErrors] = useState({});
-  const [sellType, setSellType] = useState('rent'); // rent | resale
+  const [sellType, setSellType] = useState('rent');
   const [propertyType, setPropertyType] = useState(null);
   const [propertyName, setPropertyName] = useState('');
   const [address, setAddress] = useState('');
@@ -49,16 +48,18 @@ export default function OldPropertyScreen({route}) {
   const [cities, setCities] = useState([]);
   const [stateModal, setStateModal] = useState(false);
   const [cityModal, setCityModal] = useState(false);
+
+  // ── imageFiles now stores S3 URL strings (or null) per section ──
   const [imageFiles, setImageFiles] = useState({
-    frontView: [],
-    sideView: [],
-    kitchenView: [],
-    hallView: [],
-    bedroomView: [],
-    bathroomView: [],
-    balconyView: [],
-    nearestLandmark: [],
-    developedAmenities: [],
+    frontView: null,
+    sideView: null,
+    kitchenView: null,
+    hallView: null,
+    bedroomView: null,
+    bathroomView: null,
+    balconyView: null,
+    nearestLandmark: null,
+    developedAmenities: null,
   });
 
   const fetchStates = async () => {
@@ -82,21 +83,21 @@ export default function OldPropertyScreen({route}) {
       console.log('Error fetching cities:', err);
     }
   };
+
   useEffect(() => {
-    fetchStates(); // run once
+    fetchStates();
   }, []);
 
   useEffect(() => {
     if (state) {
       fetchCities(state);
-      setCity(''); // reset city when state changes
+      setCity('');
     }
   }, [state]);
 
-  /* ---------------- VALIDATION ---------------- */
+  /* ── Validation ── */
   const validateStepOne = () => {
     const newErrors = {};
-
     if (!propertyType) newErrors.propertyType = 'Please select property type';
     if (!propertyName) newErrors.propertyName = 'Property name required';
     if (!address) newErrors.address = 'Address required';
@@ -108,55 +109,50 @@ export default function OldPropertyScreen({route}) {
     if (!ownerName) newErrors.ownerName = 'Owner name required';
     if (!phone || phone.length !== 10)
       newErrors.phone = 'Valid mobile number required';
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-  console.log(user, 'user', type);
 
   const getTotalImageCount = () =>
-    Object.values(imageFiles).reduce((sum, arr) => sum + arr.length, 0);
+    Object.values(imageFiles).filter(v => !!v).length;
 
+  /* ── Submit — sends S3 URLs as JSON ── */
   const handleSubmit = async () => {
     if (getTotalImageCount() < 1) {
-      ToastAndroid.show('Upload at least 1 images', ToastAndroid.SHORT);
+      ToastAndroid.show('Upload at least 1 image', ToastAndroid.SHORT);
       return;
     }
 
     try {
-      const formData = new FormData();
-
-      formData.append('property_type', propertyType);
-      formData.append('property_name', propertyName);
-      formData.append('price', totalPrice);
-      formData.append('ofprice', sellingPrice);
-      formData.append('contact', phone);
-      formData.append('state', state);
-      formData.append('city', city);
-      formData.append('ownername', ownerName);
-      formData.append('customerid', user?.id || '');
-      formData.append('address', address);
-
-      formData.append(
-        'areas',
-        JSON.stringify([{label: 'Built-up Area', value: area, unit: 'sq.ft.'}]),
-      );
-
-      Object.keys(imageFiles).forEach(key => {
-        imageFiles[key].forEach((file, index) => {
-          formData.append(key, {
-            uri: file.uri,
-            type: file.type || 'image/jpeg',
-            name: `${key}_${index}.jpg`,
-          });
-        });
-      });
+      const payload = {
+        property_type: propertyType,
+        property_name: propertyName,
+        price: totalPrice,
+        ofprice: sellingPrice,
+        contact: phone,
+        state,
+        city,
+        ownername: ownerName,
+        customerid: user?.id || '',
+        address,
+        areas: JSON.stringify([
+          {label: 'Built-up Area', value: area, unit: 'sq.ft.'},
+        ]),
+        // ── S3 URLs for each section (null sections are omitted) ──
+        ...Object.fromEntries(
+          Object.entries(imageFiles).filter(([, url]) => !!url),
+        ),
+      };
 
       const res = await fetch(
         'https://aws-api.reparv.in/customerapp/property/post',
-        {method: 'POST', body: formData},
+        {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(payload),
+        },
       );
-      console.log(res);
+
       if (res.ok) {
         ToastAndroid.show('Property added successfully', ToastAndroid.SHORT);
         navigation.goBack();
@@ -167,6 +163,7 @@ export default function OldPropertyScreen({route}) {
       ToastAndroid.show('Network error', ToastAndroid.LONG);
     }
   };
+
   const handleButtonPress = () => {
     if (!showUpload) {
       if (validateStepOne()) setShowUpload(true);
@@ -174,6 +171,7 @@ export default function OldPropertyScreen({route}) {
       handleSubmit();
     }
   };
+
   const handleBackPress = () => {
     showUpload ? setShowUpload(false) : navigation.goBack();
   };
@@ -194,53 +192,6 @@ export default function OldPropertyScreen({route}) {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {!showUpload ? (
           <>
-            {/* SELL TYPE
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>
-                What type of property are you selling?
-                <Text style={styles.required}> *</Text>
-              </Text>
-
-              <View style={styles.tabRow}>
-                <Pressable
-                  style={[
-                    styles.tabBtn,
-                    sellType === 'rent' && styles.activeTab,
-                  ]}
-                  onPress={() => {
-                    setSellType('rent');
-                    setPropertyType(null);
-                  }}>
-                  <Text
-                    style={[
-                      styles.tabText,
-                      sellType === 'rent' && styles.activeTabText,
-                    ]}>
-                    Rent
-                  </Text>
-                </Pressable>
-
-                <Pressable
-                  style={[
-                    styles.tabBtn,
-                    sellType === 'resale' && styles.activeTab,
-                  ]}
-                  onPress={() => {
-                    setSellType('resale');
-                    setPropertyType(null);
-                  }}>
-                  <Text
-                    style={[
-                      styles.tabText,
-                      sellType === 'resale' && styles.activeTabText,
-                    ]}>
-                    Resale
-                  </Text>
-                </Pressable>
-              </View>
-            </View> */}
-
-            {/* PROPERTY TYPE (UNCHANGED COMPONENT) */}
             {type === 'sell' ? (
               <OldPropertyType
                 value={propertyType}
@@ -292,7 +243,6 @@ export default function OldPropertyScreen({route}) {
               />
 
               <View style={styles.row}>
-                {/* STATE PICKER */}
                 <Pressable
                   style={styles.pickerBox}
                   onPress={() => setStateModal(true)}>
@@ -309,7 +259,6 @@ export default function OldPropertyScreen({route}) {
                   <ArrowIcon width={14} height={14} />
                 </Pressable>
 
-                {/* CITY PICKER */}
                 <Pressable
                   style={[styles.pickerBox, !state && styles.disabledPicker]}
                   disabled={!state}
@@ -394,6 +343,8 @@ export default function OldPropertyScreen({route}) {
           All fields marked with * are mandatory
         </Text>
       </ScrollView>
+
+      {/* STATE MODAL */}
       <Modal visible={stateModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
@@ -413,6 +364,8 @@ export default function OldPropertyScreen({route}) {
           </View>
         </View>
       </Modal>
+
+      {/* CITY MODAL */}
       <Modal visible={cityModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
@@ -436,8 +389,6 @@ export default function OldPropertyScreen({route}) {
   );
 }
 
-/* STYLES */
-
 const styles = StyleSheet.create({
   container: {flex: 1, backgroundColor: '#FAF8FF'},
   header: {
@@ -449,12 +400,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {fontSize: 16, fontFamily: 'SegoeUI-Bold'},
   scrollContent: {paddingBottom: 32, gap: 16},
-  tabRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 12,
-  },
-
+  tabRow: {flexDirection: 'row', gap: 12, marginTop: 12},
   tabBtn: {
     flex: 1,
     height: 44,
@@ -465,33 +411,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#F9FAFB',
   },
-
-  activeTab: {
-    backgroundColor: '#8A38F5',
-    borderColor: '#8A38F5',
-  },
-
-  tabText: {
-    fontSize: 14,
-    fontFamily: 'SegoeUI-Bold',
-    color: '#374151',
-  },
-
-  activeTabText: {
-    color: '#FFFFFF',
-  },
-
+  activeTab: {backgroundColor: '#8A38F5', borderColor: '#8A38F5'},
+  tabText: {fontSize: 14, fontFamily: 'SegoeUI-Bold', color: '#374151'},
+  activeTabText: {color: '#FFFFFF'},
   section: {backgroundColor: '#fff', padding: 16},
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
+  sectionHeader: {flexDirection: 'row', alignItems: 'center', gap: 6},
   sectionTitle: {
     fontSize: 16,
     fontFamily: 'SegoeUI-Bold',
     marginBottom: 8,
-    lineHeight: 20,
   },
   required: {color: '#E33629'},
   pickerBox: {
@@ -506,30 +434,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E7EB',
   },
-
   pickerLabel: {
     fontSize: 12,
     color: '#6B7280',
     marginBottom: 2,
     fontFamily: 'SegoeUI-Regular',
   },
-
-  pickerValue: {
-    fontSize: 14,
-    color: '#111827',
-    fontFamily: 'SegoeUI-Bold',
-  },
-
-  placeholderText: {
-    color: '#9CA3AF',
-    fontFamily: 'SegoeUI-Regular',
-  },
-
-  disabledPicker: {
-    backgroundColor: '#F3F4F6',
-    borderColor: '#E5E7EB',
-  },
-
+  pickerValue: {fontSize: 14, color: '#111827', fontFamily: 'SegoeUI-Bold'},
+  placeholderText: {color: '#9CA3AF', fontFamily: 'SegoeUI-Regular'},
+  disabledPicker: {backgroundColor: '#F3F4F6', borderColor: '#E5E7EB'},
   input: {
     height: 48,
     borderWidth: 1,
@@ -538,9 +451,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     marginBottom: 8,
   },
-
   row: {flexDirection: 'row', gap: 12},
-
   primaryButton: {
     marginHorizontal: 24,
     height: 52,
@@ -553,11 +464,8 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontFamily: 'SegoeUI-Bold',
-    lineHeight: 30,
   },
-
   error: {color: '#E33629', fontSize: 12, marginBottom: 6},
-
   actionRow: {flexDirection: 'row', gap: 12, paddingHorizontal: 16},
   actionBtn: {flex: 1, height: 50, borderRadius: 12},
   gradient: {
@@ -570,9 +478,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontFamily: 'SegoeUI-Bold',
-    lineHeight: 20,
   },
-
   footerText: {
     textAlign: 'center',
     fontSize: 12,

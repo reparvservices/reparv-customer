@@ -7,37 +7,27 @@ import {
   TouchableOpacity,
   ScrollView,
 } from 'react-native';
-import { X, Info } from 'lucide-react-native';
+import {X, Info} from 'lucide-react-native';
 
-const formatAmount = value =>
-  Number(value || 0).toLocaleString('en-IN');
+const formatAmount = value => Number(value || 0).toLocaleString('en-IN');
 
-const ItemRow = ({ label, value, highlight }) => (
+const ItemRow = ({label, value, highlight}) => (
   <View style={styles.itemRow}>
     <Text style={styles.itemLabel}>{label}</Text>
-    <Text
-      style={[
-        styles.itemValue,
-        highlight && styles.highlightValue,
-      ]}
-    >
+    <Text style={[styles.itemValue, highlight && styles.highlightValue]}>
       {value}
     </Text>
   </View>
 );
 
-const InfoText = ({ text }) => (
+const InfoText = ({text}) => (
   <View style={styles.infoRow}>
     <Info size={13} color="#7C7C88" />
     <Text style={styles.infoText}>{text}</Text>
   </View>
 );
 
-const PriceSummaryDrawer = ({
-  visible,
-  onClose,
-  propertyData,
-}) => {
+const PriceSummaryDrawer = ({visible, onClose, propertyData}) => {
   const basePrice = Number(propertyData?.totalOfferPrice || 0);
   const stampDuty = basePrice * (Number(propertyData?.stampDuty || 0) / 100);
   const registrationFee =
@@ -66,9 +56,7 @@ const PriceSummaryDrawer = ({
           <View style={styles.header}>
             <View>
               <Text style={styles.title}>Price Summary</Text>
-              <Text style={styles.subtitle}>
-                Complete cost breakdown
-              </Text>
+              <Text style={styles.subtitle}>Complete cost breakdown</Text>
             </View>
             <TouchableOpacity onPress={onClose}>
               <X size={22} color="#111" />
@@ -77,8 +65,7 @@ const PriceSummaryDrawer = ({
 
           <ScrollView
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.content}
-          >
+            contentContainerStyle={styles.content}>
             <ItemRow
               label="Base Price"
               value={`₹ ${formatAmount(basePrice)}`}
@@ -121,21 +108,19 @@ const PriceSummaryDrawer = ({
             <ItemRow
               label="Other Charges"
               value={
-               propertyData?.other
+                propertyData?.other
                   ? `₹ ${formatAmount(propertyData?.other)}`
                   : '—'
               }
             />
 
-            <View style={{ height: 110 }} />
+            <View style={{height: 110}} />
           </ScrollView>
 
           {/* Sticky Total */}
           <View style={styles.totalBox}>
             <Text style={styles.totalLabel}>Total Property Price</Text>
-            <Text style={styles.totalValue}>
-              ₹ {formatAmount(totalCost)}
-            </Text>
+            <Text style={styles.totalValue}>₹ {formatAmount(totalCost)}</Text>
           </View>
         </View>
       </View>
@@ -219,7 +204,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Sugio-Regular',
     color: '#7C7C88',
     flex: 1,
-    lineHeight: 16,
   },
 
   totalBox: {

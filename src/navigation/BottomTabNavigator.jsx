@@ -3,26 +3,31 @@ import {View, Text, Image, TouchableOpacity, StyleSheet} from 'react-native';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 
 import HomeScreen from '../screens/HomeScreen';
+
 import ActivitiesScreen from '../screens/ActivitiesScreen';
 import CalculatorScreen from '../screens/CalculatorScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import HomeIcon from '../assets/image/bottom-navigator/home.png';
+import TrendsIcon from '../assets/image/bottom-navigator/trends.png';
 import ActivitiesIcon from '../assets/image/bottom-navigator/activities.png';
 import CalculatorIcon from '../assets/image/bottom-navigator/calculator.png';
 import ProfileIcon from '../assets/image/bottom-navigator/profile.png';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 const Tab = createBottomTabNavigator();
 
 function CustomTabBar({state, navigation}) {
   const tabs = [
     {label: 'Home', icon: HomeIcon, route: 'Home'},
+
     {label: 'Activities', icon: ActivitiesIcon, route: 'Activities'},
     {label: 'Calculator', icon: CalculatorIcon, route: 'Calculator'},
     {label: 'Profile', icon: ProfileIcon, route: 'Profile'},
   ];
+  const insets = useSafeAreaInsets();
 
   return (
-    <View style={styles.tabBar}>
+    <View style={[styles.tabBar, {paddingBottom: insets.bottom}]}>
       {tabs.map((tab, index) => {
         const focused = state.index === index;
 
@@ -42,11 +47,7 @@ function CustomTabBar({state, navigation}) {
                   source={tab.icon}
                   style={[
                     styles.profileIcon,
-                    {
-                      tintColor: focused ? '#6D28D9' : '#B8B8B8',
-                      width: 16,
-                      height: 19,
-                    },
+                    {tintColor: focused ? '#5E23DC' : '#B8B8B8'},
                   ]}
                 />
               </View>
@@ -55,13 +56,19 @@ function CustomTabBar({state, navigation}) {
                 source={tab.icon}
                 style={[
                   styles.icon,
-                  {tintColor: focused ? '#6D28D9' : '#B8B8B8'},
+                  {tintColor: focused ? '#5E23DC' : '#B8B8B8'},
                 ]}
               />
             )}
 
             <Text
-              style={[styles.label, {color: focused ? '#5E23DC' : '#868686'}]}>
+              style={[
+                styles.label,
+                {
+                  color: focused ? '#5E23DC' : '#868686',
+                  fontWeight: focused ? '700' : '400', // ← bold on active
+                },
+              ]}>
               {tab.label}
             </Text>
 
@@ -79,6 +86,7 @@ export default function BottomTabNavigator() {
       screenOptions={{headerShown: false, lazy: true}}
       tabBar={props => <CustomTabBar {...props} />}>
       <Tab.Screen name="Home" component={HomeScreen} />
+
       <Tab.Screen name="Activities" component={ActivitiesScreen} />
       <Tab.Screen name="Calculator" component={CalculatorScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
@@ -89,14 +97,19 @@ export default function BottomTabNavigator() {
 const styles = StyleSheet.create({
   tabBar: {
     flexDirection: 'row',
-    height: 70,
+    minHeight: 70,
     backgroundColor: '#FFFFFF',
     elevation: 12,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: -2},
+    shadowOpacity: 0.07,
+    shadowRadius: 6,
   },
   tabItem: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingTop: 8,
   },
   profileCircle: {
     width: 34,
@@ -112,8 +125,8 @@ const styles = StyleSheet.create({
     borderColor: '#5E23DC',
   },
   profileIcon: {
-    width: 18,
-    height: 18,
+    width: 16,
+    height: 19,
   },
   icon: {
     width: 28,

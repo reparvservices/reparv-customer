@@ -52,15 +52,15 @@ export default function RentOldNewPropertyScreen({route}) {
   const [stateModal, setStateModal] = useState(false);
   const [cityModal, setCityModal] = useState(false);
   const [imageFiles, setImageFiles] = useState({
-    frontView: [],
-    sideView: [],
-    kitchenView: [],
-    hallView: [],
-    bedroomView: [],
-    bathroomView: [],
-    balconyView: [],
-    nearestLandmark: [],
-    developedAmenities: [],
+    frontView: null,
+    sideView: null,
+    kitchenView: null,
+    hallView: null,
+    bedroomView: null,
+    bathroomView: null,
+    balconyView: null,
+    nearestLandmark: null,
+    developedAmenities: null,
   });
 
   useEffect(() => {
@@ -135,39 +135,37 @@ export default function RentOldNewPropertyScreen({route}) {
     Object.values(imageFiles).reduce((sum, arr) => sum + arr.length, 0);
 
   const handleSubmit = async () => {
-    if (mode === 'add' && getTotalImageCount() < 1) {
-      ToastAndroid.show('Upload at least 1 images', ToastAndroid.SHORT);
+    const getTotalImageCount = () =>
+      Object.values(imageFiles).reduce(
+        (sum, arr) => sum + (arr?.length || 0),
+        0,
+      );
+
+    if (mode === 'add' && getTotalImageCount() < 5) {
+      ToastAndroid.show('Upload at least 5 images', ToastAndroid.SHORT);
       return;
     }
 
     try {
-      const formData = new FormData();
-
-      formData.append('property_type', propertyType);
-      formData.append('property_name', propertyName);
-      formData.append('price', totalPrice);
-      formData.append('ofprice', sellingPrice);
-      formData.append('contact', phone);
-      formData.append('state', state);
-      formData.append('city', city);
-      formData.append('customerid', user?.id || '');
-      formData.append('ownername', ownerName || '');
-      formData.append('address', address);
-      formData.append(
-        'areas',
-        JSON.stringify([{label: 'Built-up Area', value: area, unit: 'sq.ft.'}]),
-      );
-
-      // only send images if added
-      Object.keys(imageFiles).forEach(key => {
-        imageFiles[key].forEach((file, index) => {
-          formData.append(key, {
-            uri: file.uri,
-            type: file.type || 'image/jpeg',
-            name: `${key}_${index}.jpg`,
-          });
-        });
-      });
+      const payload = {
+        property_type: propertyType,
+        property_name: propertyName,
+        price: totalPrice,
+        ofprice: sellingPrice,
+        contact: phone,
+        state,
+        city,
+        ownername: ownerName || '',
+        customerid: user?.id || '',
+        address,
+        areas: JSON.stringify([
+          {label: 'Built-up Area', value: area, unit: 'sq.ft.'},
+        ]),
+        // ── Spread arrays of S3 URLs (only non-empty arrays) ──
+        ...Object.fromEntries(
+          Object.entries(imageFiles).filter(([, arr]) => arr && arr.length > 0),
+        ),
+      };
 
       const isEdit = mode === 'edit';
 
@@ -176,9 +174,11 @@ export default function RentOldNewPropertyScreen({route}) {
         : 'https://aws-api.reparv.in/customerapp/property/post';
 
       const method = isEdit ? 'PUT' : 'POST';
+
       const res = await fetch(url, {
-        method: method, // or PUT if backend supports
-        body: formData,
+        method: method,
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(payload),
       });
 
       if (res.ok) {
@@ -219,7 +219,7 @@ export default function RentOldNewPropertyScreen({route}) {
         <TouchableOpacity onPress={handleBackPress}>
           <BackIcon width={22} height={22} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, {lineHeight: 22}]}>
+        <Text style={[styles.headerTitle]}>
           {mode === 'edit' ? 'Update Property Details' : 'Add Basic Details'}
         </Text>
 
@@ -442,7 +442,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'SegoeUI-Bold',
     marginBottom: 8,
-    lineHeight: 20,
   },
   required: {color: '#E33629'},
   pickerBox: {
@@ -504,13 +503,12 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontFamily: 'SegoeUI-Bold',
-    lineHeight: 22,
   },
 
   error: {color: '#E33629', fontSize: 12, marginBottom: 6},
 
   actionRow: {flexDirection: 'row', gap: 12, paddingHorizontal: 16},
-  actionBtn: {flex: 1, height: 50, borderRadius: 12, lineHeight: 22},
+  actionBtn: {flex: 1, height: 50, borderRadius: 12},
   gradient: {
     flex: 1,
     borderRadius: 12,
@@ -521,7 +519,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontFamily: 'SegoeUI-Bold',
-    lineHeight: 22,
   },
 
   footerText: {

@@ -129,9 +129,8 @@ export default function UploadDocForm({data, setData, errors}) {
         )}
       </View>
       {errors.aadhaarImage && (
-  <Text style={styles.error}>{errors.aadhaarImage}</Text>
-)}
-
+        <Text style={styles.error}>{errors.aadhaarImage}</Text>
+      )}
     </View>
   );
 }
@@ -198,7 +197,7 @@ const styles = StyleSheet.create({
 
   uploadTitle: {
     fontSize: 14,
-    lineHeight:20,
+
     color: '#7C3AED',
     fontFamily: 'SegoeUI-Bold',
     marginBottom: 6,
@@ -227,7 +226,7 @@ const styles = StyleSheet.create({
   uploadBtnText: {
     color: '#FFFFFF',
     fontSize: 14,
-    lineHeight:20,
+
     fontFamily: 'SegoeUI-Bold',
   },
 });

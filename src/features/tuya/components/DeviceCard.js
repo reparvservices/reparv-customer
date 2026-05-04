@@ -52,7 +52,9 @@ function DeviceCard({
     if (connectionState === 'online') {
       return (
         <View style={[styles.mintPill, {backgroundColor: mintBg}]}>
-          <Text style={[styles.mintPillText, {color: mintText}]}>Connected</Text>
+          <Text style={[styles.mintPillText, {color: mintText}]}>
+            Connected
+          </Text>
         </View>
       );
     }
@@ -73,7 +75,8 @@ function DeviceCard({
         {name || 'Smart device'}
       </Text>
       <View style={styles.statusWrap}>{renderStatus()}</View>
-      <Text style={[styles.stateHint, {color: colors.bodyText || colors.subText}]}>
+      <Text
+        style={[styles.stateHint, {color: colors.bodyText || colors.subText}]}>
         {isOn ? 'Power is on' : 'Power is off'}
       </Text>
 
@@ -92,7 +95,10 @@ function DeviceCard({
           <View style={[styles.outerRing, {shadowColor: UI.ringShadow}]}>
             {isOn ? (
               <View
-                style={[styles.innerOn, {borderColor: 'rgba(123,63,228,0.15)'}]}>
+                style={[
+                  styles.innerOn,
+                  {borderColor: 'rgba(123,63,228,0.15)'},
+                ]}>
                 {loading ? (
                   <ActivityIndicator color={accent} size="large" />
                 ) : (
@@ -125,8 +131,8 @@ function DeviceCard({
         {disabled && connectionState === 'offline'
           ? 'Connect the device to use power control.'
           : disabled && connectionState === 'error'
-            ? 'Fix the connection above, then try again.'
-            : 'Tap the button to turn on or off.'}
+          ? 'Fix the connection above, then try again.'
+          : 'Tap the button to turn on or off.'}
       </Text>
     </View>
   );
@@ -150,7 +156,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textAlign: 'center',
     paddingHorizontal: 8,
-    lineHeight: 24,
   },
   statusWrap: {
     marginTop: 12,
@@ -220,7 +225,7 @@ const styles = StyleSheet.create({
   footerHint: {
     fontSize: 13,
     textAlign: 'center',
-    lineHeight: 18,
+
     paddingHorizontal: 12,
   },
   syncLine: {

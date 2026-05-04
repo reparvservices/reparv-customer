@@ -589,14 +589,12 @@ const styles = StyleSheet.create({
   value: {
     fontSize: 14,
     fontWeight: '700',
-    lineHeight: 30,
   },
   subValue: {
     fontSize: 12,
     color: '#9CA3AF',
     flexShrink: 1,
     flexWrap: 'wrap',
-    lineHeight: 16,
   },
 
   paidBadge: {
@@ -645,7 +643,7 @@ const styles = StyleSheet.create({
   noteText: {
     color: '#FFAB00', // closer to Figma warning text
     fontSize: 12,
-    lineHeight: 16,
+
     flexWrap: 'wrap',
   },
 

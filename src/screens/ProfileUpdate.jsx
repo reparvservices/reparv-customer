@@ -21,7 +21,6 @@ const PURPLE = '#7C3AED';
 const BG = '#FAF8FF';
 
 export default function UpdateProfileScreen({navigation, route}) {
-  // route data
   const {
     fullname: f,
     email: e,
@@ -35,6 +34,7 @@ export default function UpdateProfileScreen({navigation, route}) {
   const [fullname, setFullname] = useState(f || '');
   const [email, setEmail] = useState(e || '');
   const [contact, setContact] = useState(c || '');
+  const [saving, setSaving] = useState(false); // ✅ Loading state
 
   // State / city
   const [states, setStates] = useState([]);
@@ -52,12 +52,10 @@ export default function UpdateProfileScreen({navigation, route}) {
     userimage ? {uri: userimage} : null,
   );
 
-  // Fetch states on mount
   useEffect(() => {
     fetchStates();
   }, []);
 
-  // Fetch cities when selectedState changes
   useEffect(() => {
     if (selectedState) {
       fetchCities(selectedState.state);
@@ -157,6 +155,8 @@ export default function UpdateProfileScreen({navigation, route}) {
       return Alert.alert('Invalid mobile number');
     }
 
+    setSaving(true); // ✅ Start loading
+
     try {
       const formData = new FormData();
       formData.append('user_id', userid);
@@ -164,12 +164,9 @@ export default function UpdateProfileScreen({navigation, route}) {
 
       if (email) formData.append('email', email);
       if (contact) formData.append('contact', contact);
-
-      // Append state and city if selected
       if (selectedState) formData.append('state', selectedState.state);
       if (selectedCity) formData.append('city', selectedCity.city);
 
-      // Upload only local image
       if (
         profileImage?.uri &&
         (profileImage.uri.startsWith('file://') ||
@@ -204,6 +201,8 @@ export default function UpdateProfileScreen({navigation, route}) {
     } catch (err) {
       console.log('Update profile error:', err);
       ToastAndroid.show('Error updating profile', ToastAndroid.LONG);
+    } finally {
+      setSaving(false); // ✅ Stop loading
     }
   };
 
@@ -234,7 +233,6 @@ export default function UpdateProfileScreen({navigation, route}) {
               </TouchableOpacity>
             </View>
 
-            {/* Search */}
             <TextInput
               style={styles.modalSearch}
               value={searchValue}
@@ -362,10 +360,20 @@ export default function UpdateProfileScreen({navigation, route}) {
         </View>
       </ScrollView>
 
-      {/* Save Button */}
+      {/* ✅ Save Button with Loading */}
       <View style={styles.bottom}>
-        <TouchableOpacity style={styles.saveBtn} onPress={updateProfile}>
-          <Text style={styles.saveText}>Save Changes</Text>
+        <TouchableOpacity
+          style={[styles.saveBtn, saving && {opacity: 0.8}]}
+          onPress={updateProfile}
+          disabled={saving}>
+          {saving ? (
+            <View style={{flexDirection: 'row', alignItems: 'center', gap: 10}}>
+              <ActivityIndicator size="small" color="#fff" />
+              <Text style={styles.saveText}>Saving...</Text>
+            </View>
+          ) : (
+            <Text style={styles.saveText}>Save Changes</Text>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -376,7 +384,7 @@ export default function UpdateProfileScreen({navigation, route}) {
         data={states}
         onSelect={item => {
           setSelectedState(item);
-          setSelectedCity(null); // reset city when state changes
+          setSelectedCity(null);
           setCities([]);
         }}
         loading={loadingStates}
@@ -464,7 +472,6 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
   },
 
-  // Dropdown — matches input style exactly
   dropdown: {
     backgroundColor: '#F9FAFB',
     borderRadius: 12,
@@ -495,7 +502,6 @@ const styles = StyleSheet.create({
   },
   saveText: {color: '#fff', fontSize: 16, fontWeight: '600'},
 
-  // Modal styles
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.4)',

@@ -112,7 +112,13 @@ function PropertyCard({item}) {
   return (
     <View style={styles.card}>
       {/* IMAGE */}
-      <View style={styles.imageWrapper}>
+      <TouchableOpacity
+        onPress={() =>
+          navigation.navigate('PropertyDetails', {
+            seoSlug: item?.seoSlug,
+          })
+        }
+        style={styles.imageWrapper}>
         {item.frontView ? (
           <Image
             source={{
@@ -138,7 +144,7 @@ function PropertyCard({item}) {
             fill={isLiked ? '#7A2EFF' : 'none'}
           />
         </TouchableOpacity>
-      </View>
+      </TouchableOpacity>
 
       {/* BODY */}
       <View style={styles.cardBody}>
@@ -178,7 +184,7 @@ function PropertyCard({item}) {
                 fontFamily: 'Poppins-SemiBold',
                 fontWeight: '700',
                 fontSize: 12,
-                lineHeight: 12,
+
                 letterSpacing: 0,
                 color: '#8A38F5',
               }}>
@@ -358,7 +364,7 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 14,
     fontWeight: '700',
-    // lineHeight: 20,
+    //
   },
   divider: {
     width: '100%', // responsive instead of fixed px

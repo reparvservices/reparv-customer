@@ -20,26 +20,26 @@ export default function HomeLoan() {
       <View style={styles.cardShell}>
         <View style={styles.card}>
           <View style={styles.leftCol}>
-          <Text style={styles.title}>
-            Home Loans That Fit Your Life, Seamlessly.
-          </Text>
-          <TouchableOpacity
-            style={styles.button}
-            onPress={() =>
-              navigation.navigate('HomeLoan', {
-                propertyid: null,
-              })
-            }>
-            <Text style={styles.buttonText}>Start Application</Text>
-          </TouchableOpacity>
-        </View>
-        <View style={styles.artCol}>
-          <Image
-            source={require('../../assets/image/home/illustration1.png')}
-            style={styles.rightImage}
-            resizeMode="contain"
-          />
-        </View>
+            <Text style={styles.title}>
+              Home Loans That Fit Your Life, Seamlessly.
+            </Text>
+            <TouchableOpacity
+              style={styles.button}
+              onPress={() =>
+                navigation.navigate('HomeLoan', {
+                  propertyid: null,
+                })
+              }>
+              <Text style={styles.buttonText}>Start Application</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.artCol}>
+            <Image
+              source={require('../../assets/image/home/illustration1.png')}
+              style={styles.rightImage}
+              resizeMode="contain"
+            />
+          </View>
         </View>
       </View>
     </View>
@@ -81,7 +81,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'SegoeUI-Bold',
     color: '#0F2942',
-    lineHeight: 24,
     flexShrink: 1,
     marginBottom: 14,
   },

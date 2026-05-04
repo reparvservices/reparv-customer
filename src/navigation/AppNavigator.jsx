@@ -30,6 +30,8 @@ import DashboardScreen from '../features/tuya/screens/DashboardScreen';
 import {setUser} from '../features/auth/authSlice';
 import {navigationRef} from './Navigationref';
 import {devLog} from '../utils/devLog';
+import PropertyMapScreen from '../screens/PropertyMapScreen';
+import LocationPickerScreen from '../components/home/LocationPickerScreen';
 
 //import {setUser} from '../redux/slices/authSlice'; // adjust path as needed
 
@@ -113,6 +115,13 @@ function AppStack() {
       <Stack.Screen name="UpdateProfile" component={UpdateProfileScreen} />
       <Stack.Screen name="BlogDetails" component={BlogDetailScreen} />
       <Stack.Screen name="TuyaDashboard" component={DashboardScreen} />
+
+      <Stack.Screen name="PropertyMap" component={PropertyMapScreen} />
+      <Stack.Screen
+        name="LocationPickerScreen"
+        component={LocationPickerScreen}
+        options={{headerShown: false, animation: 'slide_from_bottom'}}
+      />
     </Stack.Navigator>
   );
 }

@@ -94,11 +94,7 @@ const BlogScreen = () => {
       <ImageBackground
         source={require('../assets/image/blogs/pn.jpg')}
         style={styles.hero}
-<<<<<<< HEAD
-        resizeMode="contain">
-=======
         resizeMode="cover">
->>>>>>> c97ae5fe9b1141d2e925d73b2359185946777473
         <LinearGradient
           colors={['rgba(0,0,0,0)', '#3F2D62']}
           locations={[0, 0.8]}
@@ -247,7 +243,6 @@ const styles = StyleSheet.create({
     color: '#E6E1F0',
     marginVertical: 8,
     fontSize: 14,
-    lineHeight: 20,
   },
 
   searchBox: {
@@ -303,7 +298,7 @@ const styles = StyleSheet.create({
   tagText: {color: '#27AE60', fontSize: 11},
 
   cardTitle: {fontSize: 16, fontWeight: '700', marginVertical: 6},
-  cardDesc: {fontSize: 13, color: '#666', lineHeight: 18},
+  cardDesc: {fontSize: 13, color: '#666'},
 
   cardFooter: {
     marginTop: 10,

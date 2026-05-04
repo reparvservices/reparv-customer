@@ -88,6 +88,7 @@ export const googleLogin = createAsyncThunk(
     }
   },
 );
+
 /**
  * Facebook Login (UNCHANGED)
  */
@@ -132,6 +133,7 @@ export const loadUser = createAsyncThunk(
     }
   },
 );
+
 const authSlice = createSlice({
   name: 'auth',
   initialState: {
@@ -149,6 +151,22 @@ const authSlice = createSlice({
     },
     setUser: (state, action) => {
       state.user = action.payload;
+    },
+
+    /**
+     * setUserLocation
+     * Fired after the user picks a city in LocationPickerModal.
+     * Updates city + state on the in-memory user object so every
+     * component reading user.city from Redux re-renders instantly.
+     *
+     * Usage:
+     *   dispatch(setUserLocation({ city: 'Pune', state: 'Maharashtra' }))
+     */
+    setUserLocation: (state, action) => {
+      if (state.user) {
+        state.user.city = action.payload.city;
+        state.user.state = action.payload.state;
+      }
     },
   },
   extraReducers: builder => {
@@ -201,6 +219,7 @@ const authSlice = createSlice({
         state.user = action.payload.user;
         state.isLoading = false;
       })
+
       // FACEBOOK LOGIN
       .addCase(facebookLoginSlice.pending, state => {
         state.isLoading = true;
@@ -215,6 +234,7 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.error = action.payload;
       })
+
       // LOGOUT
       .addCase(logoutUser.fulfilled, state => {
         state.isAuthenticated = false;
@@ -222,7 +242,8 @@ const authSlice = createSlice({
         state.token = null;
         state.otpVerified = false;
       })
-      /* ========= LOAD USER ========= */
+
+      // LOAD USER
       .addCase(loadUser.pending, state => {
         state.isLoading = true;
       })
@@ -239,5 +260,5 @@ const authSlice = createSlice({
   },
 });
 
-export const {clearAuthError, setUser} = authSlice.actions;
+export const {clearAuthError, setUser, setUserLocation} = authSlice.actions;
 export default authSlice.reducer;

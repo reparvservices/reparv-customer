@@ -288,7 +288,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#868686',
     textAlign: 'center',
-    lineHeight: 18,
   },
 
   row: {
@@ -311,7 +310,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Segoe UI',
     fontSize: 17,
     fontWeight: '700',
-    lineHeight: 21,
+
     color: '#000000',
   },
 
@@ -391,7 +390,6 @@ const styles = StyleSheet.create({
     fontFamily: 'SegoeUI-Bold',
     color: '#000000',
     marginTop: 2,
-    lineHeight: 16,
   },
 
   featuresPriceRow: {

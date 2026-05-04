@@ -84,56 +84,56 @@ export default function NewLaunchShowcase() {
       <Text style={styles.sectionTitle}>New Launches</Text>
       <View style={styles.cardOuter}>
         <View style={styles.cardInner}>
-        <TouchableOpacity
-          style={styles.imageBox}
-          activeOpacity={0.95}
-          onPress={openDetails}>
-          {currentFlat?.topPicksBanner ? (
-            <Image
-              source={{uri: currentFlat.topPicksBanner}}
-              style={styles.image}
-              resizeMode="cover"
-            />
-          ) : imgUri ? (
-            <Image
-              source={{uri: imgUri}}
-              style={styles.image}
-              resizeMode="cover"
-            />
-          ) : (
-            <Image
-              source={require('../../assets/image/home/defaultProject.png')}
-              style={styles.image}
-              resizeMode="cover"
-            />
-          )}
-          <View style={styles.preLaunchTag}>
-            <Text style={styles.preLaunchText}>Pre-Launch</Text>
-          </View>
-        </TouchableOpacity>
-
-        <View style={styles.footer}>
           <TouchableOpacity
-            style={styles.footerText}
-            activeOpacity={0.85}
+            style={styles.imageBox}
+            activeOpacity={0.95}
             onPress={openDetails}>
-            <Text style={styles.projectTitle} numberOfLines={1}>
-              {currentFlat?.propertyName || 'Premium project'}
-            </Text>
-            <Text style={styles.projectSub} numberOfLines={2}>
-              {currentFlat?.propertyCategory
-                ? `Premium ${currentFlat.propertyCategory}`
-                : 'Premium 3 & 4 BHK Residences'}
-            </Text>
-            <Text style={styles.price}>{priceLabel}</Text>
+            {currentFlat?.topPicksBanner ? (
+              <Image
+                source={{uri: currentFlat.topPicksBanner}}
+                style={styles.image}
+                resizeMode="cover"
+              />
+            ) : imgUri ? (
+              <Image
+                source={{uri: imgUri}}
+                style={styles.image}
+                resizeMode="cover"
+              />
+            ) : (
+              <Image
+                source={require('../../assets/image/home/defaultProject.png')}
+                style={styles.image}
+                resizeMode="cover"
+              />
+            )}
+            <View style={styles.preLaunchTag}>
+              <Text style={styles.preLaunchText}>Pre-Launch</Text>
+            </View>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.arrowBtn}
-            onPress={handleNext}
-            hitSlop={12}>
-            <ChevronRight size={22} color="#FFFFFF" strokeWidth={2.5} />
-          </TouchableOpacity>
-        </View>
+
+          <View style={styles.footer}>
+            <TouchableOpacity
+              style={styles.footerText}
+              activeOpacity={0.85}
+              onPress={openDetails}>
+              <Text style={styles.projectTitle} numberOfLines={1}>
+                {currentFlat?.propertyName || 'Premium project'}
+              </Text>
+              <Text style={styles.projectSub} numberOfLines={2}>
+                {currentFlat?.propertyCategory
+                  ? `Premium ${currentFlat.propertyCategory}`
+                  : 'Premium 3 & 4 BHK Residences'}
+              </Text>
+              <Text style={styles.price}>{priceLabel}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.arrowBtn}
+              onPress={handleNext}
+              hitSlop={12}>
+              <ChevronRight size={22} color="#FFFFFF" strokeWidth={2.5} />
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     </View>
@@ -220,7 +220,7 @@ const styles = StyleSheet.create({
   projectSub: {
     fontSize: 13,
     color: '#868686',
-    lineHeight: 18,
+
     marginBottom: 8,
   },
   price: {

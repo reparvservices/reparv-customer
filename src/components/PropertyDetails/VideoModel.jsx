@@ -257,7 +257,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 28,
     fontWeight: '600',
-    lineHeight: 30,
   },
 
   infoOverlay: {

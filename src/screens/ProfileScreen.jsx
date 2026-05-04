@@ -389,7 +389,6 @@ const styles = StyleSheet.create({
 
   headerTitle: {
     fontSize: 18,
-    lineHeight: 26,
     fontFamily: 'SegoeUI-Bold',
     color: '#111',
   },
@@ -438,7 +437,6 @@ const styles = StyleSheet.create({
 
   userName: {
     fontSize: 16,
-    lineHeight: 22,
     width: 200,
     fontWeight: '700',
     color: '#111827',
@@ -447,13 +445,11 @@ const styles = StyleSheet.create({
 
   userContact: {
     fontSize: 13,
-    lineHeight: 18,
     color: '#6B7280',
   },
 
   userEmail: {
     fontSize: 12,
-    lineHeight: 16,
     color: '#9CA3AF',
   },
 
@@ -467,7 +463,6 @@ const styles = StyleSheet.create({
 
   editText: {
     fontSize: 13,
-    lineHeight: 18,
     color: '#FFF',
     fontWeight: '600',
   },
@@ -505,13 +500,11 @@ const styles = StyleSheet.create({
 
   statValue: {
     fontSize: 22,
-    lineHeight: 30,
     fontWeight: '700',
   },
 
   statLabel: {
     fontSize: 12,
-    lineHeight: 16,
     color: '#9CA3AF',
   },
 
@@ -556,7 +549,6 @@ const styles = StyleSheet.create({
     flex: 1, //  FIX
     fontFamily: 'SegoeUI-Bold',
     fontSize: 14,
-    lineHeight: 20,
     paddingBottom: 1,
     color: '#111',
   },
@@ -576,7 +568,6 @@ const styles = StyleSheet.create({
 
   logoutText: {
     fontSize: 16,
-    lineHeight: 22,
     fontWeight: '600',
     color: '#EF4444',
   },
@@ -584,7 +575,6 @@ const styles = StyleSheet.create({
   version: {
     textAlign: 'center',
     fontSize: 12,
-    lineHeight: 16,
     color: '#9CA3AF',
     marginVertical: 20,
   },

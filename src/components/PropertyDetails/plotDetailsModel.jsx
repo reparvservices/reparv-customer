@@ -414,7 +414,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: '#060606',
-    lineHeight: 16,
     letterSpacing: 0,
   },
 
@@ -429,7 +428,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
     color: '#000000',
-    lineHeight: 12,
     letterSpacing: 0,
     marginLeft: 4,
   },
@@ -495,7 +493,7 @@ const styles = StyleSheet.create({
     fontWeight: '700', // Bold
     color: '#111827',
     marginTop: 4, // space between row & value
-    lineHeight: 20, // 100% of 20px
+    // 100% of 20px
     letterSpacing: 0, // no extra spacing
   },
 
@@ -516,7 +514,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     fontStyle: 'normal',
-    lineHeight: 24,
     letterSpacing: 0,
     color: '#111827',
   },

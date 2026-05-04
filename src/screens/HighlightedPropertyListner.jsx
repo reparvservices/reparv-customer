@@ -90,7 +90,6 @@ const HighlightedPropertyListScreen = () => {
   const [filterradius, setFilterRadius] = useState();
   const [cityModalVisible, setCityModalVisible] = useState(false);
   const [selectedCity, setSelectedCity] = useState('');
- 
 
   useEffect(() => {
     if (ptype) {
@@ -243,31 +242,24 @@ const HighlightedPropertyListScreen = () => {
   };
 
   const renderItem = ({item}) => <PropertyCard item={item} />;
- const filteredCategories = React.useMemo(() => {
-  if (!ptype) return propertyCategory;
+  const filteredCategories = React.useMemo(() => {
+    if (!ptype) return propertyCategory;
 
-  // Case 1: Rental
-  if (ptype.startsWith('Rental')) {
-    return propertyCategory.filter(item =>
-      item.startsWith('Rental')
+    // Case 1: Rental
+    if (ptype.startsWith('Rental')) {
+      return propertyCategory.filter(item => item.startsWith('Rental'));
+    }
+
+    // Case 2: Resale
+    if (ptype.startsWith('Resale')) {
+      return propertyCategory.filter(item => item.startsWith('Resale'));
+    }
+
+    // Case 3: Others (exclude Rental & Resale)
+    return propertyCategory.filter(
+      item => !item.startsWith('Rental') && !item.startsWith('Resale'),
     );
-  }
-
-  // Case 2: Resale
-  if (ptype.startsWith('Resale')) {
-    return propertyCategory.filter(item =>
-      item.startsWith('Resale')
-    );
-  }
-
-  // Case 3: Others (exclude Rental & Resale)
-  return propertyCategory.filter(
-    item =>
-      !item.startsWith('Rental') &&
-      !item.startsWith('Resale')
-  );
-}, [ptype, propertyCategory]);
-
+  }, [ptype, propertyCategory]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -397,7 +389,7 @@ const HighlightedPropertyListScreen = () => {
               setAmenities([]);
               setSelectedCity('');
               setSelectedTab('');
-           
+
               setFilterVisible(false);
             }}
           />
@@ -650,7 +642,6 @@ const styles = StyleSheet.create({
 
   placeholder: {
     color: '#999',
-    lineHeight: 20,
   },
 
   filterText: {

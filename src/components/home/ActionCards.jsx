@@ -123,7 +123,6 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontFamily: 'Inter-Bold',
     fontWeight: '800',
-    lineHeight: 22,
     color: '#111827',
     flexShrink: 1,
     marginBottom: 6,
@@ -131,7 +130,7 @@ const styles = StyleSheet.create({
   cardSub: {
     fontSize: 13,
     color: '#868686',
-    lineHeight: 20,
+
     flexShrink: 1,
   },
 });

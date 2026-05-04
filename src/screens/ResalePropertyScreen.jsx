@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontFamily: 'Segoe UI',
     fontSize: 16,
-    lineHeight: 30,
+
     fontFamily: 'SegoeUI-Bold',
     color: '#000',
   },
@@ -152,7 +152,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'SegoeUI-Bold',
     color: '#3F2D62',
-    lineHeight: 22,
     flex: 1,
   },
   circle: {

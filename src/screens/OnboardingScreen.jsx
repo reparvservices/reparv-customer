@@ -142,7 +142,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontFamily: 'SegoeUI-Bold',
-    lineHeight: 22,
     // fontWeight: '700'
   },
   bottomContainer: {
@@ -157,7 +156,6 @@ const styles = StyleSheet.create({
     fontFamily: 'SegoeUI-Bold',
     width: '80%',
     marginBottom: 20,
-    lineHeight: 42,
   },
   dotsContainer: {flexDirection: 'row', alignSelf: 'center', marginBottom: 25},
   dot: {

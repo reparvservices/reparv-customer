@@ -126,7 +126,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'SegoeUI-Bold',
     color: '#3F2D62',
-    lineHeight:20
   },
 
   arrowCircle: {
@@ -143,7 +142,6 @@ const styles = StyleSheet.create({
     color: '#868686',
     marginTop: 4,
     fontSize: 12,
-    lineHeight: 16,
   },
 
   tag: {

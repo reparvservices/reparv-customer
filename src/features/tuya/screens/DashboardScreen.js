@@ -10,7 +10,11 @@ import {
   View,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
-import {useFocusEffect, useIsFocused, useNavigation} from '@react-navigation/native';
+import {
+  useFocusEffect,
+  useIsFocused,
+  useNavigation,
+} from '@react-navigation/native';
 import {ArrowLeft} from 'lucide-react-native';
 import DeviceCard from '../components/DeviceCard';
 import useDevice from '../hooks/useDevice';
@@ -276,13 +280,11 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 13,
     color: BREAKER_UI.danger,
-    lineHeight: 18,
   },
   hintText: {
     marginTop: 8,
     fontSize: 12,
     color: BREAKER_UI.bodyText,
-    lineHeight: 17,
   },
 });
 
