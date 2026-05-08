@@ -9,7 +9,6 @@ import {
   ToastAndroid,
   TextInput,
   Pressable,
-  Modal,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import {SafeAreaView} from 'react-native-safe-area-context';
@@ -22,11 +21,47 @@ import OldPropertyArea from '../components/old-property/OldPropertyArea';
 import OldPriceDetails from '../components/old-property/OldPriceDetails';
 import OldContactDetails from '../components/old-property/OldContactDetails';
 import OldUploadImg from '../components/old-property/OldUploadImg';
-import {MapPin} from 'lucide-react-native';
+import {MapPin, X} from 'lucide-react-native';
 import {useSelector} from 'react-redux';
-import PropertyTypeSelector from '../components/rent-property/PropertyType';
 import AllPropertyTypeSelector from '../components/propertyUpdate/AllTypeProperty';
 
+/* ─────────────────────────────────────────
+   Custom bottom-sheet dropdown (no Modal)
+───────────────────────────────────────── */
+const CustomDropdownModal = ({visible, onClose, data, onSelect, title}) => {
+  if (!visible) return null;
+
+  return (
+    <View style={styles.customModalOverlay}>
+      <Pressable style={styles.customModalBackdrop} onPress={onClose} />
+      <View style={styles.customModalContent}>
+        <View style={styles.customModalHeader}>
+          <Text style={styles.customModalTitle}>{title}</Text>
+          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <X color="#666" size={24} />
+          </TouchableOpacity>
+        </View>
+        <ScrollView style={styles.customModalScroll}>
+          {data.map(item => (
+            <TouchableOpacity
+              key={item.id}
+              style={styles.customModalItem}
+              onPress={() => onSelect(item)}
+              activeOpacity={0.7}>
+              <Text style={styles.customModalItemText}>
+                {item.state || item.city}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+    </View>
+  );
+};
+
+/* ─────────────────────────────────────────
+   Main Screen
+───────────────────────────────────────── */
 export default function RentOldNewPropertyScreen({route}) {
   const navigation = useNavigation();
   const {user} = useSelector(state => state.auth);
@@ -75,8 +110,6 @@ export default function RentOldNewPropertyScreen({route}) {
       setTotalPrice(propertyData.totalSalesPrice);
       setOwnerName(propertyData.projectBy);
       setPhone(propertyData.contact);
-
-      // images usually NOT prefilled (backend controlled)
     }
   }, [mode, propertyData]);
 
@@ -101,20 +134,21 @@ export default function RentOldNewPropertyScreen({route}) {
       console.log('Error fetching cities:', err);
     }
   };
+
   useEffect(() => {
-    fetchStates(); // run once
+    fetchStates();
   }, []);
 
   useEffect(() => {
     if (state) {
       fetchCities(state);
+      setCity(''); // reset city when state changes
     }
   }, [state]);
 
-  /* ---------------- VALIDATION ---------------- */
+  /* ── Validation ── */
   const validateStepOne = () => {
     const newErrors = {};
-
     if (!propertyType) newErrors.propertyType = 'Please select property type';
     if (!propertyName) newErrors.propertyName = 'Property name required';
     if (!address) newErrors.address = 'Address required';
@@ -123,17 +157,13 @@ export default function RentOldNewPropertyScreen({route}) {
     if (!area) newErrors.area = 'Area required';
     if (!sellingPrice) newErrors.sellingPrice = 'Offer price required';
     if (!totalPrice) newErrors.totalPrice = 'Selling price required';
-    //  if (!ownerName) newErrors.ownerName = 'Owner name required';
     if (!phone || phone.length !== 10)
       newErrors.phone = 'Valid mobile number required';
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const getTotalImageCount = () =>
-    Object.values(imageFiles).reduce((sum, arr) => sum + arr.length, 0);
-
+  /* ── Submit ── */
   const handleSubmit = async () => {
     const getTotalImageCount = () =>
       Object.values(imageFiles).reduce(
@@ -161,22 +191,18 @@ export default function RentOldNewPropertyScreen({route}) {
         areas: JSON.stringify([
           {label: 'Built-up Area', value: area, unit: 'sq.ft.'},
         ]),
-        // ── Spread arrays of S3 URLs (only non-empty arrays) ──
         ...Object.fromEntries(
           Object.entries(imageFiles).filter(([, arr]) => arr && arr.length > 0),
         ),
       };
 
       const isEdit = mode === 'edit';
-
       const url = isEdit
         ? `https://aws-api.reparv.in/customerapp/property/update/${propertyData.propertyid}`
         : 'https://aws-api.reparv.in/customerapp/property/post';
 
-      const method = isEdit ? 'PUT' : 'POST';
-
       const res = await fetch(url, {
-        method: method,
+        method: isEdit ? 'PUT' : 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(payload),
       });
@@ -210,6 +236,17 @@ export default function RentOldNewPropertyScreen({route}) {
     showUpload ? setShowUpload(false) : navigation.goBack();
   };
 
+  /* ── Dropdown select handlers ── */
+  const handleStateSelect = item => {
+    setState(item.state);
+    setStateModal(false);
+  };
+
+  const handleCitySelect = item => {
+    setCity(item.city);
+    setCityModal(false);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar backgroundColor="#FAF8FF" barStyle="dark-content" />
@@ -219,10 +256,9 @@ export default function RentOldNewPropertyScreen({route}) {
         <TouchableOpacity onPress={handleBackPress}>
           <BackIcon width={22} height={22} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle]}>
+        <Text style={styles.headerTitle}>
           {mode === 'edit' ? 'Update Property Details' : 'Add Basic Details'}
         </Text>
-
         <View style={{width: 22}} />
       </View>
 
@@ -242,6 +278,7 @@ export default function RentOldNewPropertyScreen({route}) {
               </Text>
               <TextInput
                 placeholder="Enter Building / Project / Society Name"
+                placeholderTextColor="#868686"
                 style={styles.input}
                 value={propertyName}
                 onChangeText={setPropertyName}
@@ -262,6 +299,7 @@ export default function RentOldNewPropertyScreen({route}) {
 
               <TextInput
                 placeholder="Enter Property Location"
+                placeholderTextColor="#868686"
                 style={styles.input}
                 value={address}
                 onChangeText={setAddress}
@@ -376,50 +414,30 @@ export default function RentOldNewPropertyScreen({route}) {
           All fields marked with * are mandatory
         </Text>
       </ScrollView>
-      <Modal visible={stateModal} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalBox}>
-            <ScrollView>
-              {states.map(item => (
-                <Pressable
-                  key={item.id}
-                  style={styles.modalItem}
-                  onPress={() => {
-                    setState(item.state);
-                    setStateModal(false);
-                  }}>
-                  <Text>{item.state}</Text>
-                </Pressable>
-              ))}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
-      <Modal visible={cityModal} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalBox}>
-            <ScrollView>
-              {cities.map(item => (
-                <Pressable
-                  key={item.id}
-                  style={styles.modalItem}
-                  onPress={() => {
-                    setCity(item.city);
-                    setCityModal(false);
-                  }}>
-                  <Text>{item.city}</Text>
-                </Pressable>
-              ))}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
+
+      {/* ── Custom Dropdown Modals ── */}
+      <CustomDropdownModal
+        visible={stateModal}
+        onClose={() => setStateModal(false)}
+        data={states}
+        onSelect={handleStateSelect}
+        title="Select State"
+      />
+
+      <CustomDropdownModal
+        visible={cityModal}
+        onClose={() => setCityModal(false)}
+        data={cities}
+        onSelect={handleCitySelect}
+        title="Select City"
+      />
     </SafeAreaView>
   );
 }
 
-/* ---------------- STYLES ---------------- */
-
+/* ─────────────────────────────────────────
+   Styles
+───────────────────────────────────────── */
 const styles = StyleSheet.create({
   container: {flex: 1, backgroundColor: '#FAF8FF'},
   header: {
@@ -429,21 +447,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     justifyContent: 'space-between',
   },
-  headerTitle: {fontSize: 16, fontFamily: 'SegoeUI-Bold'},
+  headerTitle: {fontSize: 16, fontFamily: 'SegoeUI-Bold', color: 'black'},
   scrollContent: {paddingBottom: 32, gap: 16},
 
   section: {backgroundColor: '#fff', padding: 16},
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
+  sectionHeader: {flexDirection: 'row', alignItems: 'center', gap: 6},
   sectionTitle: {
     fontSize: 16,
     fontFamily: 'SegoeUI-Bold',
     marginBottom: 8,
+    color: '#383737',
   },
   required: {color: '#E33629'},
+
   pickerBox: {
     flex: 1,
     flexDirection: 'row',
@@ -456,29 +472,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E7EB',
   },
-
   pickerLabel: {
     fontSize: 12,
     color: '#6B7280',
     marginBottom: 2,
     fontFamily: 'SegoeUI-Regular',
   },
-
-  pickerValue: {
-    fontSize: 14,
-    color: '#111827',
-    fontFamily: 'SegoeUI-Bold',
-  },
-
-  placeholderText: {
-    color: '#9CA3AF',
-    fontFamily: 'SegoeUI-Regular',
-  },
-
-  disabledPicker: {
-    backgroundColor: '#F3F4F6',
-    borderColor: '#E5E7EB',
-  },
+  pickerValue: {fontSize: 14, color: '#111827', fontFamily: 'SegoeUI-Bold'},
+  placeholderText: {color: '#9CA3AF', fontFamily: 'SegoeUI-Regular'},
+  disabledPicker: {backgroundColor: '#F3F4F6', borderColor: '#E5E7EB'},
 
   input: {
     height: 48,
@@ -487,8 +489,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 12,
     marginBottom: 8,
+    color: '#000',
   },
-
   row: {flexDirection: 'row', gap: 12},
 
   primaryButton: {
@@ -499,11 +501,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  primaryText: {
-    color: '#fff',
-    fontSize: 16,
-    fontFamily: 'SegoeUI-Bold',
-  },
+  primaryText: {color: '#fff', fontSize: 16, fontFamily: 'SegoeUI-Bold'},
 
   error: {color: '#E33629', fontSize: 12, marginBottom: 6},
 
@@ -515,11 +513,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  btnText: {
-    color: '#fff',
-    fontSize: 16,
-    fontFamily: 'SegoeUI-Bold',
-  },
+  btnText: {color: '#fff', fontSize: 16, fontFamily: 'SegoeUI-Bold'},
 
   footerText: {
     textAlign: 'center',
@@ -527,21 +521,60 @@ const styles = StyleSheet.create({
     color: '#8E8E8E',
     marginTop: 12,
   },
-  modalOverlay: {
+
+  /* ── Custom Dropdown Modal ── */
+  customModalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 999,
+  },
+  customModalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
-  modalBox: {
-    backgroundColor: '#fff',
-    maxHeight: '60%',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    padding: 16,
+  customModalContent: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '70%',
+    paddingTop: 16,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: -2},
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
   },
-  modalItem: {
-    paddingVertical: 14,
+  customModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 12,
     borderBottomWidth: 1,
-    borderColor: '#E5E7EB',
+    borderBottomColor: '#E5E7EB',
+  },
+  customModalTitle: {
+    fontSize: 18,
+    fontFamily: 'SegoeUI-Bold',
+    color: '#111827',
+  },
+  closeButton: {padding: 4},
+  customModalScroll: {paddingHorizontal: 20},
+  customModalItem: {
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  customModalItemText: {
+    fontSize: 16,
+    fontFamily: 'SegoeUI-Regular',
+    color: '#374151',
   },
 });

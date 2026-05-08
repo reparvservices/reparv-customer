@@ -432,7 +432,7 @@ const styles = StyleSheet.create({
     padding: 16,
     justifyContent: 'space-between',
   },
-  headerTitle: {fontSize: 18, fontWeight: '600'},
+  headerTitle: {fontSize: 18, fontWeight: '600', color: '#000'},
 
   avatarWrapper: {alignItems: 'center', marginTop: 20},
   avatar: {
@@ -462,6 +462,7 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     marginTop: 12,
     marginBottom: 6,
+    color: '#000',
   },
 
   input: {
@@ -470,6 +471,7 @@ const styles = StyleSheet.create({
     padding: 14,
     borderWidth: 1,
     borderColor: '#E5E7EB',
+    color: '#000',
   },
 
   dropdown: {

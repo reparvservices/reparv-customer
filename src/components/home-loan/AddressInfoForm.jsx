@@ -233,11 +233,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'SegoeUI-Bold',
     marginBottom: 12,
+    color: '#000',
   },
   label: {
     fontSize: 14,
     fontFamily: 'SegoeUI-Semibold',
     marginVertical: 10,
+    color: '#000',
   },
   row: {
     flexDirection: 'row',
@@ -258,6 +260,7 @@ const styles = StyleSheet.create({
     borderColor: '#8A38F5',
     alignItems: 'center',
     justifyContent: 'center',
+    color: '#000',
   },
   radioSelected: {
     borderColor: '#8A38F5',
@@ -271,6 +274,7 @@ const styles = StyleSheet.create({
   radioText: {
     marginLeft: 8,
     fontSize: 14,
+    color: '#000',
   },
   input: {
     height: 48,
@@ -279,6 +283,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 14,
     fontSize: 14,
+    color: '#000',
     marginBottom: 12,
   },
   halfInput: {

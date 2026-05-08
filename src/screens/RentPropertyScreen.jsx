@@ -157,7 +157,10 @@ export default function RentPropertyScreen() {
                 start={{x: 0.5, y: 0}}
                 end={{x: 0.5, y: 1}}
                 style={styles.bottomBtn}>
-                <Text style={styles.bottomBtnText}>Explore PG Options</Text>
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('NoPropertyFound')}>
+                  <Text style={styles.bottomBtnText}>Explore PG Options</Text>
+                </TouchableOpacity>
                 <WhiteArrowIcon width={14} height={14} />
               </LinearGradient>
             </View>

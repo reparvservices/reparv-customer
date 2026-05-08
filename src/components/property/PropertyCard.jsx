@@ -18,7 +18,7 @@ import {getImageUri, parseFrontView} from '../../utils/imageHandle';
 const {width} = Dimensions.get('window');
 const IMAGE_BASE_URL = 'https://reparv-assets.s3.ap-south-1.amazonaws.com';
 
-function PropertyCard({item}) {
+function PropertyCard({item, iswishList}) {
   const navigation = useNavigation();
   const {user} = useSelector(state => state.auth);
   const [isLiked, setIsLiked] = useState(false);
@@ -136,14 +136,15 @@ function PropertyCard({item}) {
             <Text style={styles.assuredText}>REPARV Assured</Text>
           </View>
         )}
-
-        <TouchableOpacity style={styles.heartBtn} onPress={handleLikePress}>
-          <Heart
-            size={20}
-            color="#7A2EFF"
-            fill={isLiked ? '#7A2EFF' : 'none'}
-          />
-        </TouchableOpacity>
+        {!iswishList && (
+          <TouchableOpacity style={styles.heartBtn} onPress={handleLikePress}>
+            <Heart
+              size={20}
+              color="#7A2EFF"
+              fill={isLiked ? '#7A2EFF' : 'none'}
+            />
+          </TouchableOpacity>
+        )}
       </TouchableOpacity>
 
       {/* BODY */}

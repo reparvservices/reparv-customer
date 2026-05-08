@@ -182,7 +182,7 @@ function LoginModal({visible, onClose, onSwitchToSignUp, onOtpSent}) {
               <Text
                 style={styles.link}
                 onPress={() => navigation.navigate('TermsPrivacyScreen')}>
-                Terms & Conditions
+                Terms & Conditions.
               </Text>
             </Text>
 

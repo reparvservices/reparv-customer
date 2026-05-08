@@ -8,17 +8,30 @@ import {
   Image,
   Animated,
   Platform,
-  PermissionsAndroid,
   ScrollView,
   TextInput,
-  KeyboardAvoidingView,
   FlatList,
 } from 'react-native';
 import {WebView} from 'react-native-webview';
-import Geolocation from '@react-native-community/geolocation';
 import Slider from '@react-native-community/slider';
 import {getImageUri} from '../utils/imageHandle';
-import {Filter} from 'lucide-react-native';
+import {
+  Filter,
+  ChevronDown,
+  Search,
+  X,
+  Check,
+  Home,
+  Ruler,
+  Compass,
+  CreditCard,
+  Building2,
+  MapPin,
+  TriangleAlert,
+  RefreshCcw,
+  SquareDashedMousePointer,
+  ScanSearch,
+} from 'lucide-react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
@@ -40,37 +53,12 @@ const C = {
   success: '#10B981',
   successLight: '#D1FAE5',
   danger: '#EF4444',
-  dangerLight: '#FEE2E2',
   skeleton1: '#E2E8F0',
-  skeleton2: '#F1F5F9',
 };
 
-const RADIUS_KM_DEFAULT = 5;
 const BUDGET_MIN = 1_000;
 const BUDGET_MAX = 20_000_000;
 const BUDGET_STEP = 15_000;
-
-// Radius preset chips
-const RADIUS_PRESETS = [
-  {label: '1km', value: 1},
-  {label: '5km', value: 5},
-  {label: '10km', value: 10},
-  {label: '25km', value: 25},
-];
-
-// Sort options
-const SORT_OPTIONS = [
-  {key: 'distance', label: '📍 Distance'},
-  {key: 'price_asc', label: '💰 Price ↑'},
-  {key: 'price_desc', label: '💰 Price ↓'},
-  {key: 'newest', label: '🆕 Newest'},
-];
-
-Geolocation.setRNConfiguration({
-  skipPermissionRequests: false,
-  authorizationLevel: 'whenInUse',
-  locationProvider: 'auto',
-});
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function haversineKm(lat1, lon1, lat2, lon2) {
@@ -94,11 +82,6 @@ function formatPrice(val) {
   return '₹' + n;
 }
 
-function formatDistance(km) {
-  if (km < 1) return (km * 1000).toFixed(0) + 'm';
-  return km.toFixed(1) + 'km';
-}
-
 function getFirstImage(frontView) {
   try {
     const arr = JSON.parse(frontView);
@@ -115,55 +98,34 @@ function prettifyCategory(cat) {
     .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2');
 }
 
-function getLocationRobust() {
-  return new Promise((resolve, reject) => {
-    Geolocation.getCurrentPosition(
-      p => resolve({lat: p.coords.latitude, lon: p.coords.longitude}),
-      () =>
-        Geolocation.getCurrentPosition(
-          p => resolve({lat: p.coords.latitude, lon: p.coords.longitude}),
-          () =>
-            Geolocation.getCurrentPosition(
-              p => resolve({lat: p.coords.latitude, lon: p.coords.longitude}),
-              err => reject(err),
-              {enableHighAccuracy: false, timeout: 10000, maximumAge: 300000},
-            ),
-          {enableHighAccuracy: false, timeout: 10000, maximumAge: 0},
-        ),
-      {enableHighAccuracy: true, timeout: 10000, maximumAge: 0},
-    );
+function computeCityBounds(cityProps) {
+  const coords = cityProps
+    .map(p => ({lat: parseFloat(p.latitude), lon: parseFloat(p.longitude)}))
+    .filter(c => c.lat && c.lon);
+  if (!coords.length) return null;
+
+  const centLat = coords.reduce((s, c) => s + c.lat, 0) / coords.length;
+  const centLon = coords.reduce((s, c) => s + c.lon, 0) / coords.length;
+
+  let maxDist = 0;
+  coords.forEach(c => {
+    const d = haversineKm(centLat, centLon, c.lat, c.lon);
+    if (d > maxDist) maxDist = d;
   });
+
+  const circleKm = Math.max(maxDist + 3, 8);
+  return {lat: centLat, lon: centLon, circleKm};
 }
 
-async function requestAndroidPermission() {
-  if (Platform.OS !== 'android') return true;
-  const fine = PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION;
-  if (await PermissionsAndroid.check(fine)) return true;
-  const r = await PermissionsAndroid.request(fine, {
-    title: 'Location Permission',
-    message: 'Reparv needs your location to show nearby properties.',
-    buttonPositive: 'Allow',
-    buttonNegative: 'Deny',
-  });
-  if (r === PermissionsAndroid.RESULTS.GRANTED) return true;
-  const coarse = await PermissionsAndroid.request(
-    PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION,
-  );
-  return coarse === PermissionsAndroid.RESULTS.GRANTED;
+function circleKmToZoom(km) {
+  if (km < 5) return 14;
+  if (km < 10) return 13;
+  if (km < 20) return 12;
+  if (km < 50) return 11;
+  return 10;
 }
 
-function locationErrMsg(code) {
-  if (code === 1)
-    return 'Permission denied.\nGo to Settings → Apps → Permissions → Enable Location.';
-  if (code === 2)
-    return 'Location unavailable.\nMake sure GPS is ON in device Settings → Location.';
-  if (code === 3)
-    return 'Location timed out.\nMove to an open area or enable Wi-Fi and try again.';
-  return 'Could not get your location. Please try again.';
-}
-
-// ─── Leaflet Satellite Map HTML ───────────────────────────────────────────────
-// Loaded via WebView. Communicates with RN via postMessage / injectJavaScript.
+// ─── Leaflet HTML ─────────────────────────────────────────────────────────────
 const LEAFLET_HTML = `<!DOCTYPE html>
 <html>
 <head>
@@ -178,16 +140,11 @@ const LEAFLET_HTML = `<!DOCTYPE html>
     html, body, #map { width:100%; height:100%; background:#0f172a; }
     .leaflet-control-attribution,
     .leaflet-control-zoom { display:none !important; }
-
-    /* ── Price marker ── */
     .pm-wrap { display:flex; flex-direction:column; align-items:center; }
     .pm-bubble {
-      background:#6E56CF;
-      padding:5px 10px;
-      border-radius:10px;
+      background:#6E56CF; padding:5px 10px; border-radius:10px;
       display:flex; flex-direction:column; align-items:center;
-      box-shadow:0 2px 8px rgba(110,86,207,0.35);
-      white-space:nowrap;
+      box-shadow:0 2px 8px rgba(110,86,207,0.35); white-space:nowrap;
     }
     .pm-bubble.sel { background:#fff; border:2px solid #6E56CF; }
     .pm-price {
@@ -195,52 +152,31 @@ const LEAFLET_HTML = `<!DOCTYPE html>
       font-family:-apple-system,sans-serif; line-height:1.3;
     }
     .pm-bubble.sel .pm-price { color:#6E56CF; }
-    .pm-dist {
-      color:rgba(255,255,255,0.75); font-size:9px; font-weight:500;
-      font-family:-apple-system,sans-serif; margin-top:1px;
-    }
-    .pm-bubble.sel .pm-dist { color:#BEB0F0; }
     .pm-pin {
       width:0; height:0;
       border-left:5px solid transparent;
       border-right:5px solid transparent;
       border-top:7px solid #6E56CF;
     }
-    .pm-bubble.sel + .pm-pin { border-top-color:#6E56CF; }
-
-    /* ── User location dot ── */
-    .ud-outer {
-      width:22px; height:22px; border-radius:11px;
-      background:rgba(37,99,235,0.15);
-      border:2px solid #2563EB;
-      display:flex; align-items:center; justify-content:center;
-    }
-    .ud-inner {
-      width:9px; height:9px; border-radius:5px;
-      background:#fff; border:2px solid #2563EB;
+    .city-dot {
+      width:14px; height:14px; border-radius:7px;
+      background:#6E56CF; border:3px solid #fff;
+      box-shadow:0 0 0 2px #6E56CF;
     }
   </style>
 </head>
 <body>
 <div id="map"></div>
 <script>
-  // ── Map init ──────────────────────────────────────────────────────────────
   var map = L.map('map', { zoomControl:false, attributionControl:false });
-
-  // Satellite layer only (Esri World Imagery — no API key required)
   L.tileLayer(
     'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
     { maxZoom:19, tileSize:256 }
   ).addTo(map);
-
   map.setView([20.5937, 78.9629], 5);
-
-  // ── State ─────────────────────────────────────────────────────────────────
-  var propertyMarkers = {};   // id → L.Marker
-  var userMarker      = null;
-  var radiusCircle    = null;
-
-  // ── Helpers ───────────────────────────────────────────────────────────────
+  var propertyMarkers = {};
+  var cityCircle     = null;
+  var cityCenterDot  = null;
   function _fmt(val) {
     var n = parseFloat(val);
     if (!n) return '\u2014';
@@ -249,124 +185,79 @@ const LEAFLET_HTML = `<!DOCTYPE html>
     if (n >= 1000)     return '\u20b9' + (n/1000).toFixed(0)     + 'K';
     return '\u20b9' + n;
   }
-  function _dist(km) {
-    return km < 1 ? (km*1000).toFixed(0)+'m' : km.toFixed(1)+'km';
-  }
-  function _hav(lat1,lon1,lat2,lon2) {
-    var R=6371, dLat=(lat2-lat1)*Math.PI/180, dLon=(lon2-lon1)*Math.PI/180;
-    var a=Math.sin(dLat/2)*Math.sin(dLat/2)+
-          Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*
-          Math.sin(dLon/2)*Math.sin(dLon/2);
-    return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-  }
-
-  // Build a DivIcon matching PriceMarker design
-  function _priceIcon(price, selected, distKm) {
+  function _priceIcon(price, selected) {
     var priceStr = _fmt(price);
-    var distStr  = distKm != null ? _dist(distKm) : null;
-    var inner    = '<span class="pm-price">'+priceStr+'</span>' +
-                   (distStr ? '<span class="pm-dist">'+distStr+'</span>' : '');
     var html = '<div class="pm-wrap">' +
-               '<div class="pm-bubble'+(selected?' sel':'')+'">'+inner+'</div>'+
-               '<div class="pm-pin"></div>'+
-               '</div>';
-    // Approximate width from string length
+               '<div class="pm-bubble'+(selected?' sel':'')+'">'+
+               '<span class="pm-price">'+priceStr+'</span></div>'+
+               '<div class="pm-pin"></div></div>';
     var w = Math.max(priceStr.length * 8 + 22, 58);
-    var h = distStr ? 44 : 36;
-    return L.divIcon({
-      html: html,
-      className: '',
-      iconSize:   [w, h],
-      iconAnchor: [w/2, h],
-    });
+    return L.divIcon({ html:html, className:'', iconSize:[w,36], iconAnchor:[w/2,36] });
   }
-
-  // ── Map click → close card ────────────────────────────────────────────────
-  map.on('click', function () {
-    window.ReactNativeWebView.postMessage(
-      JSON.stringify({ type: 'MAP_PRESS' })
-    );
+  map.on('click', function() {
+    window.ReactNativeWebView.postMessage(JSON.stringify({ type:'MAP_PRESS' }));
   });
-
-  // ── Public API (called via injectJavaScript from RN) ──────────────────────
-
-  /**
-   * flyTo(lat, lon, zoom?)
-   * Animates the map to the given centre.
-   */
   window.flyTo = function(lat, lon, zoom) {
-    map.setView([lat, lon], zoom || 13, { animate:true, duration:0.8 });
+    map.setView([lat, lon], zoom || 12, { animate:true, duration:0.9 });
   };
-
-  /**
-   * updateMap({ userCoords, markers, radiusKm })
-   * Syncs user dot, radius circle and all property markers.
-   */
-  window.updateMap = function(data) {
-    var uc       = data.userCoords;
-    var mList    = data.markers || [];
-    var radiusKm = data.radiusKm || 5;
-
-    // ── User location dot ──────────────────────────────────────────────────
-    if (uc) {
-      var uLL = [uc.lat, uc.lon];
-      var uIcon = L.divIcon({
-        html: '<div class="ud-outer"><div class="ud-inner"></div></div>',
-        className: '',
-        iconSize:   [22, 22],
-        iconAnchor: [11, 11],
-      });
-      if (userMarker) {
-        userMarker.setLatLng(uLL);
-        userMarker.setIcon(uIcon);
+  window.clearMap = function() {
+    Object.keys(propertyMarkers).forEach(function(id) {
+      map.removeLayer(propertyMarkers[id]);
+    });
+    propertyMarkers = {};
+    if (cityCircle)    { map.removeLayer(cityCircle);    cityCircle    = null; }
+    if (cityCenterDot) { map.removeLayer(cityCenterDot); cityCenterDot = null; }
+  };
+  window.updateCityMap = function(data) {
+    var center     = data.centerCoords;
+    var mList      = data.markers || [];
+    var circleKm   = data.circleKm   || 10;
+    var selectedId = data.selectedId || null;
+    if (center) {
+      var cLL = [center.lat, center.lon];
+      if (cityCircle) {
+        cityCircle.setLatLng(cLL);
+        cityCircle.setRadius(circleKm * 1000);
       } else {
-        userMarker = L.marker(uLL, { icon:uIcon, zIndexOffset:999 }).addTo(map);
-      }
-
-      // ── Radius circle ────────────────────────────────────────────────────
-      if (radiusCircle) {
-        radiusCircle.setLatLng(uLL);
-        radiusCircle.setRadius(radiusKm * 1000);
-      } else {
-        radiusCircle = L.circle(uLL, {
-          radius:      radiusKm * 1000,
+        cityCircle = L.circle(cLL, {
+          radius:      circleKm * 1000,
           color:       '#6E56CF',
-          weight:      1.5,
-          fillColor:   'rgba(37,99,235,0.06)',
+          weight:      2,
+          dashArray:   '8, 5',
+          fillColor:   'rgba(110,86,207,0.07)',
           fillOpacity: 1,
         }).addTo(map);
       }
+      var dotIcon = L.divIcon({
+        html:'<div class="city-dot"></div>',
+        className:'', iconSize:[14,14], iconAnchor:[7,7],
+      });
+      if (cityCenterDot) {
+        cityCenterDot.setLatLng(cLL);
+        cityCenterDot.setIcon(dotIcon);
+      } else {
+        cityCenterDot = L.marker(cLL, { icon:dotIcon, zIndexOffset:999 }).addTo(map);
+      }
     }
-
-    // ── Property markers ───────────────────────────────────────────────────
-    // Remove stale markers
     var incoming = {};
     mList.forEach(function(m) { incoming[m.id] = true; });
     Object.keys(propertyMarkers).forEach(function(id) {
-      if (!incoming[id]) {
-        map.removeLayer(propertyMarkers[id]);
-        delete propertyMarkers[id];
-      }
+      if (!incoming[id]) { map.removeLayer(propertyMarkers[id]); delete propertyMarkers[id]; }
     });
-
-    // Add or update
     mList.forEach(function(m) {
       if (!m.lat || !m.lon) return;
-      var distKm = uc ? _hav(uc.lat, uc.lon, m.lat, m.lon) : null;
-      var icon   = _priceIcon(m.price, m.selected, distKm);
-
+      var sel  = m.id === selectedId;
+      var icon = _priceIcon(m.price, sel);
       if (propertyMarkers[m.id]) {
         propertyMarkers[m.id].setIcon(icon);
-        propertyMarkers[m.id].setZIndexOffset(m.selected ? 200 : 0);
+        propertyMarkers[m.id].setZIndexOffset(sel ? 200 : 0);
       } else {
         var mk = L.marker([m.lat, m.lon], {
-          icon:                icon,
-          zIndexOffset:        m.selected ? 200 : 0,
-          bubblingMouseEvents: false,   // prevent map-click from firing too
+          icon:icon, zIndexOffset:sel ? 200 : 0, bubblingMouseEvents:false,
         });
         mk.on('click', function() {
           window.ReactNativeWebView.postMessage(
-            JSON.stringify({ type: 'MARKER_PRESS', id: m.id })
+            JSON.stringify({ type:'MARKER_PRESS', id:m.id })
           );
         });
         mk.addTo(map);
@@ -374,17 +265,14 @@ const LEAFLET_HTML = `<!DOCTYPE html>
       }
     });
   };
-
-  // Signal RN that Leaflet + map are fully ready
-  window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'MAP_READY' }));
+  window.ReactNativeWebView.postMessage(JSON.stringify({ type:'MAP_READY' }));
 <\/script>
 </body>
 </html>`;
 
-// ─── Skeleton Loader ──────────────────────────────────────────────────────────
+// ─── Skeleton ─────────────────────────────────────────────────────────────────
 const SkeletonBox = ({width, height, borderRadius = 8, style}) => {
   const anim = useRef(new Animated.Value(0)).current;
-
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([
@@ -403,95 +291,58 @@ const SkeletonBox = ({width, height, borderRadius = 8, style}) => {
     loop.start();
     return () => loop.stop();
   }, []);
-
-  const opacity = anim.interpolate({inputRange: [0, 1], outputRange: [0.4, 1]});
-
   return (
     <Animated.View
       style={[
-        {width, height, borderRadius, backgroundColor: C.skeleton1, opacity},
+        {
+          width,
+          height,
+          borderRadius,
+          backgroundColor: C.skeleton1,
+          opacity: anim.interpolate({
+            inputRange: [0, 1],
+            outputRange: [0.4, 1],
+          }),
+        },
         style,
       ]}
     />
   );
 };
 
-// ─── Empty State ──────────────────────────────────────────────────────────────
-const EmptyState = ({hasFilters, onReset, radiusKm, onExpandRadius}) => {
-  const scaleAnim = useRef(new Animated.Value(0.85)).current;
-  const opacityAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        tension: 80,
-        friction: 10,
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacityAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
-
-  return (
-    <Animated.View
-      style={[
-        s.emptyState,
-        {transform: [{scale: scaleAnim}], opacity: opacityAnim},
-      ]}>
-      <Text style={s.emptyEmoji}>🏘️</Text>
-      <Text style={s.emptyTitle}>No properties found</Text>
-      <Text style={s.emptySubtitle}>
-        {hasFilters
-          ? 'Your filters are too narrow. Try resetting them or expanding the radius.'
-          : `No properties within ${radiusKm}km. Try a larger radius.`}
-      </Text>
-      <View style={s.emptyActions}>
-        {hasFilters && (
-          <TouchableOpacity
-            style={s.emptyBtnOutline}
-            onPress={onReset}
-            activeOpacity={0.8}>
-            <Text style={s.emptyBtnOutlineTxt}>Reset Filters</Text>
-          </TouchableOpacity>
-        )}
-        {radiusKm < 25 && (
-          <TouchableOpacity
-            style={s.emptyBtnPrimary}
-            onPress={() => onExpandRadius(radiusKm < 10 ? 10 : 25)}
-            activeOpacity={0.8}>
-            <Text style={s.emptyBtnPrimaryTxt}>
-              Expand to {radiusKm < 10 ? '10' : '25'}km
-            </Text>
-          </TouchableOpacity>
-        )}
-      </View>
-    </Animated.View>
-  );
-};
-
-// ─── Sort Sheet ───────────────────────────────────────────────────────────────
-const SortSheet = ({visible, onClose, selected, onSelect}) => {
+// ─── City Picker Modal ────────────────────────────────────────────────────────
+const CityPickerModal = ({
+  visible,
+  onClose,
+  cities,
+  selectedCity,
+  onSelect,
+}) => {
+  const [search, setSearch] = useState('');
   const [mounted, setMounted] = useState(false);
-  const slideY = useRef(new Animated.Value(200)).current;
+  const slideY = useRef(new Animated.Value(700)).current;
   const opacity = useRef(new Animated.Value(0)).current;
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return cities;
+    return cities.filter(c =>
+      c.name.toLowerCase().includes(search.toLowerCase()),
+    );
+  }, [cities, search]);
 
   useEffect(() => {
     if (visible) {
       setMounted(true);
+      setSearch('');
       Animated.parallel([
         Animated.timing(opacity, {
           toValue: 1,
-          duration: 200,
+          duration: 220,
           useNativeDriver: true,
         }),
         Animated.spring(slideY, {
           toValue: 0,
-          tension: 90,
+          tension: 80,
           friction: 12,
           useNativeDriver: true,
         }),
@@ -500,12 +351,12 @@ const SortSheet = ({visible, onClose, selected, onSelect}) => {
       Animated.parallel([
         Animated.timing(opacity, {
           toValue: 0,
-          duration: 150,
+          duration: 180,
           useNativeDriver: true,
         }),
         Animated.timing(slideY, {
-          toValue: 200,
-          duration: 150,
+          toValue: 700,
+          duration: 200,
           useNativeDriver: true,
         }),
       ]).start(({finished}) => {
@@ -517,80 +368,212 @@ const SortSheet = ({visible, onClose, selected, onSelect}) => {
   if (!mounted) return null;
 
   return (
-    <Animated.View style={[ss.backdrop, {opacity}]}>
+    <Animated.View style={[cp.backdrop, {opacity}]}>
       <TouchableOpacity
         style={StyleSheet.absoluteFill}
         activeOpacity={1}
         onPress={onClose}
       />
-      <Animated.View style={[ss.sheet, {transform: [{translateY: slideY}]}]}>
-        <View style={ss.handle} />
-        <Text style={ss.title}>Sort By</Text>
-        {SORT_OPTIONS.map(opt => (
-          <TouchableOpacity
-            key={opt.key}
-            style={[ss.row, selected === opt.key && ss.rowActive]}
-            onPress={() => {
-              onSelect(opt.key);
-              onClose();
-            }}>
-            <Text style={[ss.rowTxt, selected === opt.key && ss.rowTxtActive]}>
-              {opt.label}
-            </Text>
-            {selected === opt.key && <Text style={ss.check}>✓</Text>}
+      <Animated.View style={[cp.sheet, {transform: [{translateY: slideY}]}]}>
+        <View style={cp.handle} />
+
+        {/* Header */}
+        <View style={cp.header}>
+          <Text style={cp.title}>Select City</Text>
+          <TouchableOpacity style={cp.closeBtn} onPress={onClose}>
+            <X size={16} color={C.textSub} strokeWidth={2.5} />
           </TouchableOpacity>
-        ))}
+        </View>
+
+        {/* Search */}
+        <View style={cp.searchWrap}>
+          <Search size={15} color={C.textMuted} strokeWidth={2} />
+          <TextInput
+            style={cp.searchInput}
+            placeholder="Search city…"
+            placeholderTextColor={C.textMuted}
+            value={search}
+            onChangeText={setSearch}
+            autoCorrect={false}
+            autoCapitalize="words"
+          />
+          {search.length > 0 && (
+            <TouchableOpacity
+              onPress={() => setSearch('')}
+              hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
+              <X size={14} color={C.textMuted} strokeWidth={2.5} />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* List */}
+        <FlatList
+          data={filtered}
+          keyExtractor={item => item.name}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          style={cp.list}
+          ListEmptyComponent={
+            <View style={cp.emptySearch}>
+              <Text style={cp.emptySearchTxt}>No cities match "{search}"</Text>
+            </View>
+          }
+          renderItem={({item}) => {
+            const active = selectedCity === item.name;
+            return (
+              <TouchableOpacity
+                style={[cp.cityRow, active && cp.cityRowActive]}
+                onPress={() => {
+                  onSelect(item.name);
+                  onClose();
+                }}
+                activeOpacity={0.75}>
+                <View style={cp.cityLeft}>
+                  <View
+                    style={[cp.cityIconWrap, active && cp.cityIconWrapActive]}>
+                    <Building2
+                      size={18}
+                      color={active ? C.primary : C.textMuted}
+                      strokeWidth={1.8}
+                    />
+                  </View>
+                  <View style={cp.cityMeta}>
+                    <Text style={[cp.cityName, active && cp.cityNameActive]}>
+                      {item.name}
+                    </Text>
+                    <Text style={cp.cityCount}>{item.count} properties</Text>
+                  </View>
+                </View>
+                {active ? (
+                  <View style={cp.cityCheckWrap}>
+                    <Check size={13} color={C.white} strokeWidth={3} />
+                  </View>
+                ) : (
+                  <ChevronDown
+                    size={16}
+                    color={C.textMuted}
+                    style={{transform: [{rotate: '-90deg'}]}}
+                  />
+                )}
+              </TouchableOpacity>
+            );
+          }}
+        />
       </Animated.View>
     </Animated.View>
   );
 };
 
-const ss = StyleSheet.create({
+const cp = StyleSheet.create({
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(15,23,42,0.45)',
-    zIndex: 60,
+    backgroundColor: 'rgba(15,23,42,0.52)',
+    zIndex: 70,
     justifyContent: 'flex-end',
   },
   sheet: {
     backgroundColor: C.white,
-    borderTopLeftRadius: 22,
-    borderTopRightRadius: 22,
-    paddingHorizontal: 20,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     paddingTop: 12,
-    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+    maxHeight: '80%',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: -6},
+    shadowOpacity: 0.12,
+    shadowRadius: 20,
   },
   handle: {
-    width: 36,
+    width: 38,
     height: 4,
     borderRadius: 2,
     backgroundColor: C.border,
     alignSelf: 'center',
     marginBottom: 16,
   },
-  title: {color: C.text, fontSize: 16, fontWeight: '800', marginBottom: 12},
-  row: {
+  header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: C.border,
-  },
-  rowActive: {
-    backgroundColor: C.primaryLight,
-    marginHorizontal: -20,
+    justifyContent: 'space-between',
     paddingHorizontal: 20,
-    borderRadius: 0,
+    marginBottom: 14,
   },
-  rowTxt: {color: C.textSub, fontSize: 14, fontWeight: '500'},
-  rowTxtActive: {color: C.primary, fontWeight: '700'},
-  check: {color: C.primary, fontSize: 15, fontWeight: '800'},
+  title: {color: C.text, fontSize: 17, fontWeight: '800'},
+  closeBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: C.bg,
+    borderWidth: 1,
+    borderColor: C.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  searchWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: C.bg,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: C.border,
+    marginHorizontal: 16,
+    paddingHorizontal: 14,
+    height: 46,
+    marginBottom: 12,
+    gap: 10,
+  },
+  searchInput: {
+    flex: 1,
+    color: C.text,
+    fontSize: 14,
+    fontWeight: '500',
+    paddingVertical: 0,
+  },
+  list: {paddingHorizontal: 12, paddingBottom: Platform.OS === 'ios' ? 34 : 16},
+  emptySearch: {alignItems: 'center', paddingVertical: 32},
+  emptySearchTxt: {color: C.textMuted, fontSize: 14},
+
+  cityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    borderRadius: 14,
+    marginBottom: 4,
+  },
+  cityRowActive: {backgroundColor: C.primaryLight},
+  cityLeft: {flexDirection: 'row', alignItems: 'center', flex: 1, gap: 12},
+  cityIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: C.bg,
+    borderWidth: 1,
+    borderColor: C.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cityIconWrapActive: {
+    backgroundColor: C.primaryMid + '40',
+    borderColor: C.primaryMid,
+  },
+  cityMeta: {flex: 1},
+  cityName: {color: C.text, fontSize: 14, fontWeight: '700', marginBottom: 2},
+  cityNameActive: {color: C.primary},
+  cityCount: {color: C.textMuted, fontSize: 11, fontWeight: '500'},
+  cityCheckWrap: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: C.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });
 
 // ─── Property Bottom Card ─────────────────────────────────────────────────────
-const PropertyCard = ({property, onClose, navigation, userCoords}) => {
-  const slideY = useRef(new Animated.Value(280)).current;
+const PropertyCard = ({property, onClose, navigation}) => {
+  const slideY = useRef(new Animated.Value(300)).current;
   const [imgLoaded, setImgLoaded] = useState(false);
   const [imgError, setImgError] = useState(false);
 
@@ -612,17 +595,11 @@ const PropertyCard = ({property, onClose, navigation, userCoords}) => {
     ? property.propertyType.join(' · ')
     : property.propertyType || '';
 
-  const distance = useMemo(() => {
-    if (!userCoords) return null;
-    const lat = parseFloat(property.latitude);
-    const lon = parseFloat(property.longitude);
-    if (!lat || !lon) return null;
-    return haversineKm(userCoords.lat, userCoords.lon, lat, lon);
-  }, [property, userCoords]);
-
   return (
     <Animated.View style={[s.sheet, {transform: [{translateY: slideY}]}]}>
       <View style={s.sheetHandle} />
+
+      {/* Header */}
       <View style={s.sheetHeader}>
         <View style={{flex: 1}}>
           <Text style={s.sheetName} numberOfLines={1}>
@@ -637,19 +614,20 @@ const PropertyCard = ({property, onClose, navigation, userCoords}) => {
           </View>
         </View>
         <TouchableOpacity style={s.closeBtn} onPress={onClose}>
-          <Text style={s.closeTxt}>✕</Text>
+          <X size={14} color={C.textSub} strokeWidth={2.5} />
         </TouchableOpacity>
       </View>
 
-      {distance != null && (
-        <View style={s.distanceStrip}>
-          <Text style={s.distanceStripIcon}>📍</Text>
-          <Text style={s.distanceStripTxt}>
-            {formatDistance(distance)} away from your location
-          </Text>
-        </View>
-      )}
+      {/* City strip */}
+      <View style={s.cityStrip}>
+        <MapPin size={13} color={C.primary} strokeWidth={2} />
+        <Text style={s.cityStripTxt} numberOfLines={1}>
+          {property.location ? `${property.location}, ` : ''}
+          {property.city}, {property.state}
+        </Text>
+      </View>
 
+      {/* Card row */}
       <View style={s.cardRow}>
         <View style={[s.cardImg, {overflow: 'hidden'}]}>
           {image && !imgError ? (
@@ -669,7 +647,7 @@ const PropertyCard = ({property, onClose, navigation, userCoords}) => {
             </>
           ) : (
             <View style={[s.cardImg, s.cardImgFallback]}>
-              <Text style={{fontSize: 26}}>🏗️</Text>
+              <Building2 size={28} color={C.textMuted} strokeWidth={1.5} />
             </View>
           )}
         </View>
@@ -677,34 +655,36 @@ const PropertyCard = ({property, onClose, navigation, userCoords}) => {
         <View style={s.cardInfo}>
           {!!types && (
             <View style={s.infoRow}>
-              <Text style={s.infoIcon}>🏠</Text>
+              <Home size={12} color={C.textMuted} strokeWidth={2} />
               <Text style={s.infoTxt} numberOfLines={2}>
                 {types}
               </Text>
             </View>
           )}
-          <View style={s.infoRow}>
-            <Text style={s.infoIcon}>📍</Text>
-            <Text style={s.infoTxt} numberOfLines={1}>
-              {property.location ? `${property.location}, ` : ''}
-              {property.city}, {property.state}
-            </Text>
-          </View>
           {!!property.carpetArea && (
             <View style={s.infoRow}>
-              <Text style={s.infoIcon}>📐</Text>
+              <Ruler size={12} color={C.textMuted} strokeWidth={2} />
               <Text style={s.infoTxt}>{property.carpetArea} sq.ft</Text>
             </View>
           )}
           {!!property.propertyFacing && (
             <View style={s.infoRow}>
-              <Text style={s.infoIcon}>🧭</Text>
+              <Compass size={12} color={C.textMuted} strokeWidth={2} />
               <Text style={s.infoTxt}>{property.propertyFacing}</Text>
+            </View>
+          )}
+          {property.loanAvailability === 'Yes' && (
+            <View style={s.infoRow}>
+              <CreditCard size={12} color={C.primary} strokeWidth={2} />
+              <Text style={[s.infoTxt, {color: C.primary}]}>
+                Loan Available
+              </Text>
             </View>
           )}
         </View>
       </View>
 
+      {/* Price row */}
       <View style={s.priceRow}>
         <View>
           <Text style={s.priceLabel}>Offer Price</Text>
@@ -713,23 +693,14 @@ const PropertyCard = ({property, onClose, navigation, userCoords}) => {
             <Text style={s.priceStrike}>MRP {salesPrice}</Text>
           )}
         </View>
-        <View style={s.ctaCol}>
-          {property.loanAvailability === 'Yes' && (
-            <View style={s.tagBlue}>
-              <Text style={s.tagBlueTxt}>🏦 Loan</Text>
-            </View>
-          )}
-          <TouchableOpacity
-            style={s.detailsBtn}
-            activeOpacity={0.85}
-            onPress={() =>
-              navigation.navigate('PropertyDetails', {
-                seoSlug: property.seoSlug,
-              })
-            }>
-            <Text style={s.detailsBtnTxt}>View Details →</Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          style={s.detailsBtn}
+          activeOpacity={0.85}
+          onPress={() =>
+            navigation.navigate('PropertyDetails', {seoSlug: property.seoSlug})
+          }>
+          <Text style={s.detailsBtnTxt}>View Details →</Text>
+        </TouchableOpacity>
       </View>
     </Animated.View>
   );
@@ -804,22 +775,23 @@ const FilterPanel = ({
         onPress={onClose}
       />
       <Animated.View style={[s.filterCard, {transform: [{scale}]}]}>
+        {/* Header */}
         <View style={s.filterHeader}>
           <Text style={s.filterTitle}>Filters</Text>
           <View style={{flexDirection: 'row', gap: 8, alignItems: 'center'}}>
             {activeCount > 0 && (
               <TouchableOpacity style={s.resetBtn} onPress={onReset}>
+                <RefreshCcw size={12} color={C.textSub} strokeWidth={2.5} />
                 <Text style={s.resetTxt}>Reset</Text>
               </TouchableOpacity>
             )}
             <TouchableOpacity style={s.closeBtn} onPress={onClose}>
-              <Text style={s.closeTxt}>✕</Text>
+              <X size={15} color={C.textSub} strokeWidth={2.5} />
             </TouchableOpacity>
           </View>
         </View>
 
         <View style={s.divider} />
-
         <Text style={s.filterLabel}>Property Category</Text>
         <ScrollView
           horizontal
@@ -843,7 +815,6 @@ const FilterPanel = ({
         </ScrollView>
 
         <View style={s.divider} />
-
         <View style={s.budgetHeader}>
           <Text style={s.filterLabel}>Max Budget</Text>
           <View style={s.budgetBadge}>
@@ -867,8 +838,7 @@ const FilterPanel = ({
                 setInputText(clean);
                 const num = parseInt(clean, 10);
                 if (!isNaN(num) && num >= BUDGET_MIN) {
-                  const clamped = Math.min(num, BUDGET_MAX);
-                  onBudgetChange(clamped);
+                  onBudgetChange(Math.min(num, BUDGET_MAX));
                 }
               }}
               onBlur={() => {
@@ -899,7 +869,6 @@ const FilterPanel = ({
           )}
         </View>
 
-        {/* Budget quick chips */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -960,47 +929,129 @@ const FilterPanel = ({
   );
 };
 
-// ─── Main Screen ──────────────────────────────────────────────────────────────
-export default function PropertyMapScreen({navigation}) {
-  // ── Refs ──────────────────────────────────────────────────────────────────
-  const webViewRef = useRef(null); // ← replaces mapRef (was react-native-maps)
+// ─── Empty State ──────────────────────────────────────────────────────────────
+const EmptyState = ({hasFilters, onReset, noCity, onPickCity}) => {
+  const scaleAnim = useRef(new Animated.Value(0.85)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.parallel([
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        tension: 80,
+        friction: 10,
+        useNativeDriver: true,
+      }),
+      Animated.timing(opacityAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
 
-  // ── Core state ────────────────────────────────────────────────────────────
+  return (
+    <Animated.View
+      style={[
+        s.emptyState,
+        {transform: [{scale: scaleAnim}], opacity: opacityAnim},
+      ]}>
+      {noCity ? (
+        <Building2
+          size={42}
+          color={C.primaryMid}
+          strokeWidth={1.5}
+          style={{marginBottom: 12}}
+        />
+      ) : (
+        <ScanSearch
+          size={42}
+          color={C.primaryMid}
+          strokeWidth={1.5}
+          style={{marginBottom: 12}}
+        />
+      )}
+      <Text style={s.emptyTitle}>
+        {noCity ? 'Choose a City' : 'No properties found'}
+      </Text>
+      <Text style={s.emptySubtitle}>
+        {noCity
+          ? 'Tap the city button above to browse properties in any city.'
+          : 'No properties match your filters. Try resetting them.'}
+      </Text>
+      <View style={s.emptyActions}>
+        {noCity && (
+          <TouchableOpacity
+            style={s.emptyBtnPrimary}
+            onPress={onPickCity}
+            activeOpacity={0.8}>
+            <Text style={s.emptyBtnPrimaryTxt}>Pick a City</Text>
+          </TouchableOpacity>
+        )}
+        {hasFilters && !noCity && (
+          <TouchableOpacity
+            style={s.emptyBtnOutline}
+            onPress={onReset}
+            activeOpacity={0.8}>
+            <Text style={s.emptyBtnOutlineTxt}>Reset Filters</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    </Animated.View>
+  );
+};
+
+// ─── Main Screen ──────────────────────────────────────────────────────────────
+export default function CityPropertyMapScreen({navigation}) {
+  const webViewRef = useRef(null);
+
   const [status, setStatus] = useState('loading');
-  const [statusMsg, setStatusMsg] = useState('Getting your location…');
-  const [userCoords, setUserCoords] = useState(null);
+  const [statusMsg, setStatusMsg] = useState('Loading properties…');
   const [allProperties, setAllProperties] = useState([]);
-  const [nearbyProperties, setNearbyProperties] = useState([]);
-  const [radiusKm, setRadiusKm] = useState(RADIUS_KM_DEFAULT);
-  const [sliderValue, setSliderValue] = useState(RADIUS_KM_DEFAULT);
+  const [selectedCity, setSelectedCity] = useState(null);
   const [selectedProperty, setSelectedProperty] = useState(null);
-  const [webViewReady, setWebViewReady] = useState(false); // ← Leaflet ready flag
+  const [webViewReady, setWebViewReady] = useState(false);
   const pillAnim = useRef(new Animated.Value(0)).current;
 
-  // ── Category Tab ──────────────────────────────────────────────────────────
+  const [showCityPicker, setShowCityPicker] = useState(false);
   const [activeTab, setActiveTab] = useState('All');
-
-  // ── Filters ───────────────────────────────────────────────────────────────
   const [showFilters, setShowFilters] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [maxBudget, setMaxBudget] = useState(0);
-  const [budgetSliderVal, setBudgetSliderVal] = useState(0);
+  const [budgetSliderVal, setBudgetSliderVal] = useState(BUDGET_MAX);
   const [pendingCategories, setPendingCategories] = useState([]);
-  const [pendingMaxBudget, setPendingMaxBudget] = useState(0);
-  const [pendingBudgetSlider, setPendingBudgetSlider] = useState(0);
+  const [pendingMaxBudget, setPendingMaxBudget] = useState(BUDGET_MAX);
+  const [pendingBudgetSlider, setPendingBudgetSlider] = useState(BUDGET_MAX);
 
-  // ── Sort ──────────────────────────────────────────────────────────────────
-  const [showSort, setShowSort] = useState(false);
-  const [sortKey, setSortKey] = useState('distance');
+  const uniqueCities = useMemo(() => {
+    const map = {};
+    allProperties.forEach(p => {
+      if (p.city) {
+        const name = p.city.trim();
+        map[name] = (map[name] || 0) + 1;
+      }
+    });
+    return Object.entries(map)
+      .map(([name, count]) => ({name, count}))
+      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+  }, [allProperties]);
 
-  // ── Derived ───────────────────────────────────────────────────────────────
+  const cityProperties = useMemo(() => {
+    if (!selectedCity) return [];
+    return allProperties.filter(p => p.city && p.city.trim() === selectedCity);
+  }, [allProperties, selectedCity]);
+
   const uniqueCategories = useMemo(() => {
     const cats = new Set();
-    allProperties.forEach(p => {
+    cityProperties.forEach(p => {
       if (p.propertyCategory) cats.add(p.propertyCategory);
     });
     return [...cats].sort();
-  }, [allProperties]);
+  }, [cityProperties]);
+
+  const cityBounds = useMemo(() => {
+    if (!cityProperties.length) return null;
+    return computeCityBounds(cityProperties);
+  }, [cityProperties]);
 
   const activeFilterCount = useMemo(() => {
     let count = 0;
@@ -1010,7 +1061,7 @@ export default function PropertyMapScreen({navigation}) {
   }, [selectedCategories, maxBudget]);
 
   const filteredProperties = useMemo(() => {
-    return nearbyProperties.filter(p => {
+    return cityProperties.filter(p => {
       if (
         selectedCategories.length > 0 &&
         !selectedCategories.includes(p.propertyCategory)
@@ -1022,51 +1073,17 @@ export default function PropertyMapScreen({navigation}) {
       }
       return true;
     });
-  }, [nearbyProperties, selectedCategories, maxBudget]);
+  }, [cityProperties, selectedCategories, maxBudget]);
 
-  const displayedProperties = useMemo(() => {
-    return [...filteredProperties].sort((a, b) => {
-      if (sortKey === 'price_asc')
-        return (
-          parseFloat(a.totalOfferPrice || 0) -
-          parseFloat(b.totalOfferPrice || 0)
-        );
-      if (sortKey === 'price_desc')
-        return (
-          parseFloat(b.totalOfferPrice || 0) -
-          parseFloat(a.totalOfferPrice || 0)
-        );
-      if (sortKey === 'newest')
-        return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
-      // default: distance
-      if (!userCoords) return 0;
-      const da = haversineKm(
-        userCoords.lat,
-        userCoords.lon,
-        parseFloat(a.latitude),
-        parseFloat(a.longitude),
-      );
-      const db = haversineKm(
-        userCoords.lat,
-        userCoords.lon,
-        parseFloat(b.latitude),
-        parseFloat(b.longitude),
-      );
-      return da - db;
-    });
-  }, [filteredProperties, sortKey, userCoords]);
-
-  // ── Per-category counts for tab badges ────────────────────────────────────
   const categoryCounts = useMemo(() => {
     const map = {};
-    nearbyProperties.forEach(p => {
+    cityProperties.forEach(p => {
       if (p.propertyCategory)
         map[p.propertyCategory] = (map[p.propertyCategory] || 0) + 1;
     });
     return map;
-  }, [nearbyProperties]);
+  }, [cityProperties]);
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
   const animatePill = useCallback(() => {
     pillAnim.setValue(0);
     Animated.spring(pillAnim, {
@@ -1077,52 +1094,50 @@ export default function PropertyMapScreen({navigation}) {
     }).start();
   }, [pillAnim]);
 
-  const filterNearby = useCallback(
-    (props, coords, km) =>
-      props.filter(p => {
-        const lat = parseFloat(p.latitude);
-        const lon = parseFloat(p.longitude);
-        return (
-          lat && lon && haversineKm(coords.lat, coords.lon, lat, lon) <= km
-        );
-      }),
-    [],
-  );
-
-  // ── flyTo → injectJavaScript into Leaflet WebView ─────────────────────────
-  const flyTo = useCallback((lat, lon, delta = 0.08) => {
-    // Convert latitudeDelta to an approximate Leaflet zoom level
-    const zoom = Math.round(Math.log2(360 / (delta || 0.08)));
+  const flyTo = useCallback((lat, lon, zoom) => {
     webViewRef.current?.injectJavaScript(
-      `window.flyTo(${lat}, ${lon}, ${zoom}); true;`,
+      `window.flyTo(${lat}, ${lon}, ${zoom || 12}); true;`,
     );
   }, []);
 
-  // ── Sync map state into WebView whenever relevant data changes ─────────────
   useEffect(() => {
     if (!webViewReady || !webViewRef.current) return;
-
-    const markers = displayedProperties
+    if (!selectedCity || !cityBounds) {
+      webViewRef.current.injectJavaScript(`window.clearMap(); true;`);
+      return;
+    }
+    const markers = filteredProperties
       .map(p => ({
         id: p.propertyid,
         lat: parseFloat(p.latitude),
         lon: parseFloat(p.longitude),
         price: p.totalOfferPrice || p.totalSalesPrice,
-        selected: selectedProperty?.propertyid === p.propertyid,
       }))
       .filter(m => m.lat && m.lon);
 
-    const payload = JSON.stringify({userCoords, markers, radiusKm});
-    webViewRef.current.injectJavaScript(`window.updateMap(${payload}); true;`);
+    const payload = JSON.stringify({
+      centerCoords: {lat: cityBounds.lat, lon: cityBounds.lon},
+      markers,
+      circleKm: cityBounds.circleKm,
+      selectedId: selectedProperty?.propertyid ?? null,
+    });
+    webViewRef.current.injectJavaScript(
+      `window.updateCityMap(${payload}); true;`,
+    );
   }, [
     webViewReady,
-    displayedProperties,
-    userCoords,
-    radiusKm,
+    filteredProperties,
+    cityBounds,
+    selectedCity,
     selectedProperty,
   ]);
 
-  // ── Handle messages from WebView ──────────────────────────────────────────
+  useEffect(() => {
+    if (!webViewReady || !cityBounds) return;
+    const zoom = circleKmToZoom(cityBounds.circleKm);
+    setTimeout(() => flyTo(cityBounds.lat, cityBounds.lon, zoom), 200);
+  }, [webViewReady, cityBounds]);
+
   const onWebViewMessage = useCallback(
     event => {
       try {
@@ -1133,91 +1148,47 @@ export default function PropertyMapScreen({navigation}) {
           setSelectedProperty(null);
         } else if (msg.type === 'MARKER_PRESS') {
           const prop =
-            displayedProperties.find(p => p.propertyid === msg.id) ||
+            filteredProperties.find(p => p.propertyid === msg.id) ||
             allProperties.find(p => p.propertyid === msg.id);
           if (prop) setSelectedProperty(prop);
         }
       } catch (_) {}
     },
-    [displayedProperties, allProperties],
+    [filteredProperties, allProperties],
   );
 
-  // ── Init budget slider default ─────────────────────────────────────────────
-  useEffect(() => {
-    if (pendingBudgetSlider === 0) {
-      setPendingBudgetSlider(BUDGET_MAX);
-      setPendingMaxBudget(BUDGET_MAX);
-    }
-  }, []);
-
-  // ── Boot: fetch properties + get location ──────────────────────────────────
-  const boot = useCallback(
-    async (existingProps = null) => {
-      setStatus('loading');
-      setStatusMsg('Getting your location…');
-      let props = existingProps;
-      if (!props) {
-        props = await fetch(API_URL)
-          .then(r => r.json())
-          .then(d => {
-            const list = Array.isArray(d) ? d : d.properties || d.data || [];
-            return list.filter(
-              item => item.status === 'Active' && item.approve === 'Approved',
-            );
-          })
-          .catch(() => []);
-        setAllProperties(props);
-      }
-      const hasPerm = await requestAndroidPermission();
-      if (!hasPerm) {
-        setStatus('error');
-        setStatusMsg(locationErrMsg(1));
-        return;
-      }
-      try {
-        const coords = await getLocationRobust();
-        setUserCoords(coords);
-        const nearby = filterNearby(props, coords, RADIUS_KM_DEFAULT);
-        setNearbyProperties(nearby);
-        setRadiusKm(RADIUS_KM_DEFAULT);
-        setSliderValue(RADIUS_KM_DEFAULT);
-        setStatus('ready');
-        animatePill();
-        setTimeout(() => flyTo(coords.lat, coords.lon), 300);
-      } catch (err) {
-        setStatus('error');
-        setStatusMsg(locationErrMsg(err?.code));
-      }
-    },
-    [filterNearby, animatePill, flyTo],
-  );
+  const boot = useCallback(async () => {
+    setStatus('loading');
+    setStatusMsg('Loading properties…');
+    const props = await fetch(API_URL)
+      .then(r => r.json())
+      .then(d => {
+        const list = Array.isArray(d) ? d : d.properties || d.data || [];
+        return list.filter(
+          item => item.status === 'Active' && item.approve === 'Approved',
+        );
+      })
+      .catch(() => []);
+    setAllProperties(props);
+    setStatus('ready');
+    animatePill();
+  }, [animatePill]);
 
   useEffect(() => {
     boot();
   }, []);
 
-  // ── Radius change ─────────────────────────────────────────────────────────
-  const applyRadius = useCallback(
-    km => {
-      const r = parseFloat(km.toFixed(1));
-      setRadiusKm(r);
-      setSliderValue(r);
-      if (userCoords) {
-        setNearbyProperties(filterNearby(allProperties, userCoords, r));
-        animatePill();
-        setSelectedProperty(null);
-      }
+  const handleCitySelect = useCallback(
+    city => {
+      setSelectedCity(city);
+      setSelectedProperty(null);
+      setActiveTab('All');
+      setSelectedCategories([]);
+      animatePill();
     },
-    [allProperties, userCoords, filterNearby, animatePill],
+    [animatePill],
   );
 
-  const onSliderRelease = useCallback(val => applyRadius(val), [applyRadius]);
-
-  const recenter = useCallback(() => {
-    if (userCoords) flyTo(userCoords.lat, userCoords.lon);
-  }, [userCoords, flyTo]);
-
-  // ── Tab select ────────────────────────────────────────────────────────────
   const handleTabSelect = useCallback(
     cat => {
       setActiveTab(cat);
@@ -1228,7 +1199,6 @@ export default function PropertyMapScreen({navigation}) {
     [animatePill],
   );
 
-  // ── Filter panel ──────────────────────────────────────────────────────────
   const openFilters = useCallback(() => {
     setPendingCategories([...selectedCategories]);
     setPendingMaxBudget(maxBudget > 0 ? maxBudget : BUDGET_MAX);
@@ -1267,20 +1237,53 @@ export default function PropertyMapScreen({navigation}) {
     animatePill();
   }, [animatePill]);
 
-  const handleExpandRadius = useCallback(km => applyRadius(km), [applyRadius]);
-
-  // ─────────────────────────────────────────────────────────────────────────
   return (
     <SafeAreaView style={s.container}>
-      {/* ══ Category Tab Bar (above map, always visible) ══════════════════ */}
-      {status === 'ready' && uniqueCategories.length > 0 && (
+      {/* ── Top Bar ── */}
+      <View style={s.topBar}>
+        {/* City picker */}
+        <TouchableOpacity
+          style={s.cityPickerBtn}
+          onPress={() => setShowCityPicker(true)}
+          activeOpacity={0.8}>
+          <Building2 size={16} color={C.primary} strokeWidth={2} />
+          <Text style={s.cityPickerTxt} numberOfLines={1}>
+            {selectedCity || 'Select City'}
+          </Text>
+          <ChevronDown
+            size={16}
+            color={selectedCity ? C.primary : C.textMuted}
+          />
+        </TouchableOpacity>
+
+        {/* Filter button */}
+        <TouchableOpacity
+          style={[s.topBarBtn, activeFilterCount > 0 && s.topBarBtnActive]}
+          onPress={openFilters}
+          activeOpacity={0.8}>
+          <Filter
+            size={14}
+            color={activeFilterCount > 0 ? C.white : C.textSub}
+            strokeWidth={2}
+          />
+          <Text
+            style={[
+              s.topBarBtnTxt,
+              activeFilterCount > 0 && s.topBarBtnTxtActive,
+            ]}>
+            Filter{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* ── Category Tab Bar ── */}
+      {status === 'ready' && selectedCity && uniqueCategories.length > 0 && (
         <View style={s.topTabBar}>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={s.topTabContent}
             keyboardShouldPersistTaps="handled">
-            {/* All tab */}
             <TouchableOpacity
               style={[s.topTab, activeTab === 'All' && s.topTabActive]}
               onPress={() => handleTabSelect('All')}
@@ -1299,14 +1302,13 @@ export default function PropertyMapScreen({navigation}) {
                     s.topTabBadgeTxt,
                     activeTab === 'All' && s.topTabBadgeTxtActive,
                   ]}>
-                  {nearbyProperties.length}
+                  {cityProperties.length}
                 </Text>
               </View>
             </TouchableOpacity>
 
             {uniqueCategories.map(cat => {
               const isActive = activeTab === cat;
-              const count = categoryCounts[cat] || 0;
               return (
                 <TouchableOpacity
                   key={cat}
@@ -1323,7 +1325,7 @@ export default function PropertyMapScreen({navigation}) {
                         s.topTabBadgeTxt,
                         isActive && s.topTabBadgeTxtActive,
                       ]}>
-                      {count}
+                      {categoryCounts[cat] || 0}
                     </Text>
                   </View>
                 </TouchableOpacity>
@@ -1333,9 +1335,8 @@ export default function PropertyMapScreen({navigation}) {
         </View>
       )}
 
-      {/* ══ Map wrapper (fills remaining space below tab bar) ═════════════ */}
+      {/* ── Map Wrapper ── */}
       <View style={s.mapWrapper}>
-        {/* ── Leaflet WebView (satellite layer only) ── */}
         <WebView
           ref={webViewRef}
           style={s.map}
@@ -1349,7 +1350,7 @@ export default function PropertyMapScreen({navigation}) {
           onMessage={onWebViewMessage}
         />
 
-        {/* ── Loading overlay ── */}
+        {/* Loading overlay */}
         {status === 'loading' && (
           <View style={s.overlay}>
             <View style={s.overlayCard}>
@@ -1359,26 +1360,28 @@ export default function PropertyMapScreen({navigation}) {
           </View>
         )}
 
-        {/* ── Error overlay ── */}
+        {/* Error overlay */}
         {status === 'error' && (
           <View style={s.overlay}>
             <View style={s.overlayCard}>
-              <Text style={s.errEmoji}>📍</Text>
-              <Text style={s.errTitle}>Location Error</Text>
+              <TriangleAlert
+                size={38}
+                color={C.danger}
+                strokeWidth={1.5}
+                style={{marginBottom: 10}}
+              />
+              <Text style={s.errTitle}>Failed to load</Text>
               <Text style={s.errMsg}>{statusMsg}</Text>
-              <TouchableOpacity
-                style={s.retryBtn}
-                onPress={() =>
-                  boot(allProperties.length ? allProperties : null)
-                }>
-                <Text style={s.retryTxt}>Try Again</Text>
+              <TouchableOpacity style={s.retryBtn} onPress={boot}>
+                <RefreshCcw size={14} color={C.white} strokeWidth={2.5} />
+                <Text style={s.retryTxt}>Retry</Text>
               </TouchableOpacity>
             </View>
           </View>
         )}
 
-        {/* ── Top pill (count) ── */}
-        {status === 'ready' && (
+        {/* Property count pill */}
+        {status === 'ready' && selectedCity && (
           <Animated.View
             style={[
               s.pill,
@@ -1396,108 +1399,38 @@ export default function PropertyMapScreen({navigation}) {
             ]}>
             <View style={s.pillDot} />
             <Text style={s.pillTxt}>
-              {displayedProperties.length}{' '}
-              {displayedProperties.length === 1 ? 'property' : 'properties'}
+              {filteredProperties.length}{' '}
+              {filteredProperties.length === 1 ? 'property' : 'properties'}
               {activeFilterCount > 0 || activeTab !== 'All'
                 ? ' matched'
-                : ' nearby'}
+                : ` in ${selectedCity}`}
             </Text>
           </Animated.View>
         )}
 
-        {/* ── Right FAB column ── */}
-        {status === 'ready' && (
-          <View style={s.fabCol}>
-            <TouchableOpacity
-              style={[s.fabBtn, activeFilterCount > 0 && s.fabBtnActive]}
-              onPress={openFilters}
-              activeOpacity={0.85}>
-              <View
-                style={[s.fabIcon, activeFilterCount > 0 && s.fabIconActive]}>
-                <Filter
-                  size={18}
-                  color={activeFilterCount > 0 ? C.white : C.textSub}
-                />
-              </View>
-              {activeFilterCount > 0 && (
-                <View style={s.fabBadge}>
-                  <Text style={s.fabBadgeTxt}>{activeFilterCount}</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* ── Bottom radius slider + preset chips ── */}
-        {status === 'ready' && (
-          <View style={s.sliderPanel}>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={s.presetRow}
-              style={{marginBottom: 6}}>
-              {RADIUS_PRESETS.map(p => {
-                const active = radiusKm === p.value;
-                return (
-                  <TouchableOpacity
-                    key={p.value}
-                    style={[s.presetChip, active && s.presetChipActive]}
-                    onPress={() => applyRadius(p.value)}
-                    activeOpacity={0.75}>
-                    <Text
-                      style={[
-                        s.presetChipTxt,
-                        active && s.presetChipTxtActive,
-                      ]}>
-                      {p.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-
-            <View style={s.sliderLabelRow}>
-              <Text style={s.sliderLabel}>Radius</Text>
-              <Text style={s.sliderVal}>{sliderValue.toFixed(1)} km</Text>
-            </View>
-            <Slider
-              style={s.radiusSlider}
-              minimumValue={1}
-              maximumValue={30}
-              step={0.5}
-              value={sliderValue}
-              minimumTrackTintColor={C.primary}
-              maximumTrackTintColor={C.border}
-              thumbTintColor={C.primary}
-              onValueChange={setSliderValue}
-              onSlidingComplete={onSliderRelease}
-            />
-          </View>
-        )}
-
-        {/* ── Empty state ── */}
+        {/* Empty state */}
         {status === 'ready' &&
-          displayedProperties.length === 0 &&
-          !selectedProperty && (
+          !selectedProperty &&
+          (!selectedCity ||
+            (selectedCity && filteredProperties.length === 0)) && (
             <EmptyState
+              noCity={!selectedCity}
               hasFilters={activeFilterCount > 0 || activeTab !== 'All'}
               onReset={handleResetAll}
-              radiusKm={radiusKm}
-              onExpandRadius={handleExpandRadius}
+              onPickCity={() => setShowCityPicker(true)}
             />
           )}
 
-        {/* ── Property bottom sheet ── */}
+        {/* Property bottom sheet */}
         {selectedProperty && (
           <PropertyCard
             property={selectedProperty}
             onClose={() => setSelectedProperty(null)}
             navigation={navigation}
-            userCoords={userCoords}
           />
         )}
 
-        {/* ── Filter modal ── */}
+        {/* Filter modal */}
         <FilterPanel
           visible={showFilters}
           onClose={() => setShowFilters(false)}
@@ -1522,28 +1455,75 @@ export default function PropertyMapScreen({navigation}) {
           }
         />
       </View>
-      {/* end mapWrapper */}
+
+      {/* City picker (full screen, outside mapWrapper) */}
+      <CityPickerModal
+        visible={showCityPicker}
+        onClose={() => setShowCityPicker(false)}
+        cities={uniqueCities}
+        selectedCity={selectedCity}
+        onSelect={handleCitySelect}
+      />
     </SafeAreaView>
   );
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
-  // ── Root ──
   container: {flex: 1, backgroundColor: C.bg},
 
-  // ── Category Tab Bar ──
-  topTabBar: {
+  // Top Bar
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     backgroundColor: C.white,
     borderBottomWidth: 1,
     borderBottomColor: C.border,
-    paddingVertical: 10,
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.06,
     shadowRadius: 6,
     elevation: 4,
     zIndex: 10,
+  },
+  cityPickerBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: C.primaryLight,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderWidth: 1.5,
+    borderColor: C.primaryMid,
+  },
+  cityPickerTxt: {flex: 1, color: C.primary, fontSize: 14, fontWeight: '700'},
+  topBarBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: C.bg,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderWidth: 1.5,
+    borderColor: C.border,
+  },
+  topBarBtnActive: {backgroundColor: C.primary, borderColor: C.primary},
+  topBarBtnTxt: {color: C.textSub, fontSize: 12, fontWeight: '600'},
+  topBarBtnTxtActive: {color: C.white, fontWeight: '700'},
+
+  // Tab Bar
+  topTabBar: {
+    backgroundColor: C.white,
+    borderBottomWidth: 1,
+    borderBottomColor: C.border,
+    paddingVertical: 10,
+    zIndex: 9,
   },
   topTabContent: {
     flexDirection: 'row',
@@ -1578,11 +1558,11 @@ const s = StyleSheet.create({
   topTabBadgeTxt: {color: C.primary, fontSize: 10, fontWeight: '800'},
   topTabBadgeTxtActive: {color: C.white},
 
-  // ── Map wrapper ──
+  // Map
   mapWrapper: {flex: 1},
   map: {flex: 1},
 
-  // ── Overlays ──
+  // Overlays
   overlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(248,250,252,0.9)',
@@ -1609,7 +1589,6 @@ const s = StyleSheet.create({
     marginTop: 12,
     textAlign: 'center',
   },
-  errEmoji: {fontSize: 38, marginBottom: 10},
   errTitle: {color: C.text, fontSize: 17, fontWeight: '700', marginBottom: 8},
   errMsg: {
     color: C.textSub,
@@ -1619,6 +1598,9 @@ const s = StyleSheet.create({
     marginBottom: 22,
   },
   retryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     backgroundColor: C.primary,
     paddingHorizontal: 28,
     paddingVertical: 12,
@@ -1630,7 +1612,7 @@ const s = StyleSheet.create({
   },
   retryTxt: {color: C.white, fontWeight: '700', fontSize: 14},
 
-  // ── Pill ──
+  // Pill
   pill: {
     position: 'absolute',
     top: Platform.OS === 'ios' ? 16 : 14,
@@ -1652,87 +1634,7 @@ const s = StyleSheet.create({
   pillDot: {width: 7, height: 7, borderRadius: 4, backgroundColor: C.success},
   pillTxt: {color: C.text, fontWeight: '600', fontSize: 13},
 
-  // ── FAB ──
-  fabCol: {
-    position: 'absolute',
-    right: 14,
-    bottom: 160,
-    gap: 10,
-    alignItems: 'center',
-  },
-  fabBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: C.white,
-    borderWidth: 1,
-    borderColor: C.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-  },
-  fabBtnActive: {backgroundColor: C.primary, borderColor: C.primary},
-  fabIcon: {alignItems: 'center', justifyContent: 'center'},
-  fabIconActive: {},
-  fabBadge: {
-    position: 'absolute',
-    top: -3,
-    right: -3,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: C.danger,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: C.white,
-  },
-  fabBadgeTxt: {color: C.white, fontSize: 9, fontWeight: '800'},
-
-  // ── Radius slider panel ──
-  sliderPanel: {
-    width: '95%',
-    position: 'absolute',
-    bottom: 20,
-    left: 4,
-    right: 70,
-    backgroundColor: C.white,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: C.border,
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 8,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.07,
-    shadowRadius: 10,
-  },
-  presetRow: {flexDirection: 'row', gap: 6, paddingRight: 4},
-  presetChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 50,
-    borderWidth: 1.5,
-    borderColor: C.border,
-    backgroundColor: C.bg,
-  },
-  presetChipActive: {backgroundColor: C.primaryLight, borderColor: C.primary},
-  presetChipTxt: {color: C.textSub, fontSize: 12, fontWeight: '600'},
-  presetChipTxtActive: {color: C.primary, fontWeight: '700'},
-  sliderLabelRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 2,
-  },
-  sliderLabel: {color: C.textSub, fontSize: 12, fontWeight: '600'},
-  sliderVal: {color: C.primary, fontSize: 12, fontWeight: '700'},
-  radiusSlider: {height: 34, marginHorizontal: -6},
-
-  // ── Property bottom sheet ──
+  // Property sheet
   sheet: {
     position: 'absolute',
     bottom: 0,
@@ -1784,26 +1686,17 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: C.border,
   },
-  closeTxt: {color: C.textSub, fontSize: 11, fontWeight: '700'},
-
-  distanceStrip: {
+  cityStrip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: C.successLight,
+    backgroundColor: C.primaryLight,
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 9,
     marginBottom: 12,
   },
-  distanceStripIcon: {fontSize: 13},
-  distanceStripTxt: {
-    color: C.success,
-    fontSize: 13,
-    fontWeight: '700',
-    flex: 1,
-  },
-
+  cityStripTxt: {color: C.primary, fontSize: 13, fontWeight: '600', flex: 1},
   cardRow: {flexDirection: 'row', gap: 12, marginBottom: 14},
   cardImg: {width: 84, height: 84, borderRadius: 12, backgroundColor: C.bg},
   cardImgFallback: {
@@ -1813,10 +1706,8 @@ const s = StyleSheet.create({
     borderColor: C.border,
   },
   cardInfo: {flex: 1, justifyContent: 'center', gap: 5},
-  infoRow: {flexDirection: 'row', alignItems: 'flex-start', gap: 5},
-  infoIcon: {fontSize: 11, marginTop: 1},
+  infoRow: {flexDirection: 'row', alignItems: 'center', gap: 6},
   infoTxt: {color: C.textSub, fontSize: 12, flex: 1, lineHeight: 17},
-
   priceRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1840,7 +1731,6 @@ const s = StyleSheet.create({
     textDecorationLine: 'line-through',
     marginTop: 1,
   },
-  ctaCol: {alignItems: 'flex-end', gap: 8},
   detailsBtn: {
     backgroundColor: C.primary,
     borderRadius: 12,
@@ -1853,15 +1743,15 @@ const s = StyleSheet.create({
   },
   detailsBtnTxt: {color: C.white, fontSize: 13, fontWeight: '700'},
 
-  // ── Empty state ──
+  // Empty state
   emptyState: {
     position: 'absolute',
-    bottom: 150,
+    bottom: 100,
     left: 24,
     right: 24,
     backgroundColor: C.white,
     borderRadius: 20,
-    padding: 24,
+    padding: 28,
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 4},
@@ -1870,14 +1760,13 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: C.border,
   },
-  emptyEmoji: {fontSize: 42, marginBottom: 10},
-  emptyTitle: {color: C.text, fontSize: 16, fontWeight: '800', marginBottom: 6},
+  emptyTitle: {color: C.text, fontSize: 17, fontWeight: '800', marginBottom: 8},
   emptySubtitle: {
     color: C.textSub,
     fontSize: 13,
     textAlign: 'center',
     lineHeight: 20,
-    marginBottom: 18,
+    marginBottom: 20,
   },
   emptyActions: {
     flexDirection: 'row',
@@ -1896,8 +1785,8 @@ const s = StyleSheet.create({
   emptyBtnPrimary: {
     backgroundColor: C.primary,
     borderRadius: 50,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
+    paddingHorizontal: 22,
+    paddingVertical: 11,
     shadowColor: C.shadow,
     shadowOffset: {width: 0, height: 3},
     shadowOpacity: 0.22,
@@ -1905,7 +1794,7 @@ const s = StyleSheet.create({
   },
   emptyBtnPrimaryTxt: {color: C.white, fontWeight: '700', fontSize: 13},
 
-  // ── Filter backdrop + card ──
+  // Filter modal
   backdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(15,23,42,0.5)',
@@ -1935,6 +1824,9 @@ const s = StyleSheet.create({
   },
   filterTitle: {color: C.text, fontSize: 17, fontWeight: '800'},
   resetBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
     backgroundColor: C.bg,
     borderRadius: 20,
     paddingHorizontal: 12,
@@ -1950,7 +1842,6 @@ const s = StyleSheet.create({
     fontWeight: '700',
     marginBottom: 10,
   },
-
   chipRow: {flexDirection: 'row', gap: 8, paddingBottom: 4, paddingRight: 8},
   chip: {
     backgroundColor: C.bg,
@@ -1963,7 +1854,6 @@ const s = StyleSheet.create({
   chipActive: {backgroundColor: C.primaryLight, borderColor: C.primary},
   chipTxt: {color: C.textSub, fontSize: 12, fontWeight: '600'},
   chipTxtActive: {color: C.primary, fontWeight: '700'},
-
   amountInputRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2004,7 +1894,6 @@ const s = StyleSheet.create({
     minWidth: 70,
   },
   amountParsedTxt: {color: C.primary, fontSize: 12, fontWeight: '800'},
-
   budgetHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2026,7 +1915,6 @@ const s = StyleSheet.create({
     marginBottom: 16,
   },
   sliderRangeTxt: {color: C.textMuted, fontSize: 11},
-
   applyBtn: {
     backgroundColor: C.primary,
     borderRadius: 14,

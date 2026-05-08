@@ -1,11 +1,19 @@
 import React, {useState} from 'react';
 import {StyleSheet, Text, View, TouchableOpacity} from 'react-native';
-import Svg, {Path} from 'react-native-svg';
+import Svg, {
+  Path,
+  Defs,
+  LinearGradient as SvgGradient,
+  Stop,
+} from 'react-native-svg';
 import {icons} from '../../utils/benifitsSvg';
 import MediaPreviewModal from '../property/MediaPreviewModal';
+import LinearGradient from 'react-native-linear-gradient';
 
+/* ─────────────────────────────────────────
+   Offered Property Type Section
+───────────────────────────────────────── */
 const OfferedPropertyType = ({propertyType, Imguri}) => {
-  // Ensure propertyType is always an array
   const propertyTypes = Array.isArray(propertyType)
     ? propertyType
     : propertyType
@@ -15,35 +23,68 @@ const OfferedPropertyType = ({propertyType, Imguri}) => {
 
   return (
     <View style={styles.offerContainer}>
-      {/* Header */}
-      <View style={styles.offerHeader}>
-        <Text style={styles.offerTitle}>Offered Property Type</Text>
+      {/* ── Header ── */}
+      <Text style={styles.offerTitle}>Offered Property Type</Text>
 
-        <TouchableOpacity
-          style={styles.downloadBtn}
-          onPress={() => {
-            setVisible(true);
-          }}>
-          <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-            <Path
-              d="M12 3V14M12 14L8 10M12 14L16 10M4 17V21H20V17"
-              stroke="#FFFFFF"
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </Svg>
-        </TouchableOpacity>
-      </View>
-
-      {/* Options */}
-      <View style={styles.offerGrid}>
+      {/* ── Chips ── */}
+      <View style={styles.chipsWrap}>
         {propertyTypes.map((d, index) => (
           <View key={index} style={styles.offerBox}>
             <Text style={styles.offerText}>{d}</Text>
           </View>
         ))}
       </View>
+
+      {/* ── Divider ── */}
+      <View style={styles.divider} />
+
+      {/* ── Download Brochure ── */}
+      <TouchableOpacity
+        onPress={() => setVisible(true)}
+        activeOpacity={0.85}
+        style={styles.brochureBtn}>
+        <LinearGradient
+          colors={['#7C3AED', '#A855F7']}
+          start={{x: 0, y: 0}}
+          end={{x: 1, y: 0}}
+          style={styles.brochureGradient}>
+          {/* Left: PDF icon */}
+          <View style={styles.pdfIconBox}>
+            <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+              <Path d="M6 2H14L20 8V22H6V2Z" fill="#FFFFFF" opacity={0.85} />
+              <Path d="M14 2L20 8H14V2Z" fill="#C4B5FD" />
+              <Path
+                d="M9 13H15M9 16H13"
+                stroke="#7C3AED"
+                strokeWidth={1.5}
+                strokeLinecap="round"
+              />
+            </Svg>
+            <Text style={styles.pdfLabel}>PDF</Text>
+          </View>
+
+          {/* Middle: Text */}
+          <View style={styles.brochureTextWrap}>
+            <Text style={styles.brochureSubText}>
+              Tap to view &amp; download
+            </Text>
+            <Text style={styles.brochureMainText}>Property Brochure</Text>
+          </View>
+
+          {/* Right: Arrow icon */}
+          <View style={styles.arrowBox}>
+            <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+              <Path
+                d="M12 3V15M12 15L8 11M12 15L16 11M4 18V21H20V18"
+                stroke="#7C3AED"
+                strokeWidth={2.5}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </Svg>
+          </View>
+        </LinearGradient>
+      </TouchableOpacity>
 
       <MediaPreviewModal
         visible={visible}
@@ -54,29 +95,26 @@ const OfferedPropertyType = ({propertyType, Imguri}) => {
   );
 };
 
+/* ─────────────────────────────────────────
+   Highlights Section
+───────────────────────────────────────── */
 export const Highlights = ({propertyFeatures, propertyData}) => {
   const features = propertyFeatures || {};
-  const baseURL = 'https://aws-api.reparv.in';
+  const baseURL = 'https://reparv-assets.s3.ap-south-1.amazonaws.com';
+
   const getHighestBHK = (types = []) => {
     if (!Array.isArray(types)) return null;
-
     let maxBHK = null;
     let hasRK = false;
-
     types.forEach(type => {
       const lower = type.toLowerCase();
-
-      if (lower.includes('rk')) hasRK;
-
+      if (lower.includes('rk')) hasRK = true;
       const match = lower.match(/(\d+)\s*bhk/);
       if (match) {
         const bhkNumber = parseInt(match[1], 10);
-        if (!maxBHK || bhkNumber > maxBHK) {
-          maxBHK = bhkNumber;
-        }
+        if (!maxBHK || bhkNumber > maxBHK) maxBHK = bhkNumber;
       }
     });
-
     if (maxBHK) return `${maxBHK} BHK`;
     if (hasRK) return '1 RK';
     return null;
@@ -144,9 +182,8 @@ export const Highlights = ({propertyFeatures, propertyData}) => {
         }
       />
 
-      <View style={styles.container}>
+      <View style={styles.highlightContainer}>
         <Text style={styles.sectionTitle}>Property Highlights</Text>
-
         <View style={styles.grid}>
           {highlightsData.map(item => (
             <HighlightItem
@@ -162,85 +199,142 @@ export const Highlights = ({propertyFeatures, propertyData}) => {
   );
 };
 
-const HighlightItem = ({icon, title, subtitle}) => {
-  return (
-    <View style={styles.card}>
-      <View style={styles.iconBox}>{icon ? icon : <Text>—</Text>}</View>
-      <Text style={styles.title}>{title}</Text>
-      <Text style={styles.subtitle}>{subtitle}</Text>
-    </View>
-  );
-};
+const HighlightItem = ({icon, title, subtitle}) => (
+  <View style={styles.card}>
+    <View style={styles.iconBox}>{icon ? icon : <Text>—</Text>}</View>
+    <Text style={styles.cardTitle}>{title}</Text>
+    <Text style={styles.cardSubtitle}>{subtitle}</Text>
+  </View>
+);
 
+/* ─────────────────────────────────────────
+   Styles
+───────────────────────────────────────── */
 const styles = StyleSheet.create({
-  /* Offered Property Type */
+  /* ── Offered Property Type ── */
   offerContainer: {
     backgroundColor: '#FFFFFF',
     marginHorizontal: 12,
     marginTop: 16,
     padding: 16,
     borderRadius: 16,
-  },
-
-  offerHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 18,
+    shadowColor: '#8B5CF6',
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
 
   offerTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '800',
-    color: '#000000',
+    color: '#111827',
+    marginBottom: 14,
   },
 
-  downloadBtn: {
-    width: 48,
-    height: 48,
-    backgroundColor: '#8B5CF6',
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  offerGrid: {
+  /* Chips */
+  chipsWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    rowGap: 14,
+    gap: 10,
+    marginBottom: 16,
   },
 
   offerBox: {
-    width: '48%',
-    minHeight: 56,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 14,
-    borderWidth: 1,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 50,
+    borderWidth: 1.5,
     borderColor: '#8B5CF6',
+    backgroundColor: '#F5F0FF',
+  },
+
+  offerText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#7C3AED',
+  },
+
+  divider: {
+    height: 1,
+    backgroundColor: '#EDE9FE',
+    marginBottom: 14,
+  },
+
+  /* Brochure Button */
+  brochureBtn: {
+    borderRadius: 14,
+    overflow: 'hidden',
+  },
+
+  brochureGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 12,
+    borderRadius: 14,
+  },
+
+  pdfIconBox: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 1,
+  },
+
+  pdfLabel: {
+    fontSize: 8,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 1,
+  },
+
+  brochureTextWrap: {
+    flex: 1,
+  },
+
+  brochureSubText: {
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.8)',
+    fontWeight: '400',
+  },
+
+  brochureMainText: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginTop: 1,
+  },
+
+  arrowBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  offerText: {
-    fontSize: 16, // Slightly safer
-    fontWeight: '700',
-    color: '#8B5CF6',
-    textAlign: 'center',
-  },
 
-  container: {
+  /* ── Property Highlights ── */
+  highlightContainer: {
     backgroundColor: '#FFFFFF',
     padding: 16,
     marginHorizontal: 12,
-    marginTop: 20,
+    marginTop: 16,
     borderRadius: 16,
+    shadowColor: '#8B5CF6',
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
 
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#111',
+    color: '#111827',
     marginBottom: 12,
   },
 
@@ -252,12 +346,14 @@ const styles = StyleSheet.create({
 
   card: {
     width: '48%',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FAFAFF',
     borderRadius: 12,
     paddingVertical: 16,
     paddingHorizontal: 12,
     marginBottom: 12,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#EDE9FE',
   },
 
   iconBox: {
@@ -270,16 +366,16 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
 
-  title: {
+  cardTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#111',
+    color: '#111827',
     textAlign: 'center',
   },
 
-  subtitle: {
+  cardSubtitle: {
     fontSize: 12,
-    color: '#777',
+    color: '#6B7280',
     marginTop: 4,
     textAlign: 'center',
   },

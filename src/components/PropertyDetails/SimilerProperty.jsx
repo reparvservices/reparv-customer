@@ -8,6 +8,7 @@ import {
   Dimensions,
   ActivityIndicator,
   TouchableOpacity,
+  Platform,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 
@@ -20,11 +21,17 @@ import {Building2, Eye, HeartIcon} from 'lucide-react-native';
 import {useNavigation} from '@react-navigation/native';
 import {checkSubscription} from '../home/RentPropertyCards';
 import {fetchAllPropertiesCached} from '../../services/allPropertiesCache';
+import {getImageUri} from '../../utils/imageHandle';
 
 const {width} = Dimensions.get('window');
 const IMAGE_BASE_URL = 'https://reparv-assets.s3.ap-south-1.amazonaws.com';
 
-export default function SimilerProperty({filterType, city, budget}) {
+export default function SimilerProperty({
+  propertyid,
+  filterType,
+  city,
+  budget,
+}) {
   const [flats, setFlats] = useState([]);
   const [loading, setLoading] = useState(false);
   const [likeCounts, setLikeCounts] = useState({});
@@ -57,7 +64,10 @@ export default function SimilerProperty({filterType, city, budget}) {
       const data = await fetchAllPropertiesCached();
 
       const filtered = data.filter(
-        item => item.status === 'Active' && item.approve === 'Approved',
+        item =>
+          item.status === 'Active' &&
+          item.approve === 'Approved' &&
+          item.propertyid !== propertyid,
       );
 
       const userFilter = filtered.filter(
@@ -143,8 +153,11 @@ export default function SimilerProperty({filterType, city, budget}) {
       <View style={styles.card}>
         {/* IMAGE */}
         <View style={styles.imageContainer}>
-          {imageUri ? (
-            <Image source={{uri: imageUri}} style={styles.image} />
+          {item.frontView ? (
+            <Image
+              source={{uri: getImageUri(JSON.parse(item.frontView)[0])}}
+              style={styles.image}
+            />
           ) : (
             <View style={[styles.image, {backgroundColor: '#eee'}]} />
           )}
@@ -208,7 +221,7 @@ export default function SimilerProperty({filterType, city, budget}) {
             <TouchableOpacity
               style={styles.showDetailsBtn}
               onPress={() =>
-                navigation.navigate('PropertyDetails', {
+                navigation.navigate('SimilerPropertyDetailsScreen', {
                   seoSlug: item?.seoSlug,
                 })
               }>
@@ -312,6 +325,10 @@ const styles = StyleSheet.create({
     fontWeight: '700',
 
     color: '#000000',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
 
   line: {
@@ -383,6 +400,10 @@ const styles = StyleSheet.create({
   propertyType: {
     fontSize: 11,
     color: '#868686',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
 
   cardTitle: {
@@ -390,6 +411,10 @@ const styles = StyleSheet.create({
     fontFamily: 'SegoeUI-Bold',
     color: '#000000',
     marginTop: 2,
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
 
   featuresPriceRow: {
@@ -422,12 +447,20 @@ const styles = StyleSheet.create({
   featureText: {
     fontSize: 11,
     color: '#6F6F6F',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
 
   price: {
     fontSize: 12,
     fontFamily: 'SegoeUI-Bold',
     color: '#000000',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
 
   divider: {
@@ -459,6 +492,10 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '500',
     color: '#868686',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
 
   ownerLabel: {
@@ -485,5 +522,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
 
     fontWeight: '700',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
 });

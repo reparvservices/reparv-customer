@@ -220,13 +220,20 @@ const styles = StyleSheet.create({
   projectSub: {
     fontSize: 13,
     color: '#868686',
-
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
     marginBottom: 8,
   },
   price: {
     fontSize: 16,
     fontFamily: 'SegoeUI-Bold',
     color: '#6E56CF',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
   arrowBtn: {
     width: 44,

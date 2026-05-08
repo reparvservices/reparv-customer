@@ -13,7 +13,7 @@ import {
   Animated,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
-import {Building2, Eye, HeartIcon, Home} from 'lucide-react-native';
+import {Building2, Eye, HeartIcon, Map} from 'lucide-react-native';
 import {useNavigation} from '@react-navigation/native';
 import {useSelector} from 'react-redux';
 import Location from '../../assets/image/home/rented-properties-card/location.png';
@@ -86,6 +86,60 @@ export const checkSubscription = async partnerid => {
   }
 };
 
+/* ---------------------------------------
+   EMPTY STATE COMPONENT
+--------------------------------------- */
+const EmptyState = ({onPopularAreas, onExpandRadius}) => (
+  <View style={styles.emptyWrapper}>
+    <View style={styles.emptyCard}>
+      {/* Icon Circle */}
+      <View style={styles.emptyIconCircle}>
+        <Map size={32} color="#7C3AED" strokeWidth={1.8} />
+      </View>
+
+      {/* Title */}
+      <Text style={styles.emptyTitle}>No rental properties nearby</Text>
+
+      {/* Subtitle */}
+      <Text style={styles.emptySubtitle}>
+        Try expanding your search radius or check out these popular areas
+        instead.
+      </Text>
+
+      {/* Action Buttons */}
+      <View style={styles.emptyActions}>
+        <TouchableOpacity
+          style={styles.btnOutline}
+          activeOpacity={0.8}
+          onPress={onPopularAreas}>
+          <Text style={styles.btnOutlineText}>Popular Areas</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.btnFilled}
+          activeOpacity={0.85}
+          onPress={onExpandRadius}>
+          <Text style={styles.btnFilledText}>Explore More</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  </View>
+);
+
+/* ---------------------------------------
+   SECTION HEADER (reusable)
+--------------------------------------- */
+const SectionHeader = () => (
+  <View style={styles.sectionHeader}>
+    <LinearGradient colors={['#8A38F5', '#FAF8FF']} style={styles.line} />
+    <Text style={styles.titleText}>Properties on Rents</Text>
+    <LinearGradient colors={['#FAF8FF', '#8A38F5']} style={styles.line} />
+  </View>
+);
+
+/* ---------------------------------------
+   MAIN COMPONENT
+--------------------------------------- */
 export default function RentPropertyCards() {
   const [flats, setFlats] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -283,19 +337,13 @@ export default function RentPropertyCards() {
     );
   };
 
-  const displayCity = selectedCity
-    ? selectedCity.charAt(0).toUpperCase() + selectedCity.slice(1)
-    : 'your city';
-
+  /* ---------------------------------------
+     RENDER STATES
+  --------------------------------------- */
   if (loading) {
     return (
       <View>
-        <View style={styles.sectionHeader}>
-          <LinearGradient colors={['#8A38F5', '#FAF8FF']} style={styles.line} />
-          <Text style={styles.titleText}>Properties on Rents</Text>
-          <LinearGradient colors={['#FAF8FF', '#8A38F5']} style={styles.line} />
-        </View>
-
+        <SectionHeader />
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -310,36 +358,23 @@ export default function RentPropertyCards() {
 
   if (!flats.length) {
     return (
-      <View style={styles.emptyWrapper}>
-        <View style={styles.sectionHeader}>
-          <LinearGradient colors={['#8A38F5', '#FAF8FF']} style={styles.line} />
-          <Text style={styles.titleText}>Properties on Rents</Text>
-          <LinearGradient colors={['#FAF8FF', '#8A38F5']} style={styles.line} />
-        </View>
-
-        <View style={styles.emptyContainer}>
-          <View style={styles.emptyIconWrapper}>
-            <Home size={40} color="#D1D5DB" strokeWidth={1.5} />
-          </View>
-          <Text style={styles.emptyTitle}>No Rental Properties Found</Text>
-          <Text style={styles.emptyText}>
-            {selectedCity
-              ? `No rental properties available in ${displayCity}`
-              : 'No rental properties available at the moment'}
-          </Text>
-        </View>
+      <View>
+        <SectionHeader />
+        <EmptyState
+          onPopularAreas={() => {
+            navigation.navigate('LocationPickerScreen');
+          }}
+          onExpandRadius={() => {
+            navigation.navigate('RentProperty');
+          }}
+        />
       </View>
     );
   }
 
   return (
     <View>
-      <View style={styles.sectionHeader}>
-        <LinearGradient colors={['#8A38F5', '#FAF8FF']} style={styles.line} />
-        <Text style={styles.titleText}>Properties on Rents</Text>
-        <LinearGradient colors={['#FAF8FF', '#8A38F5']} style={styles.line} />
-      </View>
-
+      <SectionHeader />
       <FlatList
         data={flats}
         horizontal
@@ -367,11 +402,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 12,
     marginVertical: 16,
+    color: 'black',
   },
-  titleText: {fontSize: 17, fontWeight: '700'},
+  titleText: {fontSize: 17, fontWeight: '700', color: 'black'},
   line: {width: '25%', height: 3, borderRadius: 1},
 
-  // Skeleton styles
+  // ── Skeleton ──
   skeletonImage: {
     width: '100%',
     height: 130,
@@ -426,38 +462,83 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
 
+  // ── New Empty State ──
   emptyWrapper: {
-    marginVertical: 20,
+    paddingHorizontal: 20,
+    marginBottom: 10,
   },
-  emptyContainer: {
-    paddingVertical: 40,
-    paddingHorizontal: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 8,
-  },
-  emptyIconWrapper: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+  emptyCard: {
     backgroundColor: '#F3F4F6',
+    borderRadius: 20,
+    paddingVertical: 32,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    gap: 10,
+  },
+  emptyIconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 4,
+    shadowColor: '#7C3AED',
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    shadowOffset: {width: 0, height: 2},
   },
   emptyTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#374151',
+    color: '#1A1A2E',
+    textAlign: 'center',
   },
-  emptyText: {
+  emptySubtitle: {
     fontSize: 13,
     color: '#9CA3AF',
-    fontWeight: '500',
     textAlign: 'center',
     lineHeight: 20,
+    marginBottom: 6,
+  },
+  emptyActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 6,
+    width: '100%',
+  },
+  btnOutline: {
+    flex: 1,
+    height: 48,
+    borderRadius: 50,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    shadowOffset: {width: 0, height: 2},
+  },
+  btnOutlineText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1A1A2E',
+  },
+  btnFilled: {
+    flex: 1,
+    height: 48,
+    borderRadius: 50,
+    backgroundColor: '#7C3AED',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  btnFilledText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
 
+  // ── Property Card ──
   card: {
     width: width * 0.65,
     backgroundColor: '#fff',
@@ -489,8 +570,8 @@ const styles = StyleSheet.create({
   bottom: {padding: 10},
   propertyRow: {flexDirection: 'row', alignItems: 'center'},
   icon: {width: 16, height: 16, marginRight: 4},
-  propertyType: {fontSize: 11, color: '#868686', flex: 1},
-  cardTitle: {fontSize: 12, fontWeight: '700', marginTop: 4},
+  propertyType: {fontSize: 11, color: '#000000', flex: 1},
+  cardTitle: {fontSize: 12, fontWeight: '700', marginTop: 4, color: '#000'},
   featuresPriceRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -506,7 +587,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 6,
   },
-  featureText: {fontSize: 11},
+  featureText: {fontSize: 11, color: '#000'},
   price: {fontSize: 12, fontWeight: '700'},
   divider: {height: 1, backgroundColor: '#E3E3E3', marginVertical: 8},
   ownerRow: {

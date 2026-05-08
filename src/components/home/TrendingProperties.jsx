@@ -23,10 +23,12 @@ import {
   Bath,
   Maximize,
   Building2,
+  Map,
 } from 'lucide-react-native';
 import {getImageUri} from '../../utils/imageHandle';
 
 const {width} = Dimensions.get('window');
+
 /* ─────────────────────────────────────────────────────
    SKELETON CARD COMPONENT
 ───────────────────────────────────────────────────── */
@@ -71,6 +73,46 @@ const SkeletonCard = () => {
     </View>
   );
 };
+
+/* ─────────────────────────────────────────────────────
+   EMPTY STATE COMPONENT
+───────────────────────────────────────────────────── */
+const EmptyState = ({onPopularAreas, onExpandRadius}) => (
+  <View style={trendStyles.emptyWrapper}>
+    <View style={trendStyles.emptyCard}>
+      {/* Icon Circle */}
+      <View style={trendStyles.emptyIconCircle}>
+        <Map size={32} color="#7C3AED" strokeWidth={1.8} />
+      </View>
+
+      {/* Title */}
+      <Text style={trendStyles.emptyTitle}>No trending properties nearby</Text>
+
+      {/* Subtitle */}
+      <Text style={trendStyles.emptySubtitle}>
+        Try expanding your search radius or check out these popular areas
+        instead.
+      </Text>
+
+      {/* Action Buttons */}
+      <View style={trendStyles.emptyActions}>
+        <TouchableOpacity
+          style={trendStyles.btnOutline}
+          activeOpacity={0.8}
+          onPress={onPopularAreas}>
+          <Text style={trendStyles.btnOutlineText}>Popular Areas</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={trendStyles.btnFilled}
+          activeOpacity={0.85}
+          onPress={onExpandRadius}>
+          <Text style={trendStyles.btnFilledText}>Expand Radius</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  </View>
+);
 
 /* ─────────────────────────────────────────────────────
    TRENDING PROPERTIES (inline, uses same API)
@@ -129,18 +171,14 @@ function TrendingProperties() {
     return `₹${num}`;
   };
 
-  const displayCity = selectedCity
-    ? selectedCity.charAt(0).toUpperCase() + selectedCity.slice(1)
-    : 'your city';
-
   return (
     <View style={trendStyles.section}>
       <View style={trendStyles.header}>
         <Text style={trendStyles.title}>Trending Properties</Text>
-        <TouchableOpacity style={trendStyles.seeAll}>
+        {/* <TouchableOpacity style={trendStyles.seeAll}>
           <Text style={trendStyles.seeAllText}>See All</Text>
           <ChevronRight size={14} color="#8A38F5" strokeWidth={2.5} />
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </View>
 
       {loading ? (
@@ -153,17 +191,15 @@ function TrendingProperties() {
           <SkeletonCard />
         </ScrollView>
       ) : properties.length === 0 ? (
-        <View style={trendStyles.emptyContainer}>
-          <View style={trendStyles.emptyIconWrapper}>
-            <Building2 size={40} color="#D1D5DB" strokeWidth={1.5} />
-          </View>
-          <Text style={trendStyles.emptyTitle}>No Properties Found</Text>
-          <Text style={trendStyles.emptyText}>
-            {selectedCity
-              ? `No trending properties available in ${displayCity}`
-              : 'No trending properties available'}
-          </Text>
-        </View>
+        /* ── NEW EMPTY STATE ── */
+        <EmptyState
+          onPopularAreas={() => {
+            navigation.navigate('LocationPickerScreen');
+          }}
+          onExpandRadius={() => {
+            navigation.navigate('PropertyMap');
+          }}
+        />
       ) : (
         <FlatList
           data={properties}
@@ -185,6 +221,7 @@ function TrendingProperties() {
                     seoSlug: item?.seoSlug,
                   })
                 }>
+                {/* Image */}
                 {/* Image */}
                 <View style={trendStyles.imgWrap}>
                   {uri ? (
@@ -218,6 +255,15 @@ function TrendingProperties() {
                   <Text style={trendStyles.name} numberOfLines={1}>
                     {item.propertyName}
                   </Text>
+                  {/* Distance Badge - Top Right */}
+                  {item.distanceFromCityCenter && (
+                    <View style={trendStyles.distanceBadge}>
+                      <MapPin size={9} color="#FFFFFF" strokeWidth={2.5} />
+                      <Text style={trendStyles.distanceBadgeText}>
+                        {item.distanceFromCityCenter} KM
+                      </Text>
+                    </View>
+                  )}
                   <View style={trendStyles.locRow}>
                     <MapPin size={11} color="#9CA3AF" strokeWidth={2} />
                     <Text style={trendStyles.locText} numberOfLines={1}>
@@ -262,6 +308,10 @@ function TrendingProperties() {
 }
 
 export default TrendingProperties;
+
+/* ─────────────────────────────────────────────────────
+   STYLES
+───────────────────────────────────────────────────── */
 const trendStyles = StyleSheet.create({
   section: {marginTop: 28, marginBottom: 10},
   header: {
@@ -280,7 +330,7 @@ const trendStyles = StyleSheet.create({
   seeAll: {flexDirection: 'row', alignItems: 'center', gap: 2},
   seeAllText: {fontSize: 13, fontWeight: '600', color: '#8A38F5'},
 
-  // Skeleton styles
+  // ── Skeleton ──
   skeletonImage: {
     width: '100%',
     height: 160,
@@ -313,35 +363,99 @@ const trendStyles = StyleSheet.create({
     borderRadius: 6,
   },
 
-  emptyContainer: {
-    height: 200,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 40,
-    gap: 8,
+  // ── New Empty State ──
+  emptyWrapper: {
+    paddingHorizontal: 20,
   },
-  emptyIconWrapper: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+  emptyCard: {
     backgroundColor: '#F3F4F6',
+    borderRadius: 20,
+    paddingVertical: 32,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    gap: 10,
+  },
+  emptyIconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 4,
+    shadowColor: '#7C3AED',
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    shadowOffset: {width: 0, height: 2},
   },
   emptyTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#374151',
+    color: '#1A1A2E',
+    textAlign: 'center',
   },
-  emptyText: {
+  emptySubtitle: {
     fontSize: 13,
     color: '#9CA3AF',
-    fontWeight: '500',
     textAlign: 'center',
     lineHeight: 20,
+    marginBottom: 6,
+  },
+  emptyActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 6,
+    width: '100%',
+  },
+  btnOutline: {
+    flex: 1,
+    height: 48,
+    borderRadius: 50,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    shadowOffset: {width: 0, height: 2},
+  },
+  btnOutlineText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1A1A2E',
+  },
+  distanceBadge: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: 'rgba(137, 135, 135, 0.65)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  distanceBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  btnFilled: {
+    flex: 1,
+    height: 48,
+    borderRadius: 50,
+    backgroundColor: '#7C3AED',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  btnFilledText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
 
+  // ── Property Card ──
   card: {
     width: width * 0.58,
     backgroundColor: '#FFFFFF',
@@ -385,4 +499,9 @@ const trendStyles = StyleSheet.create({
     paddingVertical: 4,
   },
   configText: {fontSize: 10, color: '#6B7280', fontWeight: '500'},
+  distanceText: {
+    fontSize: 10,
+    color: '#9CA3AF',
+    fontWeight: '500',
+  },
 });

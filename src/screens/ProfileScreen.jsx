@@ -575,6 +575,7 @@ const styles = StyleSheet.create({
   },
 
   statValue: {
+    color: '#000',
     fontSize: 22,
     lineHeight: 28,
     fontWeight: '700',

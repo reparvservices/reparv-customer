@@ -599,7 +599,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  headerTitle: {fontSize: 18, fontWeight: '700'},
+  headerTitle: {fontSize: 18, fontWeight: '700', color: '#000'},
   applyBtn: {
     backgroundColor: PURPLE,
     paddingHorizontal: 14,
@@ -624,8 +624,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginTop: 8,
   },
-  statValue: {fontSize: 22, fontWeight: '700'},
-  statGrowth: {fontSize: 12, color: '#22C55E'},
+  statValue: {fontSize: 22, fontWeight: '700', color: '#000'},
+  statGrowth: {fontSize: 12, color: '#22C55E', color: '#000'},
 
   card: {
     backgroundColor: '#fff',
@@ -634,7 +634,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   cardHeader: {flexDirection: 'row', justifyContent: 'space-between'},
-  cardTitle: {fontSize: 16, fontWeight: '700'},
+  cardTitle: {fontSize: 16, fontWeight: '700', color: '#000'},
   statusBadge: {
     backgroundColor: '#EDE9FE',
     paddingHorizontal: 12,
@@ -642,7 +642,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   statusText: {fontSize: 12, color: PURPLE, fontWeight: '600'},
-  appId: {fontSize: 12, color: '#6B7280', marginVertical: 6},
+  appId: {fontSize: 12, color: '#6B7280', marginVertical: 6, color: '#000'},
 
   timelineRow: {flexDirection: 'row', marginTop: 14},
   timelineLeft: {alignItems: 'center', marginRight: 12},
@@ -661,7 +661,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#E5E7EB',
     marginTop: 4,
   },
-  timelineText: {fontWeight: '600'},
+  timelineText: {fontWeight: '600', color: '#000'},
   timelineDate: {fontSize: 11, color: '#9CA3AF'},
 
   activityRow: {flexDirection: 'row', gap: 12, marginTop: 14},
@@ -672,7 +672,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  activityTitle: {fontWeight: '600'},
+  activityTitle: {fontWeight: '600', color: '#000'},
   activitySub: {fontSize: 12, color: '#6B7280'},
   activityTime: {fontSize: 11, color: '#9CA3AF'},
 
@@ -686,7 +686,7 @@ const styles = StyleSheet.create({
   },
   docVerified: {backgroundColor: '#ECFDF5'},
   docPending: {backgroundColor: '#FEF3C7'},
-  docTitle: {fontWeight: '600'},
+  docTitle: {fontWeight: '600', color: '#000'},
   docSub: {fontSize: 11, color: '#6B7280'},
 
   uploadBtn: {
@@ -702,7 +702,12 @@ const styles = StyleSheet.create({
   },
   uploadText: {color: '#6B7280', fontWeight: '500'},
 
-  sectionTitle: {fontSize: 16, fontWeight: '700', marginBottom: 12},
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 12,
+    color: '#000',
+  },
 
   loanCard: {
     backgroundColor: '#fff',
@@ -710,8 +715,12 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 16,
   },
-  loanHeader: {flexDirection: 'row', justifyContent: 'space-between'},
-  loanId: {fontWeight: '700'},
+  loanHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    color: '#000',
+  },
+  loanId: {fontWeight: '700', color: '#000'},
   loanStatus: {
     backgroundColor: '#E0F2FE',
     color: '#0284C7',
@@ -727,7 +736,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   loanLabel: {fontSize: 12, color: '#6B7280'},
-  loanValue: {fontWeight: '700'},
+  loanValue: {fontWeight: '700', color: '#000'},
   viewBtn: {
     backgroundColor: '#F5F3FF',
     padding: 12,

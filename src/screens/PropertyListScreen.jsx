@@ -25,6 +25,7 @@ import {ListFilter} from 'lucide-react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {parseBhkList} from '../utils/parseBhk';
 import {fetchAllPropertiesCached} from '../services/allPropertiesCache';
+import {useSelector} from 'react-redux';
 
 const {width} = Dimensions.get('window');
 const CARD_WIDTH = width - 32;
@@ -77,9 +78,10 @@ const HighlightMatch = ({text, query, style}) => {
 
 const PropertyListScreen = () => {
   const navigation = useNavigation();
+  const {user} = useSelector(state => state.auth);
   const route = useRoute();
   const ptype = route?.params?.ptype;
-  const initialCity = route?.params?.city;
+  const initialCity = route?.params?.city || user.city;
 
   const [flats, setFlats] = useState([]);
   const [filteredFlats, setFilteredFlats] = useState([]);
@@ -281,20 +283,102 @@ const PropertyListScreen = () => {
     [cities, flats],
   );
 
+  // ─── NLP Search Parser ───
+  const parseSearchQuery = useCallback(
+    text => {
+      if (!text) return {bhk: null, city: null, category: null, rawText: ''};
+      const lower = text.toLowerCase().trim();
+
+      // 1. Extract BHK  →  "2bhk" | "2 bhk" | "2 bedroom"
+      const bhkMatch = lower.match(/(\d+)\s*(?:bhk|bedroom|bed)/);
+      const parsedBhk = bhkMatch ? `${bhkMatch[1]} BHK` : null;
+
+      // 2. Extract city  →  "in <city>" OR direct city name
+      let parsedCity = null;
+      const inMatch = lower.match(/\bin\s+([a-zA-Z\s]+?)(?:\s|$)/);
+      const cityCandidate = inMatch ? inMatch[1].trim() : lower;
+      parsedCity =
+        cities.find(c => c.toLowerCase() === cityCandidate.toLowerCase()) ||
+        cities.find(c =>
+          cityCandidate.toLowerCase().includes(c.toLowerCase()),
+        ) ||
+        null;
+
+      // 3. Extract property category keyword
+      const CATEGORY_KEYWORDS = {
+        flat: ['flat', 'apartment', 'flats', 'apartments'],
+        villa: ['villa', 'villas'],
+        rowhouse: ['rowhouse', 'row house', 'row-house'],
+        plot: ['plot', 'land', 'plots'],
+        bungalow: ['bungalow', 'bungalows'],
+        'new flat': ['new flat', 'new project', 'new launch'],
+        'rental flat': ['rent', 'rental', 'pg', 'lease'],
+        resale: ['resale', 'ready'],
+      };
+
+      let parsedCategory = null;
+      for (const [key, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
+        if (keywords.some(kw => lower.includes(kw))) {
+          // Match against actual propertyCategory values in data
+          parsedCategory =
+            propertyCategory.find(c =>
+              c.toLowerCase().includes(key.toLowerCase()),
+            ) || null;
+          if (parsedCategory) break;
+        }
+      }
+
+      return {
+        bhk: parsedBhk,
+        city: parsedCity,
+        category: parsedCategory,
+        rawText: lower,
+      };
+    },
+    [cities, propertyCategory],
+  );
   // ─── Filters ───
-  const applyFilters = () => {
+  const applyFilters = useCallback(() => {
+    // ── Parse natural language from searchText ──
+    const {
+      bhk: parsedBhk,
+      city: parsedCity,
+      category: parsedCategory,
+    } = parseSearchQuery(searchText);
+
+    // Auto-apply parsed city/tab if found
+    const effectiveCity = parsedCity || selectedCity;
+    const effectiveTab = parsedCategory || selectedTab;
+
+    if (parsedCity && parsedCity !== selectedCity) setSelectedCity(parsedCity);
+    if (parsedCategory && parsedCategory !== selectedTab)
+      setSelectedTab(parsedCategory);
+
     const filtered = flats.filter(item => {
+      // ── Category tab ──
+      const matchTab = !effectiveTab || item.propertyCategory === effectiveTab;
+
+      // ── Filter modal property type ──
       const matchCategory =
         !filterpropertyCategory.length ||
         filterpropertyCategory.includes(item.propertyCategory);
 
-      const matchTab = !selectedTab || item.propertyCategory === selectedTab;
-
+      // ── BHK — from filter modal OR parsed from search ──
+      const activeBhkFilters = filterbhk.length
+        ? filterbhk
+        : parsedBhk
+        ? [parsedBhk]
+        : [];
       const matchBhk =
-        !filterbhk.length ||
-        (item.propertyType &&
-          item.propertyType.some(pt => filterbhk.includes(pt)));
+        !activeBhkFilters.length ||
+        (Array.isArray(item.propertyType) &&
+          item.propertyType.some(pt =>
+            activeBhkFilters.some(
+              fb => fb.toLowerCase() === pt?.trim().toLowerCase(),
+            ),
+          ));
 
+      // ── Budget ──
       const priceInLakh = item.totalOfferPrice
         ? Number(item.totalOfferPrice) / 100000
         : 0;
@@ -302,8 +386,22 @@ const PropertyListScreen = () => {
         !budget.length ||
         (priceInLakh >= budget[0] && priceInLakh <= budget[1]);
 
+      // ── City — exact match on parsed/selected ──
+      const matchCity =
+        !effectiveCity ||
+        normalizeCity(item.city) === normalizeCity(effectiveCity);
+
+      // ── Raw text fallback — only on non-parsed part of query ──
+      // Strip out parsed tokens so "2bhk in nagpur" doesn't kill results
+      const strippedQuery = searchText
+        .toLowerCase()
+        .replace(/\d+\s*(?:bhk|bedroom|bed)/g, '') // remove bhk
+        .replace(/\bin\s+\w+/g, '') // remove "in <city>"
+        .replace(/flat|apartment|villa|plot|rent|resale|rowhouse/g, '')
+        .trim();
+
       const matchSearch =
-        !searchText ||
+        !strippedQuery ||
         [
           item.city,
           item.location,
@@ -312,17 +410,11 @@ const PropertyListScreen = () => {
           item.address,
         ]
           .filter(Boolean)
-          .some(field =>
-            field.toLowerCase().includes(searchText.toLowerCase()),
-          );
-
-      const matchCity =
-        !selectedCity ||
-        normalizeCity(item.city) === normalizeCity(selectedCity);
+          .some(field => field.toLowerCase().includes(strippedQuery));
 
       return (
-        matchCategory &&
         matchTab &&
+        matchCategory &&
         matchBhk &&
         matchBudget &&
         matchCity &&
@@ -332,8 +424,16 @@ const PropertyListScreen = () => {
 
     setFilteredFlats(filtered);
     setFilterVisible(false);
-  };
-
+  }, [
+    flats,
+    searchText,
+    selectedCity,
+    selectedTab,
+    filterpropertyCategory,
+    filterbhk,
+    budget,
+    parseSearchQuery,
+  ]);
   // ─── Suggestion select handler ───
   const handleSuggestionSelect = item => {
     if (item.city) setSelectedCity(item.city);
@@ -355,6 +455,9 @@ const PropertyListScreen = () => {
       item => !item.startsWith('Rental') && !item.startsWith('Resale'),
     );
   }, [ptype, propertyCategory]);
+  useEffect(() => {
+    if (flats.length > 0) applyFilters();
+  }, [flats, selectedTab, selectedCity, searchText]); // keep as-is, applyFilters is now memoized
 
   return (
     <SafeAreaView style={styles.safeArea}>

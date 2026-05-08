@@ -120,13 +120,13 @@ export default function HomeHeader() {
       </TouchableOpacity>
 
       {/* ── Hero banner ── */}
-      <Image
+      {/* <Image
         source={heroBanner}
         style={styles.heroImage}
         resizeMode="contain"
         accessibilityRole="image"
         accessibilityLabel="Find, buy, or list properties"
-      />
+      /> */}
     </View>
   );
 }
@@ -187,6 +187,10 @@ function makeStyles() {
       flex: 1,
       minWidth: 0,
       marginRight: 1,
+      ...Platform.select({
+        android: {includeFontPadding: false, textAlignVertical: 'center'},
+        default: {},
+      }),
     },
     avatarOuter: {
       borderRadius: avatarSize / 2 + 2,

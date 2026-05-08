@@ -145,10 +145,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 10,
     backgroundColor: '#fff',
+    color: '#000',
   },
   countryText: {
     fontSize: 14,
     fontWeight: '500',
+    color: '#000',
   },
   phoneInput: {
     flex: 1,

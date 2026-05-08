@@ -9,7 +9,6 @@ import {
   ToastAndroid,
   TextInput,
   Pressable,
-  Modal,
 } from 'react-native';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import {SafeAreaView} from 'react-native-safe-area-context';
@@ -23,9 +22,40 @@ import OldPropertyArea from '../components/old-property/OldPropertyArea';
 import OldPriceDetails from '../components/old-property/OldPriceDetails';
 import OldContactDetails from '../components/old-property/OldContactDetails';
 import OldUploadImg from '../components/old-property/OldUploadImg';
-import {MapPin} from 'lucide-react-native';
+import {MapPin, X} from 'lucide-react-native';
 import {useSelector} from 'react-redux';
 import PropertyTypeSelector from '../components/rent-property/PropertyType';
+
+const CustomDropdownModal = ({visible, onClose, data, onSelect, title}) => {
+  if (!visible) return null;
+
+  return (
+    <View style={styles.customModalOverlay}>
+      <Pressable style={styles.customModalBackdrop} onPress={onClose} />
+      <View style={styles.customModalContent}>
+        <View style={styles.customModalHeader}>
+          <Text style={styles.customModalTitle}>{title}</Text>
+          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <X color="#666" size={24} />
+          </TouchableOpacity>
+        </View>
+        <ScrollView style={styles.customModalScroll}>
+          {data.map(item => (
+            <TouchableOpacity
+              key={item.id}
+              style={styles.customModalItem}
+              onPress={() => onSelect(item)}
+              activeOpacity={0.7}>
+              <Text style={styles.customModalItemText}>
+                {item.state || item.city}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+    </View>
+  );
+};
 
 export default function OldPropertyScreen({route}) {
   const navigation = useNavigation();
@@ -49,7 +79,6 @@ export default function OldPropertyScreen({route}) {
   const [stateModal, setStateModal] = useState(false);
   const [cityModal, setCityModal] = useState(false);
 
-  // ── imageFiles now stores S3 URL strings (or null) per section ──
   const [imageFiles, setImageFiles] = useState({
     frontView: null,
     sideView: null,
@@ -95,7 +124,6 @@ export default function OldPropertyScreen({route}) {
     }
   }, [state]);
 
-  /* ── Validation ── */
   const validateStepOne = () => {
     const newErrors = {};
     if (!propertyType) newErrors.propertyType = 'Please select property type';
@@ -116,7 +144,6 @@ export default function OldPropertyScreen({route}) {
   const getTotalImageCount = () =>
     Object.values(imageFiles).filter(v => !!v).length;
 
-  /* ── Submit — sends S3 URLs as JSON ── */
   const handleSubmit = async () => {
     if (getTotalImageCount() < 1) {
       ToastAndroid.show('Upload at least 1 image', ToastAndroid.SHORT);
@@ -138,7 +165,6 @@ export default function OldPropertyScreen({route}) {
         areas: JSON.stringify([
           {label: 'Built-up Area', value: area, unit: 'sq.ft.'},
         ]),
-        // ── S3 URLs for each section (null sections are omitted) ──
         ...Object.fromEntries(
           Object.entries(imageFiles).filter(([, url]) => !!url),
         ),
@@ -176,11 +202,20 @@ export default function OldPropertyScreen({route}) {
     showUpload ? setShowUpload(false) : navigation.goBack();
   };
 
+  const handleStateSelect = item => {
+    setState(item.state);
+    setStateModal(false);
+  };
+
+  const handleCitySelect = item => {
+    setCity(item.city);
+    setCityModal(false);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar backgroundColor="#FAF8FF" barStyle="dark-content" />
 
-      {/* HEADER */}
       <View style={styles.header}>
         <TouchableOpacity onPress={handleBackPress}>
           <BackIcon width={22} height={22} />
@@ -208,7 +243,6 @@ export default function OldPropertyScreen({route}) {
               />
             )}
 
-            {/* PROPERTY NAME */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>
                 Property Name <Text style={styles.required}>*</Text>
@@ -225,7 +259,6 @@ export default function OldPropertyScreen({route}) {
               )}
             </View>
 
-            {/* ADDRESS DETAILS */}
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <MapPin color="#8A38F5" size={16} />
@@ -344,47 +377,21 @@ export default function OldPropertyScreen({route}) {
         </Text>
       </ScrollView>
 
-      {/* STATE MODAL */}
-      <Modal visible={stateModal} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalBox}>
-            <ScrollView>
-              {states.map(item => (
-                <Pressable
-                  key={item.id}
-                  style={styles.modalItem}
-                  onPress={() => {
-                    setState(item.state);
-                    setStateModal(false);
-                  }}>
-                  <Text>{item.state}</Text>
-                </Pressable>
-              ))}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
+      <CustomDropdownModal
+        visible={stateModal}
+        onClose={() => setStateModal(false)}
+        data={states}
+        onSelect={handleStateSelect}
+        title="Select State"
+      />
 
-      {/* CITY MODAL */}
-      <Modal visible={cityModal} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalBox}>
-            <ScrollView>
-              {cities.map(item => (
-                <Pressable
-                  key={item.id}
-                  style={styles.modalItem}
-                  onPress={() => {
-                    setCity(item.city);
-                    setCityModal(false);
-                  }}>
-                  <Text>{item.city}</Text>
-                </Pressable>
-              ))}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
+      <CustomDropdownModal
+        visible={cityModal}
+        onClose={() => setCityModal(false)}
+        data={cities}
+        onSelect={handleCitySelect}
+        title="Select City"
+      />
     </SafeAreaView>
   );
 }
@@ -398,28 +405,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     justifyContent: 'space-between',
   },
-  headerTitle: {fontSize: 16, fontFamily: 'SegoeUI-Bold'},
+  headerTitle: {fontSize: 16, fontFamily: 'SegoeUI-Bold', color: 'black'},
   scrollContent: {paddingBottom: 32, gap: 16},
-  tabRow: {flexDirection: 'row', gap: 12, marginTop: 12},
-  tabBtn: {
-    flex: 1,
-    height: 44,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F9FAFB',
-  },
-  activeTab: {backgroundColor: '#8A38F5', borderColor: '#8A38F5'},
-  tabText: {fontSize: 14, fontFamily: 'SegoeUI-Bold', color: '#374151'},
-  activeTabText: {color: '#FFFFFF'},
   section: {backgroundColor: '#fff', padding: 16},
   sectionHeader: {flexDirection: 'row', alignItems: 'center', gap: 6},
   sectionTitle: {
     fontSize: 16,
     fontFamily: 'SegoeUI-Bold',
     marginBottom: 8,
+    color: '#383737',
   },
   required: {color: '#E33629'},
   pickerBox: {
@@ -450,6 +444,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 12,
     marginBottom: 8,
+    color: '#000',
   },
   row: {flexDirection: 'row', gap: 12},
   primaryButton: {
@@ -485,21 +480,62 @@ const styles = StyleSheet.create({
     color: '#8E8E8E',
     marginTop: 12,
   },
-  modalOverlay: {
+  customModalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 999,
+  },
+  customModalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
-  modalBox: {
-    backgroundColor: '#fff',
-    maxHeight: '60%',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    padding: 16,
+  customModalContent: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '70%',
+    paddingTop: 16,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: -2},
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
   },
-  modalItem: {
-    paddingVertical: 14,
+  customModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 12,
     borderBottomWidth: 1,
-    borderColor: '#E5E7EB',
+    borderBottomColor: '#E5E7EB',
+  },
+  customModalTitle: {
+    fontSize: 18,
+    fontFamily: 'SegoeUI-Bold',
+    color: '#111827',
+  },
+  closeButton: {
+    padding: 4,
+  },
+  customModalScroll: {
+    paddingHorizontal: 20,
+  },
+  customModalItem: {
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  customModalItemText: {
+    fontSize: 16,
+    fontFamily: 'SegoeUI-Regular',
+    color: '#374151',
   },
 });

@@ -215,6 +215,7 @@ const styles = StyleSheet.create({
     padding: 12,
     textAlignVertical: 'top',
     fontSize: 14,
+    color: '#000',
   },
   attachmentBox: {
     borderWidth: 1,

@@ -212,6 +212,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'SegoeUI-Bold',
     marginBottom: 12,
+    color: '#000',
   },
   required: {color: '#E33629'},
 

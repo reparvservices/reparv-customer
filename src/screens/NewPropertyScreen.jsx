@@ -51,14 +51,14 @@ const newCardData = [
 ];
 
 const resaleCardData = [
-  {title: 'Resale Flat', img: ResaleFlatImg, ptype: 'Resale'},
-  {title: 'Resale Office', img: ResaleOfficeImg, ptype: 'Resale'},
-  {title: 'Resale Farm House', img: ResaleFarmHouseImg, ptype: 'Resale'},
-  {title: 'Resale Shop', img: ResaleShopImg, ptype: 'Resale'},
-  {title: 'Resale Godown', img: ResaleGodownImg, ptype: 'Resale'},
-  {title: 'Resale Farm Land', img: ResaleFarmImg, ptype: 'FarmLand'},
-  {title: 'Resale Row House', img: ResaleRowHouseImg, ptype: 'RowHouse'},
-  {title: 'Resale Bungalow', img: ResaleBungalowImg, ptype: 'Resale'},
+  {title: 'Resale Flat', img: ResaleFlatImg, ptype: 'ResaleFlat'},
+  {title: 'Resale Office', img: ResaleOfficeImg, ptype: 'ResaleOffice'},
+  {title: 'Resale Farm House', img: ResaleFarmHouseImg, ptype: 'ResaleHouse'},
+  {title: 'Resale Shop', img: ResaleShopImg, ptype: 'ResaleShop'},
+  {title: 'Resale Godown', img: ResaleGodownImg, ptype: 'ResaleGodown'},
+  {title: 'Resale Farm Land', img: ResaleFarmImg, ptype: 'ResaleFarmLand'},
+  {title: 'Resale Row House', img: ResaleRowHouseImg, ptype: 'ResaleRowHouse'},
+  {title: 'Resale Bungalow', img: ResaleBungalowImg, ptype: 'ResaleBungalow'},
 ];
 
 const formatTitle = title => {

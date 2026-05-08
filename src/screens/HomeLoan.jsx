@@ -415,7 +415,12 @@ const styles = StyleSheet.create({
   },
   tab: {flex: 1, paddingVertical: 12, alignItems: 'center'},
   activeTab: {backgroundColor: '#8A38F5', borderRadius: 6},
-  tabContent: {flexDirection: 'row', alignItems: 'center', gap: 8},
+  tabContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    color: '#000',
+  },
   tabIcon: {width: 18, height: 18},
   tabText: {fontSize: 16, fontFamily: 'SegoeUI-Bold', color: '#000'},
   activeTabText: {color: '#fff'},

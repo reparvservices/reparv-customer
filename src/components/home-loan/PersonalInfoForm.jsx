@@ -181,7 +181,11 @@ export default function PersonalInfoForm({data, setData, errors}) {
         labelField="state"
         valueField="state"
         placeholder="Select State"
+        placeholderTextColor={'#000'}
         value={data.state}
+        selectedTextStyle={{color: '#000000'}} // ✅ selected value color
+        placeholderStyle={{color: '#000'}} // ✅ placeholder color
+        itemTextStyle={{color: '#000'}} // ✅ dropdown list text color
         onChange={item =>
           setData({
             ...data,
@@ -203,9 +207,13 @@ export default function PersonalInfoForm({data, setData, errors}) {
         data={cities}
         labelField="city"
         valueField="city"
+        placeholderTextColor="#000"
         placeholder={loadingCities ? 'Loading cities...' : 'Select City'}
         value={data.city}
         disable={!data.state || loadingCities}
+        selectedTextStyle={{color: '#000000'}} // ✅ selected value color
+        placeholderStyle={{color: '#000'}} // ✅ placeholder color
+        itemTextStyle={{color: '#000'}} // ✅ dropdown list text color
         onChange={item =>
           setData({
             ...data,
@@ -269,6 +277,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     marginBottom: 4,
+    color: '#000',
   },
   star: {
     color: '#E33629',
@@ -318,6 +327,7 @@ const styles = StyleSheet.create({
   code: {
     fontSize: 16,
     marginRight: 8,
+    color: '#000',
   },
   divider: {
     width: 1,
@@ -342,6 +352,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 10,
     marginBottom: 14,
+    color: '#000',
   },
   disabledDropdown: {
     backgroundColor: '#F3F4F6',

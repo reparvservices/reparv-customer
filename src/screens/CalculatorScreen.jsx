@@ -61,7 +61,7 @@ export default function CalculatorScreen() {
         <Text style={styles.headerTitle}>Property Calculator</Text>
 
         <TouchableOpacity>
-           {/* <Bell size={22} color="#111" /> */}
+          {/* <Bell size={22} color="#111" /> */}
         </TouchableOpacity>
       </View>
 
@@ -349,7 +349,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
   },
-  headerTitle: {fontSize: 18, fontWeight: '700'},
+  headerTitle: {fontSize: 18, fontWeight: '700', color: '#000'},
   subTitle: {textAlign: 'center', marginVertical: 12, color: '#6B7280'},
   tabsRow: {flexDirection: 'row', gap: 10, paddingHorizontal: 16},
   tab: {
@@ -371,16 +371,21 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 16,
   },
-  fieldHeader: {flexDirection: 'row', justifyContent: 'space-between'},
-  fieldLabel: {fontSize: 14, fontWeight: '600'},
+  fieldHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    color: '#000',
+  },
+  fieldLabel: {fontSize: 14, fontWeight: '600', color: '#000'},
   inputBox: {
     borderWidth: 1,
     borderColor: '#D1D5DB',
+    color: '#000',
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: Platform.OS === 'ios' ? 6 : 4,
   },
-  inputText: {fontWeight: '600'},
+  inputText: {fontWeight: '600', color: '#000'},
   rangeRow: {flexDirection: 'row', justifyContent: 'space-between'},
   rangeText: {fontSize: 11, color: '#7C3AED', fontWeight: '500'},
   emiCard: {
@@ -413,14 +418,19 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
   },
-  breakdownTitle: {fontSize: 18, fontWeight: '700', marginBottom: 10},
+  breakdownTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 10,
+    color: '#000',
+  },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginVertical: 6,
   },
   rowLabel: {color: '#374151'},
-  rowValue: {fontWeight: '600'},
+  rowValue: {fontWeight: '600', color: '#000'},
   divider: {height: 1, backgroundColor: '#E5E7EB', marginVertical: 10},
   sectionTitle: {fontSize: 18, fontWeight: '700', marginLeft: 16},
   marker: {
@@ -432,27 +442,26 @@ const styles = StyleSheet.create({
     borderColor: '#FFF',
   },
   legendRow: {
-  flexDirection: 'row',
-  gap: 24,
-  marginTop: 16,
-},
+    flexDirection: 'row',
+    gap: 24,
+    marginTop: 16,
+  },
 
-legendItem: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  gap: 8,
-},
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
 
-legendDot: {
-  width: 12,
-  height: 12,
-  borderRadius: 6,
-},
+  legendDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
 
-legendText: {
-  fontSize: 14,
-  fontWeight: '600',
-  color: '#374151',
-},
-
+  legendText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+  },
 });

@@ -613,6 +613,7 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 22,
     fontWeight: '700',
+    color: '#000',
   },
 
   statGrowth: {

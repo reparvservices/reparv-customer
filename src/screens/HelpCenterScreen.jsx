@@ -329,8 +329,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     justifyContent: 'space-between',
+    color: '#000',
   },
-  headerTitle: {fontSize: 18, fontWeight: '600'},
+  headerTitle: {fontSize: 18, fontWeight: '600', color: '#000'},
   headerIcon: {
     width: 32,
     height: 32,
@@ -382,7 +383,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 8,
   },
-  actionTitle: {fontWeight: '600', fontSize: 14},
+  actionTitle: {fontWeight: '600', fontSize: 14, color: '#000'},
   actionSub: {fontSize: 12, color: '#6B7280', marginTop: 2},
 
   sectionHeader: {
@@ -396,6 +397,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     paddingHorizontal: 16,
     marginTop: 24,
+    color: '#000',
   },
   activeText: {color: '#6B7280'},
   divider: {
@@ -424,10 +426,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 999,
+    color: '#000',
   },
-  chipText: {fontSize: 12, fontWeight: '500'},
+  chipText: {fontSize: 12, fontWeight: '500', color: '#000'},
 
-  ticketTitle: {fontSize: 15, fontWeight: '600', marginTop: 10},
+  ticketTitle: {fontSize: 15, fontWeight: '600', marginTop: 10, color: '#000'},
   ticketDesc: {fontSize: 13, color: '#6B7280', marginTop: 4},
 
   ticketFooter: {
@@ -447,7 +450,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
 
-  faqText: {fontWeight: '500'},
+  faqText: {fontWeight: '500', color: '#000'},
   faqHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -493,7 +496,7 @@ const styles = StyleSheet.create({
     gap: 6,
     alignItems: 'center',
   },
-  callText: {fontWeight: '600'},
+  callText: {fontWeight: '600', color: '#000'},
 
   whatsappBtn: {
     backgroundColor: '#A78BFA',

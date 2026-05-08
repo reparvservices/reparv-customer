@@ -76,6 +76,7 @@ export const ListingCard = ({propertyData}) => {
         source={{
           uri: getImageUri(parseFrontView(propertyData?.frontView)[0]),
         }}
+        resizeMode="contain"
         style={styles.listingImage}
       />
 

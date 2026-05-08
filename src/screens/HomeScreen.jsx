@@ -27,6 +27,7 @@ import {SafeAreaProvider, SafeAreaView} from 'react-native-safe-area-context';
 import {getImageUri} from '../utils/imageHandle';
 import NearbyPropertiesBanner from '../components/home/NearbyPropertiesBanner';
 import TrendingProperties from '../components/home/TrendingProperties';
+import MapExplorerBanner from '../components/home/MapExplorerBanner';
 
 const {width} = Dimensions.get('window');
 
@@ -62,12 +63,15 @@ export default function HomeScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}>
           <HomeHeader />
-          <ActionCards />
-          <HomeLoan />
-          <TrendingProperties />
-          <RentProperty />
           <NearbyPropertiesBanner navigation={navigation} style={styles} />
+          <ActionCards />
+          <TrendingProperties />
+          <HomeLoan />
+
+          <RentProperty />
+
           <NewLaunchShowcase />
+          <MapExplorerBanner navigation={navigation} style={styles} />
           <View style={{height: 32}} />
         </ScrollView>
       </View>
