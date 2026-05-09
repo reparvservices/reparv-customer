@@ -11,6 +11,7 @@ import {
   ScrollView,
   TextInput,
   FlatList,
+  PanResponder,
 } from 'react-native';
 import {WebView} from 'react-native-webview';
 import Slider from '@react-native-community/slider';
@@ -270,6 +271,143 @@ const LEAFLET_HTML = `<!DOCTYPE html>
 </body>
 </html>`;
 
+// ─── Custom Slider ────────────────────────────────────────────────────────────
+const CustomSlider = ({
+  minimumValue = 0,
+  maximumValue = 1,
+  step = 0,
+  value,
+  onValueChange,
+  onSlidingComplete,
+  style,
+}) => {
+  const trackWidth = useRef(0);
+  const animVal = useRef(new Animated.Value(value)).current;
+  const currentVal = useRef(value);
+
+  // Sync animVal when value prop changes externally
+  useEffect(() => {
+    animVal.setValue(value);
+    currentVal.current = value;
+  }, [value]);
+
+  const clampStep = raw => {
+    const range = maximumValue - minimumValue;
+    let clamped = Math.max(minimumValue, Math.min(maximumValue, raw));
+    if (step > 0) {
+      clamped =
+        Math.round((clamped - minimumValue) / step) * step + minimumValue;
+    }
+    return Math.max(minimumValue, Math.min(maximumValue, clamped));
+  };
+
+  const xToValue = x => {
+    const ratio = Math.max(0, Math.min(1, x / (trackWidth.current || 1)));
+    return clampStep(minimumValue + ratio * (maximumValue - minimumValue));
+  };
+
+  const valueToRatio = v => (v - minimumValue) / (maximumValue - minimumValue);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: evt => {
+        const x = evt.nativeEvent.locationX;
+        const newVal = xToValue(x);
+        currentVal.current = newVal;
+        animVal.setValue(newVal);
+        onValueChange?.(newVal);
+      },
+      onPanResponderMove: evt => {
+        const x = evt.nativeEvent.locationX;
+        const newVal = xToValue(x);
+        if (newVal !== currentVal.current) {
+          currentVal.current = newVal;
+          animVal.setValue(newVal);
+          onValueChange?.(newVal);
+        }
+      },
+      onPanResponderRelease: () => {
+        onSlidingComplete?.(currentVal.current);
+      },
+    }),
+  ).current;
+
+  const thumbLeft = animVal.interpolate({
+    inputRange: [minimumValue, maximumValue],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
+
+  return (
+    <View
+      style={[{height: 40, justifyContent: 'center'}, style]}
+      {...panResponder.panHandlers}
+      onLayout={e => {
+        trackWidth.current = e.nativeEvent.layout.width;
+      }}>
+      {/* Track background */}
+      <View style={cs.track}>
+        {/* Filled portion */}
+        <Animated.View
+          style={[
+            cs.fill,
+            {
+              width: thumbLeft.interpolate({
+                inputRange: [0, 1],
+                outputRange: ['0%', '100%'],
+              }),
+            },
+          ]}
+        />
+      </View>
+      {/* Thumb */}
+      <Animated.View
+        style={[
+          cs.thumb,
+          {
+            left: thumbLeft.interpolate({
+              inputRange: [0, 1],
+              outputRange: ['0%', '100%'],
+            }),
+          },
+        ]}
+      />
+    </View>
+  );
+};
+
+const cs = StyleSheet.create({
+  track: {
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: C.border,
+    overflow: 'hidden',
+  },
+  fill: {
+    height: '100%',
+    backgroundColor: C.primary,
+    borderRadius: 3,
+  },
+  thumb: {
+    position: 'absolute',
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: C.white,
+    borderWidth: 2.5,
+    borderColor: C.primary,
+    top: '50%',
+    marginTop: -11,
+    marginLeft: -11,
+    shadowColor: C.primary,
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+});
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 const SkeletonBox = ({width, height, borderRadius = 8, style}) => {
   const anim = useRef(new Animated.Value(0)).current;
@@ -790,7 +928,6 @@ const FilterPanel = ({
             </TouchableOpacity>
           </View>
         </View>
-
         <View style={s.divider} />
         <Text style={s.filterLabel}>Property Category</Text>
         <ScrollView
@@ -813,7 +950,6 @@ const FilterPanel = ({
             );
           })}
         </ScrollView>
-
         <View style={s.divider} />
         <View style={s.budgetHeader}>
           <Text style={s.filterLabel}>Max Budget</Text>
@@ -823,7 +959,6 @@ const FilterPanel = ({
             </Text>
           </View>
         </View>
-
         <View style={s.amountInputRow}>
           <View style={s.amountInputWrap}>
             <Text style={s.amountPrefix}>₹</Text>
@@ -868,7 +1003,6 @@ const FilterPanel = ({
             </View>
           )}
         </View>
-
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -892,16 +1026,12 @@ const FilterPanel = ({
             );
           })}
         </ScrollView>
-
-        <Slider
+        <CustomSlider
           style={s.slider}
           minimumValue={BUDGET_MIN}
           maximumValue={BUDGET_MAX}
           step={BUDGET_STEP}
           value={budgetSliderVal}
-          minimumTrackTintColor={C.primary}
-          maximumTrackTintColor={C.border}
-          thumbTintColor={C.primary}
           onValueChange={v => {
             onBudgetChange(v);
             setInputText(v >= BUDGET_MAX ? '' : String(Math.round(v)));
@@ -911,11 +1041,11 @@ const FilterPanel = ({
             setInputText(v >= BUDGET_MAX ? '' : String(Math.round(v)));
           }}
         />
+
         <View style={s.sliderRangeRow}>
           <Text style={s.sliderRangeTxt}>₹1K</Text>
           <Text style={s.sliderRangeTxt}>₹2Cr</Text>
         </View>
-
         <TouchableOpacity
           style={s.applyBtn}
           onPress={onApply}
@@ -1160,12 +1290,17 @@ export default function CityPropertyMapScreen({navigation}) {
   const boot = useCallback(async () => {
     setStatus('loading');
     setStatusMsg('Loading properties…');
+    // ─── inside boot() ────────────────────────────────────────────────────────────
     const props = await fetch(API_URL)
       .then(r => r.json())
       .then(d => {
         const list = Array.isArray(d) ? d : d.properties || d.data || [];
         return list.filter(
-          item => item.status === 'Active' && item.approve === 'Approved',
+          item =>
+            item.status === 'Active' &&
+            item.approve === 'Approved' &&
+            !!parseFloat(item.latitude) && // ← add this
+            !!parseFloat(item.longitude), // ← add this
         );
       })
       .catch(() => []);

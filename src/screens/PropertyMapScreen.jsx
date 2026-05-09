@@ -11,15 +11,23 @@ import {
   PermissionsAndroid,
   ScrollView,
   TextInput,
-  KeyboardAvoidingView,
-  FlatList,
+  PanResponder,
+  LayoutAnimation,
+  UIManager,
 } from 'react-native';
 import {WebView} from 'react-native-webview';
 import Geolocation from '@react-native-community/geolocation';
-import Slider from '@react-native-community/slider';
 import {getImageUri} from '../utils/imageHandle';
 import {Filter} from 'lucide-react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
+
+// Enable LayoutAnimation on Android
+if (
+  Platform.OS === 'android' &&
+  UIManager.setLayoutAnimationEnabledExperimental
+) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
 const API_URL = 'https://aws-api.reparv.in/frontend/all-properties';
@@ -43,6 +51,9 @@ const C = {
   dangerLight: '#FEE2E2',
   skeleton1: '#E2E8F0',
   skeleton2: '#F1F5F9',
+  trackBg: '#E9E3FF',
+  accentBlue: '#185FA5',
+  accentBlueDark: '#0C447C',
 };
 
 const RADIUS_KM_DEFAULT = 5;
@@ -56,14 +67,7 @@ const RADIUS_PRESETS = [
   {label: '5km', value: 5},
   {label: '10km', value: 10},
   {label: '25km', value: 25},
-];
-
-// Sort options
-const SORT_OPTIONS = [
-  {key: 'distance', label: '📍 Distance'},
-  {key: 'price_asc', label: '💰 Price ↑'},
-  {key: 'price_desc', label: '💰 Price ↓'},
-  {key: 'newest', label: '🆕 Newest'},
+  {label: '30km', value: 30},
 ];
 
 Geolocation.setRNConfiguration({
@@ -162,8 +166,302 @@ function locationErrMsg(code) {
   return 'Could not get your location. Please try again.';
 }
 
+// ─── CUSTOM SLIDER COMPONENT ──────────────────────────────────────────────────
+const SliderV2 = ({
+  minimumValue = 0,
+  maximumValue = 1,
+  step = 0,
+  value,
+  onValueChange,
+  onSlidingComplete,
+  style,
+  formatLabel,
+  trackHeight = 5,
+  thumbSize = 22,
+  touchHeight = 44,
+}) => {
+  const [trackW, setTrackW] = useState(0);
+  const [trackPageX, setTrackPageX] = useState(0);
+  const trackRef = useRef(null);
+  const isDragging = useRef(false);
+  const internalVal = useRef(value);
+  const [displayVal, setDisplayVal] = useState(value);
+
+  const thumbScale = useRef(new Animated.Value(1)).current;
+  const tooltipAnim = useRef(new Animated.Value(0)).current;
+
+  const range = maximumValue - minimumValue;
+
+  const clamp = useCallback(
+    raw => {
+      let v = Math.max(minimumValue, Math.min(maximumValue, raw));
+      if (step > 0) {
+        v = Math.round((v - minimumValue) / step) * step + minimumValue;
+      }
+      return parseFloat(v.toFixed(8));
+    },
+    [minimumValue, maximumValue, step],
+  );
+
+  const fraction =
+    range > 0
+      ? Math.max(0, Math.min(1, (displayVal - minimumValue) / range))
+      : 0;
+
+  const pctFromPageX = useCallback(
+    pageX => {
+      if (trackW === 0) return fraction;
+      const usable = trackW - thumbSize;
+      const rel = pageX - trackPageX - thumbSize / 2;
+      return Math.max(0, Math.min(1, rel / usable));
+    },
+    [trackW, trackPageX, thumbSize, fraction],
+  );
+
+  const panResponder = useRef(null);
+
+  useEffect(() => {
+    panResponder.current = PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onShouldBlockNativeResponder: () => true,
+      onPanResponderGrant: evt => {
+        isDragging.current = true;
+        Animated.parallel([
+          Animated.spring(thumbScale, {
+            toValue: 1.35,
+            useNativeDriver: true,
+            tension: 250,
+            friction: 8,
+          }),
+          Animated.timing(tooltipAnim, {
+            toValue: 1,
+            duration: 130,
+            useNativeDriver: true,
+          }),
+        ]).start();
+        const pct = pctFromPageX(evt.nativeEvent.pageX);
+        const v = clamp(minimumValue + pct * range);
+        internalVal.current = v;
+        setDisplayVal(v);
+        onValueChange?.(v);
+      },
+      onPanResponderMove: evt => {
+        const pct = pctFromPageX(evt.nativeEvent.pageX);
+        const v = clamp(minimumValue + pct * range);
+        internalVal.current = v;
+        setDisplayVal(v);
+        onValueChange?.(v);
+      },
+      onPanResponderRelease: evt => {
+        isDragging.current = false;
+        Animated.parallel([
+          Animated.spring(thumbScale, {
+            toValue: 1,
+            useNativeDriver: true,
+            tension: 250,
+            friction: 8,
+          }),
+          Animated.timing(tooltipAnim, {
+            toValue: 0,
+            duration: 180,
+            useNativeDriver: true,
+          }),
+        ]).start();
+        const pct = pctFromPageX(evt.nativeEvent.pageX);
+        const v = clamp(minimumValue + pct * range);
+        internalVal.current = v;
+        setDisplayVal(v);
+        onValueChange?.(v);
+        onSlidingComplete?.(v);
+      },
+      onPanResponderTerminateRequest: () => false,
+      onPanResponderTerminate: () => {
+        isDragging.current = false;
+        Animated.parallel([
+          Animated.spring(thumbScale, {toValue: 1, useNativeDriver: true}),
+          Animated.timing(tooltipAnim, {
+            toValue: 0,
+            duration: 150,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      },
+    });
+  }, [
+    trackW,
+    trackPageX,
+    minimumValue,
+    maximumValue,
+    step,
+    range,
+    clamp,
+    pctFromPageX,
+  ]);
+
+  useEffect(() => {
+    if (!isDragging.current) {
+      setDisplayVal(value);
+    }
+  }, [value]);
+
+  const measureTrack = () => {
+    trackRef.current?.measure((_x, _y, w, _h, pageX) => {
+      setTrackW(w);
+      setTrackPageX(pageX);
+    });
+  };
+
+  const USABLE = trackW > 0 ? trackW - thumbSize : 0;
+  const thumbLeft = fraction * USABLE;
+
+  return (
+    <View style={[{height: touchHeight, justifyContent: 'center'}, style]}>
+      {formatLabel && (
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            sliderS.tooltipWrap,
+            {
+              left: thumbLeft,
+              opacity: tooltipAnim,
+              transform: [
+                {
+                  translateY: tooltipAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [6, 0],
+                  }),
+                },
+              ],
+            },
+          ]}>
+          <View style={sliderS.tooltip}>
+            <Text style={sliderS.tooltipTxt}>{formatLabel(displayVal)}</Text>
+          </View>
+          <View style={sliderS.tooltipArrow} />
+        </Animated.View>
+      )}
+      <View
+        ref={trackRef}
+        style={[sliderS.trackWrap2, {height: touchHeight}]}
+        onLayout={measureTrack}
+        {...(panResponder.current ? panResponder.current.panHandlers : {})}>
+        <View
+          style={[
+            sliderS.trackBg,
+            {height: trackHeight, borderRadius: trackHeight / 2},
+          ]}>
+          <View
+            style={[
+              sliderS.trackFill,
+              {
+                height: trackHeight,
+                borderRadius: trackHeight / 2,
+                width: thumbLeft + thumbSize / 2,
+              },
+            ]}
+          />
+        </View>
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            sliderS.thumb2,
+            {
+              width: thumbSize,
+              height: thumbSize,
+              borderRadius: thumbSize / 2,
+              left: thumbLeft,
+              top: (touchHeight - thumbSize) / 2,
+              transform: [{scale: thumbScale}],
+            },
+          ]}>
+          <View
+            style={[
+              sliderS.thumbDot,
+              {
+                width: thumbSize * 0.38,
+                height: thumbSize * 0.38,
+                borderRadius: thumbSize * 0.19,
+              },
+            ]}
+          />
+        </Animated.View>
+      </View>
+    </View>
+  );
+};
+
+const sliderS = StyleSheet.create({
+  trackWrap2: {
+    width: '100%',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  trackBg: {
+    width: '100%',
+    backgroundColor: C.trackBg,
+    position: 'relative',
+    overflow: 'visible',
+  },
+  trackFill: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    backgroundColor: C.primary,
+  },
+  thumb2: {
+    position: 'absolute',
+    backgroundColor: C.white,
+    shadowColor: C.shadow,
+    shadowOffset: {width: 0, height: 3},
+    shadowOpacity: 0.28,
+    shadowRadius: 6,
+    elevation: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2.5,
+    borderColor: C.primary,
+  },
+  thumbDot: {
+    backgroundColor: C.primary,
+  },
+  tooltipWrap: {
+    position: 'absolute',
+    top: 0,
+    alignItems: 'center',
+    zIndex: 20,
+  },
+  tooltip: {
+    backgroundColor: C.primary,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    shadowColor: C.shadow,
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  tooltipTxt: {
+    color: C.white,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.2,
+  },
+  tooltipArrow: {
+    width: 0,
+    height: 0,
+    borderLeftWidth: 5,
+    borderRightWidth: 5,
+    borderTopWidth: 5,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderTopColor: C.primary,
+    marginTop: -1,
+  },
+});
+
 // ─── Leaflet Satellite Map HTML ───────────────────────────────────────────────
-// Loaded via WebView. Communicates with RN via postMessage / injectJavaScript.
 const LEAFLET_HTML = `<!DOCTYPE html>
 <html>
 <head>
@@ -178,205 +476,79 @@ const LEAFLET_HTML = `<!DOCTYPE html>
     html, body, #map { width:100%; height:100%; background:#0f172a; }
     .leaflet-control-attribution,
     .leaflet-control-zoom { display:none !important; }
-
-    /* ── Price marker ── */
     .pm-wrap { display:flex; flex-direction:column; align-items:center; }
     .pm-bubble {
-      background:#6E56CF;
-      padding:5px 10px;
-      border-radius:10px;
+      background:#6E56CF; padding:5px 10px; border-radius:10px;
       display:flex; flex-direction:column; align-items:center;
-      box-shadow:0 2px 8px rgba(110,86,207,0.35);
-      white-space:nowrap;
+      box-shadow:0 2px 8px rgba(110,86,207,0.35); white-space:nowrap;
     }
     .pm-bubble.sel { background:#fff; border:2px solid #6E56CF; }
-    .pm-price {
-      color:#fff; font-weight:700; font-size:11.5px;
-      font-family:-apple-system,sans-serif; line-height:1.3;
-    }
+    .pm-price { color:#fff; font-weight:700; font-size:11.5px; font-family:-apple-system,sans-serif; line-height:1.3; }
     .pm-bubble.sel .pm-price { color:#6E56CF; }
-    .pm-dist {
-      color:rgba(255,255,255,0.75); font-size:9px; font-weight:500;
-      font-family:-apple-system,sans-serif; margin-top:1px;
-    }
+    .pm-dist { color:rgba(255,255,255,0.75); font-size:9px; font-weight:500; font-family:-apple-system,sans-serif; margin-top:1px; }
     .pm-bubble.sel .pm-dist { color:#BEB0F0; }
-    .pm-pin {
-      width:0; height:0;
-      border-left:5px solid transparent;
-      border-right:5px solid transparent;
-      border-top:7px solid #6E56CF;
-    }
+    .pm-pin { width:0; height:0; border-left:5px solid transparent; border-right:5px solid transparent; border-top:7px solid #6E56CF; }
     .pm-bubble.sel + .pm-pin { border-top-color:#6E56CF; }
-
-    /* ── User location dot ── */
-    .ud-outer {
-      width:22px; height:22px; border-radius:11px;
-      background:rgba(37,99,235,0.15);
-      border:2px solid #2563EB;
-      display:flex; align-items:center; justify-content:center;
-    }
-    .ud-inner {
-      width:9px; height:9px; border-radius:5px;
-      background:#fff; border:2px solid #2563EB;
-    }
+    .ud-outer { width:22px; height:22px; border-radius:11px; background:rgba(37,99,235,0.15); border:2px solid #2563EB; display:flex; align-items:center; justify-content:center; }
+    .ud-inner { width:9px; height:9px; border-radius:5px; background:#fff; border:2px solid #2563EB; }
   </style>
 </head>
 <body>
 <div id="map"></div>
 <script>
-  // ── Map init ──────────────────────────────────────────────────────────────
   var map = L.map('map', { zoomControl:false, attributionControl:false });
-
-  // Satellite layer only (Esri World Imagery — no API key required)
-  L.tileLayer(
-    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    { maxZoom:19, tileSize:256 }
-  ).addTo(map);
-
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    { maxZoom:19, tileSize:256 }).addTo(map);
   map.setView([20.5937, 78.9629], 5);
-
-  // ── State ─────────────────────────────────────────────────────────────────
-  var propertyMarkers = {};   // id → L.Marker
-  var userMarker      = null;
-  var radiusCircle    = null;
-
-  // ── Helpers ───────────────────────────────────────────────────────────────
+  var propertyMarkers = {}, userMarker = null, radiusCircle = null;
   function _fmt(val) {
-    var n = parseFloat(val);
-    if (!n) return '\u2014';
-    if (n >= 10000000) return '\u20b9' + (n/10000000).toFixed(1) + ' Cr';
-    if (n >= 100000)   return '\u20b9' + (n/100000).toFixed(2)   + ' L';
-    if (n >= 1000)     return '\u20b9' + (n/1000).toFixed(0)     + 'K';
-    return '\u20b9' + n;
+    var n=parseFloat(val); if(!n) return '\u2014';
+    if(n>=10000000) return '\u20b9'+(n/10000000).toFixed(1)+' Cr';
+    if(n>=100000) return '\u20b9'+(n/100000).toFixed(2)+' L';
+    if(n>=1000) return '\u20b9'+(n/1000).toFixed(0)+'K';
+    return '\u20b9'+n;
   }
-  function _dist(km) {
-    return km < 1 ? (km*1000).toFixed(0)+'m' : km.toFixed(1)+'km';
-  }
+  function _dist(km) { return km<1?(km*1000).toFixed(0)+'m':km.toFixed(1)+'km'; }
   function _hav(lat1,lon1,lat2,lon2) {
-    var R=6371, dLat=(lat2-lat1)*Math.PI/180, dLon=(lon2-lon1)*Math.PI/180;
-    var a=Math.sin(dLat/2)*Math.sin(dLat/2)+
-          Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*
-          Math.sin(dLon/2)*Math.sin(dLon/2);
+    var R=6371,dLat=(lat2-lat1)*Math.PI/180,dLon=(lon2-lon1)*Math.PI/180;
+    var a=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)*Math.sin(dLon/2);
     return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
   }
-
-  // Build a DivIcon matching PriceMarker design
-  function _priceIcon(price, selected, distKm) {
-    var priceStr = _fmt(price);
-    var distStr  = distKm != null ? _dist(distKm) : null;
-    var inner    = '<span class="pm-price">'+priceStr+'</span>' +
-                   (distStr ? '<span class="pm-dist">'+distStr+'</span>' : '');
-    var html = '<div class="pm-wrap">' +
-               '<div class="pm-bubble'+(selected?' sel':'')+'">'+inner+'</div>'+
-               '<div class="pm-pin"></div>'+
-               '</div>';
-    // Approximate width from string length
-    var w = Math.max(priceStr.length * 8 + 22, 58);
-    var h = distStr ? 44 : 36;
-    return L.divIcon({
-      html: html,
-      className: '',
-      iconSize:   [w, h],
-      iconAnchor: [w/2, h],
-    });
+  function _priceIcon(price,selected,distKm) {
+    var priceStr=_fmt(price), distStr=distKm!=null?_dist(distKm):null;
+    var inner='<span class="pm-price">'+priceStr+'</span>'+(distStr?'<span class="pm-dist">'+distStr+'</span>':'');
+    var html='<div class="pm-wrap"><div class="pm-bubble'+(selected?' sel':'')+'">'+inner+'</div><div class="pm-pin"></div></div>';
+    var w=Math.max(priceStr.length*8+22,58), h=distStr?44:36;
+    return L.divIcon({ html:html, className:'', iconSize:[w,h], iconAnchor:[w/2,h] });
   }
-
-  // ── Map click → close card ────────────────────────────────────────────────
-  map.on('click', function () {
-    window.ReactNativeWebView.postMessage(
-      JSON.stringify({ type: 'MAP_PRESS' })
-    );
-  });
-
-  // ── Public API (called via injectJavaScript from RN) ──────────────────────
-
-  /**
-   * flyTo(lat, lon, zoom?)
-   * Animates the map to the given centre.
-   */
-  window.flyTo = function(lat, lon, zoom) {
-    map.setView([lat, lon], zoom || 13, { animate:true, duration:0.8 });
-  };
-
-  /**
-   * updateMap({ userCoords, markers, radiusKm })
-   * Syncs user dot, radius circle and all property markers.
-   */
+  map.on('click', function() { window.ReactNativeWebView.postMessage(JSON.stringify({type:'MAP_PRESS'})); });
+  window.flyTo = function(lat,lon,zoom) { map.setView([lat,lon],zoom||13,{animate:true,duration:0.8}); };
   window.updateMap = function(data) {
-    var uc       = data.userCoords;
-    var mList    = data.markers || [];
-    var radiusKm = data.radiusKm || 5;
-
-    // ── User location dot ──────────────────────────────────────────────────
-    if (uc) {
-      var uLL = [uc.lat, uc.lon];
-      var uIcon = L.divIcon({
-        html: '<div class="ud-outer"><div class="ud-inner"></div></div>',
-        className: '',
-        iconSize:   [22, 22],
-        iconAnchor: [11, 11],
-      });
-      if (userMarker) {
-        userMarker.setLatLng(uLL);
-        userMarker.setIcon(uIcon);
-      } else {
-        userMarker = L.marker(uLL, { icon:uIcon, zIndexOffset:999 }).addTo(map);
-      }
-
-      // ── Radius circle ────────────────────────────────────────────────────
-      if (radiusCircle) {
-        radiusCircle.setLatLng(uLL);
-        radiusCircle.setRadius(radiusKm * 1000);
-      } else {
-        radiusCircle = L.circle(uLL, {
-          radius:      radiusKm * 1000,
-          color:       '#6E56CF',
-          weight:      1.5,
-          fillColor:   'rgba(37,99,235,0.06)',
-          fillOpacity: 1,
-        }).addTo(map);
-      }
+    var uc=data.userCoords, mList=data.markers||[], radiusKm=data.radiusKm||5;
+    if(uc) {
+      var uLL=[uc.lat,uc.lon];
+      var uIcon=L.divIcon({html:'<div class="ud-outer"><div class="ud-inner"></div></div>',className:'',iconSize:[22,22],iconAnchor:[11,11]});
+      if(userMarker){userMarker.setLatLng(uLL);userMarker.setIcon(uIcon);}
+      else{userMarker=L.marker(uLL,{icon:uIcon,zIndexOffset:999}).addTo(map);}
+      if(radiusCircle){radiusCircle.setLatLng(uLL);radiusCircle.setRadius(radiusKm*1000);}
+      else{radiusCircle=L.circle(uLL,{radius:radiusKm*1000,color:'#6E56CF',weight:1.5,fillColor:'rgba(37,99,235,0.06)',fillOpacity:1}).addTo(map);}
     }
-
-    // ── Property markers ───────────────────────────────────────────────────
-    // Remove stale markers
-    var incoming = {};
-    mList.forEach(function(m) { incoming[m.id] = true; });
-    Object.keys(propertyMarkers).forEach(function(id) {
-      if (!incoming[id]) {
-        map.removeLayer(propertyMarkers[id]);
-        delete propertyMarkers[id];
-      }
-    });
-
-    // Add or update
-    mList.forEach(function(m) {
-      if (!m.lat || !m.lon) return;
-      var distKm = uc ? _hav(uc.lat, uc.lon, m.lat, m.lon) : null;
-      var icon   = _priceIcon(m.price, m.selected, distKm);
-
-      if (propertyMarkers[m.id]) {
-        propertyMarkers[m.id].setIcon(icon);
-        propertyMarkers[m.id].setZIndexOffset(m.selected ? 200 : 0);
-      } else {
-        var mk = L.marker([m.lat, m.lon], {
-          icon:                icon,
-          zIndexOffset:        m.selected ? 200 : 0,
-          bubblingMouseEvents: false,   // prevent map-click from firing too
-        });
-        mk.on('click', function() {
-          window.ReactNativeWebView.postMessage(
-            JSON.stringify({ type: 'MARKER_PRESS', id: m.id })
-          );
-        });
-        mk.addTo(map);
-        propertyMarkers[m.id] = mk;
+    var incoming={};
+    mList.forEach(function(m){incoming[m.id]=true;});
+    Object.keys(propertyMarkers).forEach(function(id){if(!incoming[id]){map.removeLayer(propertyMarkers[id]);delete propertyMarkers[id];}});
+    mList.forEach(function(m){
+      if(!m.lat||!m.lon) return;
+      var distKm=uc?_hav(uc.lat,uc.lon,m.lat,m.lon):null;
+      var icon=_priceIcon(m.price,m.selected,distKm);
+      if(propertyMarkers[m.id]){propertyMarkers[m.id].setIcon(icon);propertyMarkers[m.id].setZIndexOffset(m.selected?200:0);}
+      else{
+        var mk=L.marker([m.lat,m.lon],{icon:icon,zIndexOffset:m.selected?200:0,bubblingMouseEvents:false});
+        mk.on('click',function(){window.ReactNativeWebView.postMessage(JSON.stringify({type:'MARKER_PRESS',id:m.id}));});
+        mk.addTo(map);propertyMarkers[m.id]=mk;
       }
     });
   };
-
-  // Signal RN that Leaflet + map are fully ready
-  window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'MAP_READY' }));
+  window.ReactNativeWebView.postMessage(JSON.stringify({type:'MAP_READY'}));
 <\/script>
 </body>
 </html>`;
@@ -384,7 +556,6 @@ const LEAFLET_HTML = `<!DOCTYPE html>
 // ─── Skeleton Loader ──────────────────────────────────────────────────────────
 const SkeletonBox = ({width, height, borderRadius = 8, style}) => {
   const anim = useRef(new Animated.Value(0)).current;
-
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([
@@ -403,9 +574,7 @@ const SkeletonBox = ({width, height, borderRadius = 8, style}) => {
     loop.start();
     return () => loop.stop();
   }, []);
-
   const opacity = anim.interpolate({inputRange: [0, 1], outputRange: [0.4, 1]});
-
   return (
     <Animated.View
       style={[
@@ -420,7 +589,6 @@ const SkeletonBox = ({width, height, borderRadius = 8, style}) => {
 const EmptyState = ({hasFilters, onReset, radiusKm, onExpandRadius}) => {
   const scaleAnim = useRef(new Animated.Value(0.85)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
-
   useEffect(() => {
     Animated.parallel([
       Animated.spring(scaleAnim, {
@@ -436,7 +604,6 @@ const EmptyState = ({hasFilters, onReset, radiusKm, onExpandRadius}) => {
       }),
     ]).start();
   }, []);
-
   return (
     <Animated.View
       style={[
@@ -474,123 +641,9 @@ const EmptyState = ({hasFilters, onReset, radiusKm, onExpandRadius}) => {
   );
 };
 
-// ─── Sort Sheet ───────────────────────────────────────────────────────────────
-const SortSheet = ({visible, onClose, selected, onSelect}) => {
-  const [mounted, setMounted] = useState(false);
-  const slideY = useRef(new Animated.Value(200)).current;
-  const opacity = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    if (visible) {
-      setMounted(true);
-      Animated.parallel([
-        Animated.timing(opacity, {
-          toValue: 1,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-        Animated.spring(slideY, {
-          toValue: 0,
-          tension: 90,
-          friction: 12,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else {
-      Animated.parallel([
-        Animated.timing(opacity, {
-          toValue: 0,
-          duration: 150,
-          useNativeDriver: true,
-        }),
-        Animated.timing(slideY, {
-          toValue: 200,
-          duration: 150,
-          useNativeDriver: true,
-        }),
-      ]).start(({finished}) => {
-        if (finished) setMounted(false);
-      });
-    }
-  }, [visible]);
-
-  if (!mounted) return null;
-
-  return (
-    <Animated.View style={[ss.backdrop, {opacity}]}>
-      <TouchableOpacity
-        style={StyleSheet.absoluteFill}
-        activeOpacity={1}
-        onPress={onClose}
-      />
-      <Animated.View style={[ss.sheet, {transform: [{translateY: slideY}]}]}>
-        <View style={ss.handle} />
-        <Text style={ss.title}>Sort By</Text>
-        {SORT_OPTIONS.map(opt => (
-          <TouchableOpacity
-            key={opt.key}
-            style={[ss.row, selected === opt.key && ss.rowActive]}
-            onPress={() => {
-              onSelect(opt.key);
-              onClose();
-            }}>
-            <Text style={[ss.rowTxt, selected === opt.key && ss.rowTxtActive]}>
-              {opt.label}
-            </Text>
-            {selected === opt.key && <Text style={ss.check}>✓</Text>}
-          </TouchableOpacity>
-        ))}
-      </Animated.View>
-    </Animated.View>
-  );
-};
-
-const ss = StyleSheet.create({
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(15,23,42,0.45)',
-    zIndex: 60,
-    justifyContent: 'flex-end',
-  },
-  sheet: {
-    backgroundColor: C.white,
-    borderTopLeftRadius: 22,
-    borderTopRightRadius: 22,
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
-  },
-  handle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: C.border,
-    alignSelf: 'center',
-    marginBottom: 16,
-  },
-  title: {color: C.text, fontSize: 16, fontWeight: '800', marginBottom: 12},
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: C.border,
-  },
-  rowActive: {
-    backgroundColor: C.primaryLight,
-    marginHorizontal: -20,
-    paddingHorizontal: 20,
-    borderRadius: 0,
-  },
-  rowTxt: {color: C.textSub, fontSize: 14, fontWeight: '500'},
-  rowTxtActive: {color: C.primary, fontWeight: '700'},
-  check: {color: C.primary, fontSize: 15, fontWeight: '800'},
-});
-
 // ─── Property Bottom Card ─────────────────────────────────────────────────────
 const PropertyCard = ({property, onClose, navigation, userCoords}) => {
-  const slideY = useRef(new Animated.Value(280)).current;
+  const slideY = useRef(new Animated.Value(340)).current;
   const [imgLoaded, setImgLoaded] = useState(false);
   const [imgError, setImgError] = useState(false);
 
@@ -608,6 +661,10 @@ const PropertyCard = ({property, onClose, navigation, userCoords}) => {
   const image = getFirstImage(property.frontView);
   const offerPrice = formatPrice(property.totalOfferPrice);
   const salesPrice = formatPrice(property.totalSalesPrice);
+  const hasDiscount =
+    property.totalSalesPrice &&
+    property.totalOfferPrice !== property.totalSalesPrice;
+
   const types = Array.isArray(property.propertyType)
     ? property.propertyType.join(' · ')
     : property.propertyType || '';
@@ -620,116 +677,142 @@ const PropertyCard = ({property, onClose, navigation, userCoords}) => {
     return haversineKm(userCoords.lat, userCoords.lon, lat, lon);
   }, [property, userCoords]);
 
+  const locationLine = [property.location, property.city, property.state]
+    .filter(Boolean)
+    .join(', ');
+
   return (
-    <Animated.View style={[s.sheet, {transform: [{translateY: slideY}]}]}>
-      <View style={s.sheetHandle} />
-      <View style={s.sheetHeader}>
-        <View style={{flex: 1}}>
-          <Text style={s.sheetName} numberOfLines={1}>
-            {property.propertyName}
-          </Text>
-          <View style={s.tagRow}>
-            <View style={s.tagBlue}>
-              <Text style={s.tagBlueTxt}>
-                {prettifyCategory(property.propertyCategory)}
-              </Text>
-            </View>
+    <Animated.View style={[pc.sheet, {transform: [{translateY: slideY}]}]}>
+      {/* ── Drag handle ── */}
+      <View style={pc.handle} />
+
+      {/* ── Hero image banner ── */}
+      <View style={pc.heroBanner}>
+        {image && !imgError ? (
+          <>
+            {!imgLoaded && (
+              <View style={StyleSheet.absoluteFill}>
+                <SkeletonBox width="100%" height={148} borderRadius={0} />
+              </View>
+            )}
+            <Image
+              source={{uri: getImageUri(image)}}
+              style={[StyleSheet.absoluteFill, {opacity: imgLoaded ? 1 : 0}]}
+              resizeMode="cover"
+              onLoad={() => setImgLoaded(true)}
+              onError={() => setImgError(true)}
+            />
+          </>
+        ) : (
+          <View style={pc.heroFallback}>
+            <Text style={pc.heroFallbackIcon}>🏗️</Text>
           </View>
-        </View>
-        <TouchableOpacity style={s.closeBtn} onPress={onClose}>
-          <Text style={s.closeTxt}>✕</Text>
-        </TouchableOpacity>
-      </View>
+        )}
 
-      {distance != null && (
-        <View style={s.distanceStrip}>
-          <Text style={s.distanceStripIcon}>📍</Text>
-          <Text style={s.distanceStripTxt}>
-            {formatDistance(distance)} away from your location
-          </Text>
-        </View>
-      )}
+        {/* Dark gradient scrim */}
+        <View style={pc.heroScrim} />
 
-      <View style={s.cardRow}>
-        <View style={[s.cardImg, {overflow: 'hidden'}]}>
-          {image && !imgError ? (
-            <>
-              {!imgLoaded && (
-                <View style={StyleSheet.absoluteFill}>
-                  <SkeletonBox width={84} height={84} borderRadius={12} />
-                </View>
-              )}
-              <Image
-                source={{uri: getImageUri(image)}}
-                style={[s.cardImg, {opacity: imgLoaded ? 1 : 0}]}
-                resizeMode="cover"
-                onLoad={() => setImgLoaded(true)}
-                onError={() => setImgError(true)}
-              />
-            </>
-          ) : (
-            <View style={[s.cardImg, s.cardImgFallback]}>
-              <Text style={{fontSize: 26}}>🏗️</Text>
-            </View>
-          )}
-        </View>
-
-        <View style={s.cardInfo}>
-          {!!types && (
-            <View style={s.infoRow}>
-              <Text style={s.infoIcon}>🏠</Text>
-              <Text style={s.infoTxt} numberOfLines={2}>
-                {types}
-              </Text>
-            </View>
-          )}
-          <View style={s.infoRow}>
-            <Text style={s.infoIcon}>📍</Text>
-            <Text style={s.infoTxt} numberOfLines={1}>
-              {property.location ? `${property.location}, ` : ''}
-              {property.city}, {property.state}
+        {/* Top badges row */}
+        <View style={pc.heroBadgeRow}>
+          <View style={pc.categoryBadge}>
+            <Text style={pc.categoryBadgeTxt}>
+              {prettifyCategory(property.propertyCategory)}
             </Text>
           </View>
+          {property.loanAvailability === 'Yes' && (
+            <View style={pc.loanBadge}>
+              <Text style={pc.loanBadgeTxt}>🏦 Loan</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Close button */}
+        <TouchableOpacity
+          style={pc.closeBtn}
+          onPress={onClose}
+          activeOpacity={0.85}>
+          <Text style={pc.closeTxt}>✕</Text>
+        </TouchableOpacity>
+
+        {/* Location line at bottom of hero */}
+        <View style={pc.heroLocationRow}>
+          <Text style={pc.heroLocationIcon}>📍</Text>
+          <Text style={pc.heroLocationTxt} numberOfLines={1}>
+            {locationLine}
+          </Text>
+        </View>
+      </View>
+
+      {/* ── Card body ── */}
+      <View style={pc.body}>
+        {/* Property name + price */}
+        <View style={pc.nameRow}>
+          <Text style={pc.propName} numberOfLines={2}>
+            {property.propertyName}
+          </Text>
+          <View style={pc.priceBlock}>
+            <Text style={pc.priceLabel}>Offer Price</Text>
+            <Text style={pc.priceMain}>{offerPrice}</Text>
+            {hasDiscount && (
+              <Text style={pc.priceStrike}>MRP {salesPrice}</Text>
+            )}
+          </View>
+        </View>
+
+        {/* Stat chips */}
+        <View style={pc.statsRow}>
           {!!property.carpetArea && (
-            <View style={s.infoRow}>
-              <Text style={s.infoIcon}>📐</Text>
-              <Text style={s.infoTxt}>{property.carpetArea} sq.ft</Text>
+            <View style={pc.statChip}>
+              <Text style={pc.statIcon}>📐</Text>
+              <View>
+                <Text style={pc.statLabel}>Area</Text>
+                <Text style={pc.statValue}>{property.carpetArea} sq.ft</Text>
+              </View>
             </View>
           )}
           {!!property.propertyFacing && (
-            <View style={s.infoRow}>
-              <Text style={s.infoIcon}>🧭</Text>
-              <Text style={s.infoTxt}>{property.propertyFacing}</Text>
+            <View style={pc.statChip}>
+              <Text style={pc.statIcon}>🧭</Text>
+              <View>
+                <Text style={pc.statLabel}>Facing</Text>
+                <Text style={pc.statValue}>{property.propertyFacing}</Text>
+              </View>
+            </View>
+          )}
+          {distance != null && (
+            <View style={[pc.statChip, pc.statChipGreen]}>
+              <Text style={pc.statIcon}>📍</Text>
+              <View>
+                <Text style={pc.statLabel}>Distance</Text>
+                <Text style={[pc.statValue, pc.statValueGreen]}>
+                  {formatDistance(distance)}
+                </Text>
+              </View>
+            </View>
+          )}
+          {!!types && (
+            <View style={[pc.statChip, pc.statChipWide]}>
+              <Text style={pc.statIcon}>🏠</Text>
+              <View>
+                <Text style={pc.statLabel}>Type</Text>
+                <Text style={pc.statValue} numberOfLines={1}>
+                  {types}
+                </Text>
+              </View>
             </View>
           )}
         </View>
-      </View>
 
-      <View style={s.priceRow}>
-        <View>
-          <Text style={s.priceLabel}>Offer Price</Text>
-          <Text style={s.priceMain}>{offerPrice}</Text>
-          {property.totalSalesPrice !== property.totalOfferPrice && (
-            <Text style={s.priceStrike}>MRP {salesPrice}</Text>
-          )}
-        </View>
-        <View style={s.ctaCol}>
-          {property.loanAvailability === 'Yes' && (
-            <View style={s.tagBlue}>
-              <Text style={s.tagBlueTxt}>🏦 Loan</Text>
-            </View>
-          )}
-          <TouchableOpacity
-            style={s.detailsBtn}
-            activeOpacity={0.85}
-            onPress={() =>
-              navigation.navigate('PropertyDetails', {
-                seoSlug: property.seoSlug,
-              })
-            }>
-            <Text style={s.detailsBtnTxt}>View Details →</Text>
-          </TouchableOpacity>
-        </View>
+        {/* CTA */}
+        <TouchableOpacity
+          style={pc.ctaBtn}
+          activeOpacity={0.88}
+          onPress={() =>
+            navigation.navigate('PropertyDetails', {seoSlug: property.seoSlug})
+          }>
+          <Text style={pc.ctaBtnTxt}>View Details</Text>
+          <Text style={pc.ctaArrow}>→</Text>
+        </TouchableOpacity>
       </View>
     </Animated.View>
   );
@@ -819,7 +902,6 @@ const FilterPanel = ({
         </View>
 
         <View style={s.divider} />
-
         <Text style={s.filterLabel}>Property Category</Text>
         <ScrollView
           horizontal
@@ -843,7 +925,6 @@ const FilterPanel = ({
         </ScrollView>
 
         <View style={s.divider} />
-
         <View style={s.budgetHeader}>
           <Text style={s.filterLabel}>Max Budget</Text>
           <View style={s.budgetBadge}>
@@ -899,11 +980,10 @@ const FilterPanel = ({
           )}
         </View>
 
-        {/* Budget quick chips */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={[s.chipRow, {marginBottom: 4}]}>
+          contentContainerStyle={[s.chipRow, {marginBottom: 8}]}>
           {[500000, 1000000, 2000000, 5000000, 10000000].map(amt => {
             const active = maxBudget === amt;
             return (
@@ -924,15 +1004,16 @@ const FilterPanel = ({
           })}
         </ScrollView>
 
-        <Slider
-          style={s.slider}
+        <SliderV2
           minimumValue={BUDGET_MIN}
           maximumValue={BUDGET_MAX}
           step={BUDGET_STEP}
           value={budgetSliderVal}
-          minimumTrackTintColor={C.primary}
-          maximumTrackTintColor={C.border}
-          thumbTintColor={C.primary}
+          trackHeight={6}
+          thumbSize={24}
+          touchHeight={48}
+          style={s.slider}
+          formatLabel={v => (v >= BUDGET_MAX ? '₹2Cr+' : formatPrice(v))}
           onValueChange={v => {
             onBudgetChange(v);
             setInputText(v >= BUDGET_MAX ? '' : String(Math.round(v)));
@@ -962,10 +1043,8 @@ const FilterPanel = ({
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function PropertyMapScreen({navigation}) {
-  // ── Refs ──────────────────────────────────────────────────────────────────
-  const webViewRef = useRef(null); // ← replaces mapRef (was react-native-maps)
+  const webViewRef = useRef(null);
 
-  // ── Core state ────────────────────────────────────────────────────────────
   const [status, setStatus] = useState('loading');
   const [statusMsg, setStatusMsg] = useState('Getting your location…');
   const [userCoords, setUserCoords] = useState(null);
@@ -974,13 +1053,10 @@ export default function PropertyMapScreen({navigation}) {
   const [radiusKm, setRadiusKm] = useState(RADIUS_KM_DEFAULT);
   const [sliderValue, setSliderValue] = useState(RADIUS_KM_DEFAULT);
   const [selectedProperty, setSelectedProperty] = useState(null);
-  const [webViewReady, setWebViewReady] = useState(false); // ← Leaflet ready flag
+  const [webViewReady, setWebViewReady] = useState(false);
   const pillAnim = useRef(new Animated.Value(0)).current;
 
-  // ── Category Tab ──────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState('All');
-
-  // ── Filters ───────────────────────────────────────────────────────────────
   const [showFilters, setShowFilters] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [maxBudget, setMaxBudget] = useState(0);
@@ -989,11 +1065,8 @@ export default function PropertyMapScreen({navigation}) {
   const [pendingMaxBudget, setPendingMaxBudget] = useState(0);
   const [pendingBudgetSlider, setPendingBudgetSlider] = useState(0);
 
-  // ── Sort ──────────────────────────────────────────────────────────────────
-  const [showSort, setShowSort] = useState(false);
   const [sortKey, setSortKey] = useState('distance');
 
-  // ── Derived ───────────────────────────────────────────────────────────────
   const uniqueCategories = useMemo(() => {
     const cats = new Set();
     allProperties.forEach(p => {
@@ -1038,7 +1111,6 @@ export default function PropertyMapScreen({navigation}) {
         );
       if (sortKey === 'newest')
         return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
-      // default: distance
       if (!userCoords) return 0;
       const da = haversineKm(
         userCoords.lat,
@@ -1056,7 +1128,6 @@ export default function PropertyMapScreen({navigation}) {
     });
   }, [filteredProperties, sortKey, userCoords]);
 
-  // ── Per-category counts for tab badges ────────────────────────────────────
   const categoryCounts = useMemo(() => {
     const map = {};
     nearbyProperties.forEach(p => {
@@ -1066,7 +1137,6 @@ export default function PropertyMapScreen({navigation}) {
     return map;
   }, [nearbyProperties]);
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
   const animatePill = useCallback(() => {
     pillAnim.setValue(0);
     Animated.spring(pillAnim, {
@@ -1089,19 +1159,15 @@ export default function PropertyMapScreen({navigation}) {
     [],
   );
 
-  // ── flyTo → injectJavaScript into Leaflet WebView ─────────────────────────
   const flyTo = useCallback((lat, lon, delta = 0.08) => {
-    // Convert latitudeDelta to an approximate Leaflet zoom level
     const zoom = Math.round(Math.log2(360 / (delta || 0.08)));
     webViewRef.current?.injectJavaScript(
       `window.flyTo(${lat}, ${lon}, ${zoom}); true;`,
     );
   }, []);
 
-  // ── Sync map state into WebView whenever relevant data changes ─────────────
   useEffect(() => {
     if (!webViewReady || !webViewRef.current) return;
-
     const markers = displayedProperties
       .map(p => ({
         id: p.propertyid,
@@ -1111,7 +1177,6 @@ export default function PropertyMapScreen({navigation}) {
         selected: selectedProperty?.propertyid === p.propertyid,
       }))
       .filter(m => m.lat && m.lon);
-
     const payload = JSON.stringify({userCoords, markers, radiusKm});
     webViewRef.current.injectJavaScript(`window.updateMap(${payload}); true;`);
   }, [
@@ -1122,7 +1187,6 @@ export default function PropertyMapScreen({navigation}) {
     selectedProperty,
   ]);
 
-  // ── Handle messages from WebView ──────────────────────────────────────────
   const onWebViewMessage = useCallback(
     event => {
       try {
@@ -1142,7 +1206,6 @@ export default function PropertyMapScreen({navigation}) {
     [displayedProperties, allProperties],
   );
 
-  // ── Init budget slider default ─────────────────────────────────────────────
   useEffect(() => {
     if (pendingBudgetSlider === 0) {
       setPendingBudgetSlider(BUDGET_MAX);
@@ -1150,7 +1213,6 @@ export default function PropertyMapScreen({navigation}) {
     }
   }, []);
 
-  // ── Boot: fetch properties + get location ──────────────────────────────────
   const boot = useCallback(
     async (existingProps = null) => {
       setStatus('loading');
@@ -1196,7 +1258,6 @@ export default function PropertyMapScreen({navigation}) {
     boot();
   }, []);
 
-  // ── Radius change ─────────────────────────────────────────────────────────
   const applyRadius = useCallback(
     km => {
       const r = parseFloat(km.toFixed(1));
@@ -1211,13 +1272,10 @@ export default function PropertyMapScreen({navigation}) {
     [allProperties, userCoords, filterNearby, animatePill],
   );
 
-  const onSliderRelease = useCallback(val => applyRadius(val), [applyRadius]);
-
   const recenter = useCallback(() => {
     if (userCoords) flyTo(userCoords.lat, userCoords.lon);
   }, [userCoords, flyTo]);
 
-  // ── Tab select ────────────────────────────────────────────────────────────
   const handleTabSelect = useCallback(
     cat => {
       setActiveTab(cat);
@@ -1228,7 +1286,6 @@ export default function PropertyMapScreen({navigation}) {
     [animatePill],
   );
 
-  // ── Filter panel ──────────────────────────────────────────────────────────
   const openFilters = useCallback(() => {
     setPendingCategories([...selectedCategories]);
     setPendingMaxBudget(maxBudget > 0 ? maxBudget : BUDGET_MAX);
@@ -1269,10 +1326,9 @@ export default function PropertyMapScreen({navigation}) {
 
   const handleExpandRadius = useCallback(km => applyRadius(km), [applyRadius]);
 
-  // ─────────────────────────────────────────────────────────────────────────
   return (
     <SafeAreaView style={s.container}>
-      {/* ══ Category Tab Bar (above map, always visible) ══════════════════ */}
+      {/* ══ Category Tab Bar ══════════════════════════════════════════════ */}
       {status === 'ready' && uniqueCategories.length > 0 && (
         <View style={s.topTabBar}>
           <ScrollView
@@ -1280,7 +1336,6 @@ export default function PropertyMapScreen({navigation}) {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={s.topTabContent}
             keyboardShouldPersistTaps="handled">
-            {/* All tab */}
             <TouchableOpacity
               style={[s.topTab, activeTab === 'All' && s.topTabActive]}
               onPress={() => handleTabSelect('All')}
@@ -1303,10 +1358,8 @@ export default function PropertyMapScreen({navigation}) {
                 </Text>
               </View>
             </TouchableOpacity>
-
             {uniqueCategories.map(cat => {
               const isActive = activeTab === cat;
-              const count = categoryCounts[cat] || 0;
               return (
                 <TouchableOpacity
                   key={cat}
@@ -1323,7 +1376,7 @@ export default function PropertyMapScreen({navigation}) {
                         s.topTabBadgeTxt,
                         isActive && s.topTabBadgeTxtActive,
                       ]}>
-                      {count}
+                      {categoryCounts[cat] || 0}
                     </Text>
                   </View>
                 </TouchableOpacity>
@@ -1333,9 +1386,8 @@ export default function PropertyMapScreen({navigation}) {
         </View>
       )}
 
-      {/* ══ Map wrapper (fills remaining space below tab bar) ═════════════ */}
+      {/* ══ Map wrapper ══════════════════════════════════════════════════ */}
       <View style={s.mapWrapper}>
-        {/* ── Leaflet WebView (satellite layer only) ── */}
         <WebView
           ref={webViewRef}
           style={s.map}
@@ -1349,7 +1401,6 @@ export default function PropertyMapScreen({navigation}) {
           onMessage={onWebViewMessage}
         />
 
-        {/* ── Loading overlay ── */}
         {status === 'loading' && (
           <View style={s.overlay}>
             <View style={s.overlayCard}>
@@ -1359,7 +1410,6 @@ export default function PropertyMapScreen({navigation}) {
           </View>
         )}
 
-        {/* ── Error overlay ── */}
         {status === 'error' && (
           <View style={s.overlay}>
             <View style={s.overlayCard}>
@@ -1377,7 +1427,7 @@ export default function PropertyMapScreen({navigation}) {
           </View>
         )}
 
-        {/* ── Top pill (count) ── */}
+        {/* Count pill */}
         {status === 'ready' && (
           <Animated.View
             style={[
@@ -1405,7 +1455,7 @@ export default function PropertyMapScreen({navigation}) {
           </Animated.View>
         )}
 
-        {/* ── Right FAB column ── */}
+        {/* Filter FAB */}
         {status === 'ready' && (
           <View style={s.fabCol}>
             <TouchableOpacity
@@ -1428,7 +1478,7 @@ export default function PropertyMapScreen({navigation}) {
           </View>
         )}
 
-        {/* ── Bottom radius slider + preset chips ── */}
+        {/* ── Bottom radius panel ── */}
         {status === 'ready' && (
           <View style={s.sliderPanel}>
             <ScrollView
@@ -1455,27 +1505,35 @@ export default function PropertyMapScreen({navigation}) {
                 );
               })}
             </ScrollView>
-
             <View style={s.sliderLabelRow}>
-              <Text style={s.sliderLabel}>Radius</Text>
-              <Text style={s.sliderVal}>{sliderValue.toFixed(1)} km</Text>
+              <Text style={s.sliderLabel}>Search Radius</Text>
+              <View style={s.radiusValuePill}>
+                <Text style={s.radiusValueTxt}>
+                  {sliderValue.toFixed(1)} km
+                </Text>
+              </View>
             </View>
-            <Slider
-              style={s.radiusSlider}
+            <SliderV2
               minimumValue={1}
               maximumValue={30}
               step={0.5}
               value={sliderValue}
-              minimumTrackTintColor={C.primary}
-              maximumTrackTintColor={C.border}
-              thumbTintColor={C.primary}
+              trackHeight={6}
+              thumbSize={24}
+              touchHeight={44}
+              style={{marginHorizontal: 0, marginBottom: 2}}
+              formatLabel={v => `${v.toFixed(1)} km`}
               onValueChange={setSliderValue}
-              onSlidingComplete={onSliderRelease}
+              onSlidingComplete={km => applyRadius(km)}
             />
+            <View style={s.rangeRow}>
+              <Text style={s.rangeTxt}>1 km</Text>
+              <Text style={s.rangeTxt}>30 km</Text>
+            </View>
           </View>
         )}
 
-        {/* ── Empty state ── */}
+        {/* Empty state */}
         {status === 'ready' &&
           displayedProperties.length === 0 &&
           !selectedProperty && (
@@ -1487,7 +1545,7 @@ export default function PropertyMapScreen({navigation}) {
             />
           )}
 
-        {/* ── Property bottom sheet ── */}
+        {/* Property bottom sheet */}
         {selectedProperty && (
           <PropertyCard
             property={selectedProperty}
@@ -1497,7 +1555,7 @@ export default function PropertyMapScreen({navigation}) {
           />
         )}
 
-        {/* ── Filter modal ── */}
+        {/* Filter modal */}
         <FilterPanel
           visible={showFilters}
           onClose={() => setShowFilters(false)}
@@ -1522,17 +1580,255 @@ export default function PropertyMapScreen({navigation}) {
           }
         />
       </View>
-      {/* end mapWrapper */}
     </SafeAreaView>
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
+// ─── Property Card Styles (redesigned) ───────────────────────────────────────
+const pc = StyleSheet.create({
+  sheet: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: C.white,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: -8},
+    shadowOpacity: 0.12,
+    shadowRadius: 24,
+    elevation: 16,
+  },
+  handle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: C.border,
+    alignSelf: 'center',
+    marginTop: 10,
+    marginBottom: 0,
+  },
+
+  // ── Hero banner ──
+  heroBanner: {
+    height: 148,
+    backgroundColor: C.accentBlue,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  heroFallback: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E6F1FB',
+  },
+  heroFallbackIcon: {
+    fontSize: 44,
+  },
+  heroScrim: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0)',
+    // top scrim for badges
+  },
+  // Gradient-like scrim at bottom of hero for location text legibility
+  heroBadgeRow: {
+    position: 'absolute',
+    top: 10,
+    left: 12,
+    flexDirection: 'row',
+    gap: 6,
+  },
+  categoryBadge: {
+    backgroundColor: 'rgba(255,255,255,0.20)',
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: 0.5,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  categoryBadgeTxt: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  loanBadge: {
+    backgroundColor: C.success,
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  loanBadgeTxt: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  closeBtn: {
+    position: 'absolute',
+    top: 10,
+    right: 12,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: 'rgba(0,0,0,0.28)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 0.5,
+    borderColor: 'rgba(255,255,255,0.25)',
+  },
+  closeTxt: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 14,
+  },
+  heroLocationRow: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: 'rgba(0,0,0,0.42)',
+  },
+  heroLocationIcon: {
+    fontSize: 12,
+  },
+  heroLocationTxt: {
+    color: 'rgba(255,255,255,0.92)',
+    fontSize: 12,
+    fontWeight: '500',
+    flex: 1,
+  },
+
+  // ── Body ──
+  body: {
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: Platform.OS === 'ios' ? 30 : 18,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 10,
+    marginBottom: 12,
+  },
+  propName: {
+    flex: 1,
+    color: C.text,
+    fontSize: 15,
+    fontWeight: '700',
+    lineHeight: 21,
+  },
+  priceBlock: {
+    alignItems: 'flex-end',
+    flexShrink: 0,
+  },
+  priceLabel: {
+    color: C.textMuted,
+    fontSize: 9,
+    fontWeight: '500',
+    textTransform: 'uppercase',
+    letterSpacing: 0.7,
+    marginBottom: 2,
+  },
+  priceMain: {
+    color: C.primary,
+    fontSize: 20,
+    fontWeight: '700',
+    lineHeight: 23,
+  },
+  priceStrike: {
+    color: C.textMuted,
+    fontSize: 11,
+    textDecorationLine: 'line-through',
+    marginTop: 1,
+  },
+
+  // ── Stat chips ──
+  statsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 14,
+  },
+  statChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    backgroundColor: C.bg,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: C.border,
+  },
+  statChipGreen: {
+    backgroundColor: '#EAF3DE',
+    borderColor: '#C0DD97',
+  },
+  statChipWide: {
+    flex: 1,
+  },
+  statIcon: {
+    fontSize: 14,
+  },
+  statLabel: {
+    color: C.textMuted,
+    fontSize: 9,
+    fontWeight: '500',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  statValue: {
+    color: C.text,
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 1,
+  },
+  statValueGreen: {
+    color: '#27500A',
+  },
+
+  // ── CTA button ──
+  ctaBtn: {
+    backgroundColor: C.primary,
+    borderRadius: 14,
+    paddingVertical: 13,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    shadowColor: C.accentBlueDark,
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  ctaBtnTxt: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
+  ctaArrow: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+});
+
+// ─── General Styles ───────────────────────────────────────────────────────────
 const s = StyleSheet.create({
-  // ── Root ──
   container: {flex: 1, backgroundColor: C.bg},
 
-  // ── Category Tab Bar ──
+  // Tab bar
   topTabBar: {
     backgroundColor: C.white,
     borderBottomWidth: 1,
@@ -1578,11 +1874,11 @@ const s = StyleSheet.create({
   topTabBadgeTxt: {color: C.primary, fontSize: 10, fontWeight: '800'},
   topTabBadgeTxtActive: {color: C.white},
 
-  // ── Map wrapper ──
+  // Map
   mapWrapper: {flex: 1},
   map: {flex: 1},
 
-  // ── Overlays ──
+  // Overlays
   overlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(248,250,252,0.9)',
@@ -1630,7 +1926,7 @@ const s = StyleSheet.create({
   },
   retryTxt: {color: C.white, fontWeight: '700', fontSize: 14},
 
-  // ── Pill ──
+  // Pill
   pill: {
     position: 'absolute',
     top: Platform.OS === 'ios' ? 16 : 14,
@@ -1652,11 +1948,11 @@ const s = StyleSheet.create({
   pillDot: {width: 7, height: 7, borderRadius: 4, backgroundColor: C.success},
   pillTxt: {color: C.text, fontWeight: '600', fontSize: 13},
 
-  // ── FAB ──
+  // FAB
   fabCol: {
     position: 'absolute',
     right: 14,
-    bottom: 160,
+    bottom: 174,
     gap: 10,
     alignItems: 'center',
   },
@@ -1692,20 +1988,16 @@ const s = StyleSheet.create({
   },
   fabBadgeTxt: {color: C.white, fontSize: 9, fontWeight: '800'},
 
-  // ── Radius slider panel ──
+  // Radius slider panel
   sliderPanel: {
-    width: '95%',
+    width: '100%',
     position: 'absolute',
-    bottom: 20,
-    left: 4,
-    right: 70,
+    bottom: 0,
     backgroundColor: C.white,
-    borderRadius: 16,
-    borderWidth: 1,
     borderColor: C.border,
     paddingHorizontal: 16,
     paddingTop: 12,
-    paddingBottom: 8,
+    paddingBottom: 10,
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.07,
@@ -1726,134 +2018,25 @@ const s = StyleSheet.create({
   sliderLabelRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 2,
+    alignItems: 'center',
+    marginBottom: 4,
   },
   sliderLabel: {color: C.textSub, fontSize: 12, fontWeight: '600'},
-  sliderVal: {color: C.primary, fontSize: 12, fontWeight: '700'},
-  radiusSlider: {height: 34, marginHorizontal: -6},
-
-  // ── Property bottom sheet ──
-  sheet: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: C.white,
-    borderTopLeftRadius: 22,
-    borderTopRightRadius: 22,
-    paddingHorizontal: 18,
-    paddingTop: 10,
-    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: -4},
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    borderTopWidth: 1,
-    borderColor: C.border,
-  },
-  sheetHandle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: C.border,
-    alignSelf: 'center',
-    marginBottom: 14,
-  },
-  sheetHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-    gap: 8,
-  },
-  sheetName: {color: C.text, fontSize: 15, fontWeight: '700', marginBottom: 6},
-  tagRow: {flexDirection: 'row', gap: 6, flexWrap: 'wrap'},
-  tagBlue: {
+  radiusValuePill: {
     backgroundColor: C.primaryLight,
-    borderRadius: 6,
-    paddingHorizontal: 9,
+    borderRadius: 8,
+    paddingHorizontal: 10,
     paddingVertical: 3,
   },
-  tagBlueTxt: {color: C.primary, fontSize: 11, fontWeight: '700'},
-  closeBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: C.bg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: C.border,
-  },
-  closeTxt: {color: C.textSub, fontSize: 11, fontWeight: '700'},
-
-  distanceStrip: {
+  radiusValueTxt: {color: C.primary, fontSize: 12, fontWeight: '800'},
+  rangeRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: C.successLight,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    marginBottom: 12,
-  },
-  distanceStripIcon: {fontSize: 13},
-  distanceStripTxt: {
-    color: C.success,
-    fontSize: 13,
-    fontWeight: '700',
-    flex: 1,
-  },
-
-  cardRow: {flexDirection: 'row', gap: 12, marginBottom: 14},
-  cardImg: {width: 84, height: 84, borderRadius: 12, backgroundColor: C.bg},
-  cardImgFallback: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: C.border,
-  },
-  cardInfo: {flex: 1, justifyContent: 'center', gap: 5},
-  infoRow: {flexDirection: 'row', alignItems: 'flex-start', gap: 5},
-  infoIcon: {fontSize: 11, marginTop: 1},
-  infoTxt: {color: C.textSub, fontSize: 12, flex: 1, lineHeight: 17},
-
-  priceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: C.border,
+    marginTop: 0,
   },
-  priceLabel: {
-    color: C.textMuted,
-    fontSize: 10,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 2,
-  },
-  priceMain: {color: C.primary, fontSize: 20, fontWeight: '800'},
-  priceStrike: {
-    color: C.textMuted,
-    fontSize: 12,
-    textDecorationLine: 'line-through',
-    marginTop: 1,
-  },
-  ctaCol: {alignItems: 'flex-end', gap: 8},
-  detailsBtn: {
-    backgroundColor: C.primary,
-    borderRadius: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 18,
-    shadowColor: C.shadow,
-    shadowOffset: {width: 0, height: 3},
-    shadowOpacity: 0.22,
-    shadowRadius: 8,
-  },
-  detailsBtnTxt: {color: C.white, fontSize: 13, fontWeight: '700'},
+  rangeTxt: {color: C.textMuted, fontSize: 10},
 
-  // ── Empty state ──
+  // Empty state
   emptyState: {
     position: 'absolute',
     bottom: 150,
@@ -1905,7 +2088,7 @@ const s = StyleSheet.create({
   },
   emptyBtnPrimaryTxt: {color: C.white, fontWeight: '700', fontSize: 13},
 
-  // ── Filter backdrop + card ──
+  // Filter
   backdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(15,23,42,0.5)',
@@ -1943,6 +2126,18 @@ const s = StyleSheet.create({
     borderColor: C.border,
   },
   resetTxt: {color: C.textSub, fontSize: 12, fontWeight: '600'},
+  closeBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: C.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 0.5,
+    borderColor: C.border,
+    flexShrink: 0,
+  },
+  closeTxt: {color: C.textSub, fontSize: 12, fontWeight: '600', lineHeight: 14},
   divider: {height: 1, backgroundColor: C.border, marginBottom: 16},
   filterLabel: {
     color: C.text,
@@ -1950,7 +2145,6 @@ const s = StyleSheet.create({
     fontWeight: '700',
     marginBottom: 10,
   },
-
   chipRow: {flexDirection: 'row', gap: 8, paddingBottom: 4, paddingRight: 8},
   chip: {
     backgroundColor: C.bg,
@@ -1963,7 +2157,6 @@ const s = StyleSheet.create({
   chipActive: {backgroundColor: C.primaryLight, borderColor: C.primary},
   chipTxt: {color: C.textSub, fontSize: 12, fontWeight: '600'},
   chipTxtActive: {color: C.primary, fontWeight: '700'},
-
   amountInputRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2004,7 +2197,6 @@ const s = StyleSheet.create({
     minWidth: 70,
   },
   amountParsedTxt: {color: C.primary, fontSize: 12, fontWeight: '800'},
-
   budgetHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2019,14 +2211,14 @@ const s = StyleSheet.create({
     paddingVertical: 3,
   },
   budgetBadgeTxt: {color: C.primary, fontSize: 12, fontWeight: '800'},
-  slider: {height: 38, marginHorizontal: -6},
+  slider: {marginHorizontal: 0, marginBottom: 0},
   sliderRangeRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 16,
+    marginTop: 2,
   },
   sliderRangeTxt: {color: C.textMuted, fontSize: 11},
-
   applyBtn: {
     backgroundColor: C.primary,
     borderRadius: 14,

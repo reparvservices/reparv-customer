@@ -1,14 +1,58 @@
-import React from 'react';
+import React, {useRef, useEffect, useState} from 'react';
 import {
   View,
   Text,
   Modal,
   TouchableOpacity,
   StyleSheet,
+  FlatList,
+  Pressable,
 } from 'react-native';
 
-const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+/* ─── Constants ─────────────────────────────────────────────────── */
+const WEEK_DAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+const MONTHS_SHORT = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+];
+const MONTHS_LONG = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
 
+const MIN_YEAR = 1924;
+const MAX_YEAR = new Date().getFullYear();
+const ALL_YEARS = Array.from(
+  {length: MAX_YEAR - MIN_YEAR + 1},
+  (_, i) => MAX_YEAR - i,
+);
+
+const VIEW = {CALENDAR: 'cal', YEAR: 'year', MONTH: 'month'};
+
+const PURPLE = '#7C3AED';
+const PURPLE_BG = '#F5F3FF';
+
+/* ─── Component ─────────────────────────────────────────────────── */
 export default function CustomCalendar({
   visible,
   onClose,
@@ -16,235 +60,473 @@ export default function CustomCalendar({
   currentMonth,
   setCurrentMonth,
 }) {
+  const [view, setView] = useState(VIEW.CALENDAR);
+  const yearListRef = useRef(null);
+
   const year = currentMonth.getFullYear();
   const month = currentMonth.getMonth();
 
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const firstDay = new Date(year, month, 1).getDay();
-
-  const days = [];
-
-  for (let i = 0; i < firstDay; i++) {
-    days.push(null);
-  }
-
-  for (let d = 1; d <= daysInMonth; d++) {
-    days.push(new Date(year, month, d));
-  }
-
-  const formatDate = date =>
-    `${String(date.getDate()).padStart(2, '0')}/${String(
-      date.getMonth() + 1,
-    ).padStart(2, '0')}/${date.getFullYear()}`;
-
-  // ===== Block future dates =====
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
+  useEffect(() => {
+    if (!visible) setView(VIEW.CALENDAR);
+  }, [visible]);
+
+  useEffect(() => {
+    if (view === VIEW.YEAR && yearListRef.current) {
+      const idx = ALL_YEARS.indexOf(year);
+      if (idx !== -1)
+        setTimeout(
+          () =>
+            yearListRef.current?.scrollToIndex({index: idx, animated: false}),
+          80,
+        );
+    }
+  }, [view]);
+
+  /* Build day grid */
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstDay = new Date(year, month, 1).getDay();
+  const days = [
+    ...Array(firstDay).fill(null),
+    ...Array.from(
+      {length: daysInMonth},
+      (_, i) => new Date(year, month, i + 1),
+    ),
+  ];
+
+  const fmt = d =>
+    `${String(d.getDate()).padStart(2, '0')}/${String(
+      d.getMonth() + 1,
+    ).padStart(2, '0')}/${d.getFullYear()}`;
+
+  /* ── YEAR PICKER ── */
+  if (view === VIEW.YEAR)
+    return (
+      <Modal transparent visible={visible} animationType="fade">
+        <View style={s.overlay}>
+          <View style={s.card}>
+            <View style={s.pickerHeader}>
+              <Text style={s.pickerHeading}>Select Year</Text>
+              <TouchableOpacity
+                onPress={() => setView(VIEW.CALENDAR)}
+                style={s.iconBtn}>
+                <Text style={s.iconBtnTxt}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={s.divider} />
+            <FlatList
+              ref={yearListRef}
+              data={ALL_YEARS}
+              keyExtractor={item => String(item)}
+              numColumns={3}
+              showsVerticalScrollIndicator={false}
+              style={{maxHeight: 320}}
+              contentContainerStyle={{
+                paddingVertical: 8,
+                paddingHorizontal: 12,
+              }}
+              getItemLayout={(_, i) => ({
+                length: 52,
+                offset: 52 * Math.floor(i / 3),
+                index: i,
+              })}
+              renderItem={({item: y}) => {
+                const sel = y === year;
+                return (
+                  <TouchableOpacity
+                    style={[s.yearCell, sel && s.cellActive]}
+                    onPress={() => {
+                      setCurrentMonth(new Date(y, month, 1));
+                      setView(VIEW.CALENDAR);
+                    }}>
+                    <Text style={[s.yearCellTxt, sel && s.cellActiveTxt]}>
+                      {y}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              }}
+            />
+          </View>
+        </View>
+      </Modal>
+    );
+
+  /* ── MONTH PICKER ── */
+  if (view === VIEW.MONTH)
+    return (
+      <Modal transparent visible={visible} animationType="fade">
+        <View style={s.overlay}>
+          <View style={s.card}>
+            <View style={s.pickerHeader}>
+              <Text style={s.pickerHeading}>{year}</Text>
+              <TouchableOpacity
+                onPress={() => setView(VIEW.CALENDAR)}
+                style={s.iconBtn}>
+                <Text style={s.iconBtnTxt}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={s.divider} />
+            <View style={s.monthGrid}>
+              {MONTHS_SHORT.map((m, i) => {
+                const sel = i === month;
+                const futr =
+                  year === today.getFullYear() && i > today.getMonth();
+                return (
+                  <TouchableOpacity
+                    key={m}
+                    disabled={futr}
+                    style={[
+                      s.monthCell,
+                      sel && s.cellActive,
+                      futr && s.cellDisabled,
+                    ]}
+                    onPress={() => {
+                      setCurrentMonth(new Date(year, i, 1));
+                      setView(VIEW.CALENDAR);
+                    }}>
+                    <Text
+                      style={[
+                        s.monthCellTxt,
+                        sel && s.cellActiveTxt,
+                        futr && s.txtDisabled,
+                      ]}>
+                      {m}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        </View>
+      </Modal>
+    );
+
+  /* ── CALENDAR VIEW ── */
   return (
     <Modal transparent visible={visible} animationType="fade">
-      <View style={styles.overlay}>
-        <View style={styles.card}>
+      <Pressable style={s.overlay} onPress={onClose}>
+        <Pressable style={s.card} onPress={e => e.stopPropagation()}>
+          {/* ─ Header ─ */}
+          <View style={s.header}>
+            <View>
+              <TouchableOpacity
+                onPress={() => setView(VIEW.MONTH)}
+                style={s.headerMonthRow}>
+                <Text style={s.headerMonth}>{MONTHS_LONG[month]}</Text>
+                <Text style={s.headerArrow}>›</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setView(VIEW.YEAR)}>
+                <Text style={s.headerYear}>{year}</Text>
+              </TouchableOpacity>
+            </View>
 
-          {/* ===== Year ===== */}
-          <View style={styles.yearRow}>
-            <TouchableOpacity
-              style={styles.navBtn}
-              onPress={() =>
-                setCurrentMonth(new Date(year - 1, month, 1))
-              }>
-              <Text style={styles.navText}>{'<<'}</Text>
-            </TouchableOpacity>
-
-            <Text style={styles.yearText}>{year}</Text>
-
-            <TouchableOpacity
-              style={styles.navBtn}
-              onPress={() =>
-                setCurrentMonth(new Date(year + 1, month, 1))
-              }>
-              <Text style={styles.navText}>{'>>'}</Text>
-            </TouchableOpacity>
+            <View style={s.navGroup}>
+              <TouchableOpacity
+                style={s.navBtn}
+                onPress={() => setCurrentMonth(new Date(year, month - 1, 1))}>
+                <Text style={s.navTxt}>‹</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={s.navBtn}
+                onPress={() => setCurrentMonth(new Date(year, month + 1, 1))}>
+                <Text style={s.navTxt}>›</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
-          {/* ===== Month ===== */}
-          <View style={styles.monthRow}>
-            <TouchableOpacity
-              style={styles.navBtn}
-              onPress={() =>
-                setCurrentMonth(new Date(year, month - 1, 1))
-              }>
-              <Text style={styles.navText}>{'<'}</Text>
-            </TouchableOpacity>
+          <View style={s.divider} />
 
-            <Text style={styles.monthText}>
-              {currentMonth.toLocaleString('default', { month: 'long' })}
-            </Text>
-
-            <TouchableOpacity
-              style={styles.navBtn}
-              onPress={() =>
-                setCurrentMonth(new Date(year, month + 1, 1))
-              }>
-              <Text style={styles.navText}>{'>'}</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* ===== Week ===== */}
-          <View style={styles.weekRow}>
-            {weekDays.map(day => (
-              <Text key={day} style={styles.weekText}>
-                {day}
+          {/* ─ Week labels ─ */}
+          <View style={s.weekRow}>
+            {WEEK_DAYS.map((d, i) => (
+              <Text
+                key={i}
+                style={[s.weekTxt, (i === 0 || i === 6) && s.weekEndTxt]}>
+                {d}
               </Text>
             ))}
           </View>
 
-          {/* ===== Days ===== */}
-          <View style={styles.days}>
-            {days.map((date, index) => {
-              const isFuture = date && date > today;
-
+          {/* ─ Day grid ─ */}
+          <View style={s.grid}>
+            {days.map((date, idx) => {
+              if (!date) return <View key={idx} style={s.dayCell} />;
+              const isFuture = date > today;
+              const isToday = date.toDateString() === today.toDateString();
+              const isWkEnd = date.getDay() === 0 || date.getDay() === 6;
               return (
                 <TouchableOpacity
-                  key={index}
-                  disabled={!date || isFuture}
-                  style={[
-                    styles.dayBox,
-                    isFuture && styles.disabledDay,
-                  ]}
+                  key={idx}
+                  disabled={isFuture}
+                  style={s.dayCell}
                   onPress={() => {
-                    onSelect(formatDate(date));
+                    onSelect(fmt(date));
                     onClose();
                   }}>
-                  <Text
-                    style={[
-                      styles.dayText,
-                      !date && { color: 'transparent' },
-                      isFuture && styles.disabledText,
-                    ]}>
-                    {date ? date.getDate() : ''}
-                  </Text>
+                  <View style={[s.dayCircle, isToday && s.dayCircleToday]}>
+                    <Text
+                      style={[
+                        s.dayTxt,
+                        isWkEnd && !isToday && s.weekEndTxt,
+                        isToday && s.dayTodayTxt,
+                        isFuture && s.dayFutureTxt,
+                      ]}>
+                      {date.getDate()}
+                    </Text>
+                  </View>
                 </TouchableOpacity>
               );
             })}
           </View>
 
-          {/* ===== Close ===== */}
-          <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
-            <Text style={styles.closeText}>Close</Text>
-          </TouchableOpacity>
+          <View style={s.divider} />
 
-        </View>
-      </View>
+          {/* ─ Footer ─ */}
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }
 
-const styles = StyleSheet.create({
+/* ─── Styles ─────────────────────────────────────────────────────── */
+const s = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: 'rgba(0,0,0,0.40)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   card: {
-    width: '90%',
-    backgroundColor: '#fff',
-    borderRadius: 18,
-    padding: 18,
-    elevation: 6,
+    width: '88%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 28,
+    shadowOffset: {width: 0, height: 10},
+    elevation: 12,
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: '#E5E7EB',
   },
 
-  /* Year */
-  yearRow: {
+  /* ─ Calendar Header ─ */
+  header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    paddingHorizontal: 18,
+    paddingTop: 18,
+    paddingBottom: 14,
   },
-  yearText: {
-    fontSize: 18,
+  headerMonthRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
+  headerMonth: {
+    fontSize: 20,
     fontWeight: '700',
     color: '#111827',
+    letterSpacing: -0.3,
   },
-
-  /* Month */
-  monthRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 14,
+  headerArrow: {
+    fontSize: 20,
+    color: PURPLE,
+    fontWeight: '700',
+    marginTop: 1,
   },
-  monthText: {
-    fontSize: 16,
+  headerYear: {
+    fontSize: 13,
     fontWeight: '600',
-    color: '#374151',
+    color: PURPLE,
+    marginTop: 3,
+    letterSpacing: 0.5,
   },
-
+  navGroup: {
+    flexDirection: 'row',
+    gap: 6,
+  },
   navBtn: {
     width: 36,
     height: 36,
-    borderRadius: 18,
-    backgroundColor: '#F3F4F6',
+    borderRadius: 10,
+    backgroundColor: PURPLE_BG,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  navText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#111827',
+  navTxt: {
+    fontSize: 22,
+    color: PURPLE,
+    fontWeight: '500',
+    lineHeight: 26,
   },
 
-  /* Week */
+  /* ─ Weekday row ─ */
   weekRow: {
     flexDirection: 'row',
-    marginBottom: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    backgroundColor: '#FAFAFA',
   },
-  weekText: {
+  weekTxt: {
     width: '14.28%',
     textAlign: 'center',
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#6B7280',
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#9CA3AF',
+    letterSpacing: 0.5,
+  },
+  weekEndTxt: {
+    color: '#CBD5E1',
   },
 
-  /* Days */
-  days: {
+  /* ─ Day grid ─ */
+  grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginVertical: 8,
+    paddingHorizontal: 10,
+    paddingTop: 6,
+    paddingBottom: 12,
   },
-  dayBox: {
+  dayCell: {
     width: '14.28%',
     height: 44,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  dayText: {
+  dayCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  dayTxt: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#111827',
+    color: '#1F2937',
+  },
+  dayCircleToday: {
+    backgroundColor: PURPLE,
+  },
+  dayTodayTxt: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  dayFutureTxt: {
+    color: '#D1D5DB',
   },
 
-  /* Disabled future date */
-  disabledDay: {
-    opacity: 0.3,
+  /* ─ Footer ─ */
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 18,
+    paddingVertical: 14,
   },
-  disabledText: {
-    color: '#9CA3AF',
-  },
-
-  /* Close */
-  closeBtn: {
-    marginTop: 10,
-    paddingVertical: 10,
-    borderRadius: 8,
-    backgroundColor: '#8A38F5',
-  },
-  closeText: {
-    textAlign: 'center',
-    color: '#fff',
+  todayLink: {
+    fontSize: 13,
     fontWeight: '600',
+    color: PURPLE,
+  },
+  doneBtn: {
+    backgroundColor: PURPLE,
+    paddingHorizontal: 24,
+    paddingVertical: 9,
+    borderRadius: 10,
+  },
+  doneTxt: {
+    color: '#FFFFFF',
     fontSize: 14,
+    fontWeight: '600',
+    letterSpacing: 0.2,
+  },
+
+  /* ─ Shared picker styles ─ */
+  pickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 18,
+    paddingTop: 18,
+    paddingBottom: 14,
+  },
+  pickerHeading: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+    letterSpacing: -0.2,
+  },
+  iconBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  iconBtnTxt: {
+    fontSize: 13,
+    color: '#6B7280',
+    fontWeight: '600',
+  },
+
+  /* ─ Year picker ─ */
+  yearCell: {
+    flex: 1,
+    height: 46,
+    margin: 4,
+    borderRadius: 10,
+    backgroundColor: '#F9FAFB',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  yearCellTxt: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+  },
+
+  /* ─ Month picker ─ */
+  monthGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    padding: 14,
+    paddingTop: 16,
+    paddingBottom: 20,
+  },
+  monthCell: {
+    width: '30%',
+    margin: '1.66%',
+    paddingVertical: 13,
+    borderRadius: 10,
+    backgroundColor: '#F9FAFB',
+    alignItems: 'center',
+  },
+  monthCellTxt: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+  },
+
+  /* ─ Shared active state ─ */
+  cellActive: {
+    backgroundColor: PURPLE,
+  },
+  cellActiveTxt: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  cellDisabled: {
+    opacity: 0.32,
+  },
+  txtDisabled: {
+    color: '#9CA3AF',
   },
 });

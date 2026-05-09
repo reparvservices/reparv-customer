@@ -432,7 +432,12 @@ const styles = StyleSheet.create({
   rowLabel: {color: '#374151'},
   rowValue: {fontWeight: '600', color: '#000'},
   divider: {height: 1, backgroundColor: '#E5E7EB', marginVertical: 10},
-  sectionTitle: {fontSize: 18, fontWeight: '700', marginLeft: 16},
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginLeft: 16,
+    color: '#000',
+  },
   marker: {
     height: 20,
     width: 20,

@@ -47,9 +47,11 @@ import {
   Navigation,
   Share2,
   ShieldCheck,
+  Trash2,
   Trees,
   TrendingUp,
   Waves,
+  X,
   Zap,
 } from 'lucide-react-native';
 import {PropertyIntro} from '../components/PropertyDetails/PropertyIntro';
@@ -70,6 +72,7 @@ import PlotAvailabilityModal from './PlotAvailability';
 const {width} = Dimensions.get('window');
 const isTablet = width >= 768;
 const TABS = ['Highlights', 'Overview', 'Amenities', 'About', 'Location'];
+const BASE_URL = 'https://aws-api.reparv.in/customerapp';
 
 // ─── SKELETON BOX ─────────────────────────────────────────────────────────────
 const SkeletonBox = ({width: w, height: h, style = {}, borderRadius = 8}) => {
@@ -119,17 +122,12 @@ const SkeletonBox = ({width: w, height: h, style = {}, borderRadius = 8}) => {
 const PropertyDetailsSkeleton = () => {
   return (
     <SafeAreaView style={{flex: 1, backgroundColor: '#F7F7F7'}}>
-      {/* Hero image */}
       <SkeletonBox width={width} height={250} borderRadius={0} />
-
-      {/* Thumbnail strip */}
       <View style={{flexDirection: 'row', gap: 10, padding: 12, marginTop: 8}}>
         {[1, 2, 3, 4].map(i => (
           <SkeletonBox key={i} width={100} height={71} borderRadius={8} />
         ))}
       </View>
-
-      {/* Card */}
       <View
         style={{
           backgroundColor: '#FFF',
@@ -139,17 +137,12 @@ const PropertyDetailsSkeleton = () => {
           gap: 12,
           elevation: 2,
         }}>
-        {/* Title */}
         <SkeletonBox width="80%" height={22} borderRadius={6} />
         <SkeletonBox width="50%" height={16} borderRadius={6} />
-
-        {/* Badges */}
         <View style={{flexDirection: 'row', gap: 10, marginTop: 4}}>
           <SkeletonBox width={110} height={34} borderRadius={20} />
           <SkeletonBox width={110} height={34} borderRadius={20} />
         </View>
-
-        {/* Location */}
         <View style={{flexDirection: 'row', gap: 8, marginTop: 8}}>
           <SkeletonBox width={14} height={18} borderRadius={4} />
           <View style={{gap: 6, flex: 1}}>
@@ -157,20 +150,14 @@ const PropertyDetailsSkeleton = () => {
             <SkeletonBox width="55%" height={12} borderRadius={4} />
           </View>
         </View>
-
         <View
           style={{height: 1, backgroundColor: '#E5E5E5', marginVertical: 4}}
         />
-
-        {/* Price */}
         <SkeletonBox width="45%" height={28} borderRadius={6} />
         <SkeletonBox width="35%" height={16} borderRadius={6} />
-
         <View
           style={{height: 1, backgroundColor: '#E5E5E5', marginVertical: 4}}
         />
-
-        {/* EMI card */}
         <View
           style={{
             backgroundColor: '#F9F9F9',
@@ -194,8 +181,6 @@ const PropertyDetailsSkeleton = () => {
             <SkeletonBox width={130} height={38} borderRadius={12} />
           </View>
         </View>
-
-        {/* Action buttons */}
         <View style={{flexDirection: 'row', gap: 12, marginTop: 4}}>
           <SkeletonBox width="48%" height={48} borderRadius={10} />
           <SkeletonBox width="48%" height={48} borderRadius={10} />
@@ -224,15 +209,10 @@ const ZoomImageModal = ({visible, images, initialIndex, onClose}) => {
   const {width: w, height: h} = Dimensions.get('window');
 
   useEffect(() => {
-    if (images.length == 0) {
-      return;
-    }
+    if (images.length === 0) return;
     if (visible && flatRef.current) {
       setTimeout(() => {
-        flatRef.current?.scrollToIndex({
-          index: initialIndex,
-          animated: false,
-        });
+        flatRef.current?.scrollToIndex({index: initialIndex, animated: false});
       }, 100);
     }
     setCurrentIdx(initialIndex);
@@ -246,7 +226,6 @@ const ZoomImageModal = ({visible, images, initialIndex, onClose}) => {
       onRequestClose={onClose}
       statusBarTranslucent>
       <View style={{flex: 1, backgroundColor: '#000'}}>
-        {/* Header */}
         <View style={zoomStyles.header}>
           <Text style={zoomStyles.counter}>
             {currentIdx + 1} / {images.length}
@@ -255,8 +234,6 @@ const ZoomImageModal = ({visible, images, initialIndex, onClose}) => {
             <Text style={zoomStyles.closeTxt}>✕</Text>
           </TouchableOpacity>
         </View>
-
-        {/* Image List */}
         <FlatList
           ref={flatRef}
           data={images}
@@ -265,11 +242,7 @@ const ZoomImageModal = ({visible, images, initialIndex, onClose}) => {
           keyExtractor={(_, i) => String(i)}
           showsHorizontalScrollIndicator={false}
           initialScrollIndex={initialIndex}
-          getItemLayout={(_, index) => ({
-            length: w,
-            offset: w * index,
-            index,
-          })}
+          getItemLayout={(_, index) => ({length: w, offset: w * index, index})}
           onMomentumScrollEnd={e => {
             const idx = Math.round(e.nativeEvent.contentOffset.x / w);
             setCurrentIdx(idx);
@@ -296,6 +269,113 @@ const ZoomImageModal = ({visible, images, initialIndex, onClose}) => {
   );
 };
 
+// ─── REMOVE WISHLIST CONFIRM MODAL ────────────────────────────────────────────
+const RemoveWishlistModal = ({
+  visible,
+  onCancel,
+  onConfirm,
+  loading,
+  propertyName,
+}) => {
+  const scaleAnim = useRef(new Animated.Value(0.85)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (visible) {
+      Animated.parallel([
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          useNativeDriver: true,
+          damping: 15,
+          stiffness: 200,
+        }),
+        Animated.timing(opacityAnim, {
+          toValue: 1,
+          duration: 180,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      scaleAnim.setValue(0.85);
+      opacityAnim.setValue(0);
+    }
+  }, [visible]);
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="none"
+      statusBarTranslucent
+      onRequestClose={!loading ? onCancel : undefined}>
+      <Animated.View style={[removeStyles.backdrop, {opacity: opacityAnim}]}>
+        {/* tap-outside to dismiss */}
+        <TouchableOpacity
+          style={StyleSheet.absoluteFill}
+          activeOpacity={1}
+          onPress={!loading ? onCancel : undefined}
+        />
+
+        <Animated.View
+          style={[
+            removeStyles.card,
+            {transform: [{scale: scaleAnim}], opacity: opacityAnim},
+          ]}>
+          {/* ✕ Close */}
+          {!loading && (
+            <TouchableOpacity style={removeStyles.closeBtn} onPress={onCancel}>
+              <X size={16} color="#9CA3AF" />
+            </TouchableOpacity>
+          )}
+
+          {/* Icon rings */}
+          <View style={removeStyles.iconOuter}>
+            <View style={removeStyles.iconInner}>
+              <Heart size={30} color="#EF4444" fill="#EF4444" />
+            </View>
+          </View>
+
+          <Text style={removeStyles.title}>Remove from Wishlist?</Text>
+          <Text style={removeStyles.subtitle}>
+            {propertyName
+              ? `"${propertyName}" will be removed\nfrom your saved properties.`
+              : 'This property will be removed\nfrom your saved properties.'}
+          </Text>
+
+          <View style={removeStyles.divider} />
+
+          <View style={removeStyles.btnRow}>
+            {/* Keep it */}
+            <TouchableOpacity
+              activeOpacity={0.75}
+              disabled={loading}
+              onPress={onCancel}
+              style={removeStyles.cancelBtn}>
+              <Text style={removeStyles.cancelText}>Keep it</Text>
+            </TouchableOpacity>
+
+            {/* Remove */}
+            <TouchableOpacity
+              activeOpacity={0.8}
+              disabled={loading}
+              onPress={onConfirm}
+              style={[removeStyles.confirmBtn, loading && {opacity: 0.65}]}>
+              {loading ? (
+                <ActivityIndicator size={18} color="#FFF" />
+              ) : (
+                <>
+                  <Trash2 size={15} color="#FFF" />
+                  <Text style={removeStyles.confirmText}>Yes, Remove</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+      </Animated.View>
+    </Modal>
+  );
+};
+
 // ─── MAIN SCREEN ──────────────────────────────────────────────────────────────
 const PropertyDetailsScreen = () => {
   const route = useRoute();
@@ -310,15 +390,19 @@ const PropertyDetailsScreen = () => {
   const [showDrawer, setshowDrawer] = useState(false);
   const [data, setData] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
-  const mainImageRef = useRef(null); // for the swipeable hero FlatList
+  const mainImageRef = useRef(null);
   const thumbnailRef = useRef(null);
-  const cardScrollRef = useRef(null); // for scrolling the outer ScrollView to top
+  const cardScrollRef = useRef(null);
   const navigation = useNavigation();
   const [zoomVisible, setZoomVisible] = useState(false);
   const [zoomIndex, setZoomIndex] = useState(0);
   const {seoSlug} = route.params || {};
   const [selectedImage, setImages] = useState([]);
   const [videoModel, setVideoModel] = useState(false);
+
+  // ── Wishlist remove modal state ───────────────────────────────────────────────
+  const [removeModalVisible, setRemoveModalVisible] = useState(false);
+  const [removing, setRemoving] = useState(false);
 
   // ── Guard ────────────────────────────────────────────────────────────────────
   if (seoSlug === '' || seoSlug === null) {
@@ -348,6 +432,25 @@ const PropertyDetailsScreen = () => {
     };
     fetchPropertyData();
   }, [seoSlug]);
+
+  // ── Check wishlist status when propertyData loads ─────────────────────────────
+  useEffect(() => {
+    if (!propertyData?.propertyid || !user?.id) return;
+    const checkWishlist = async () => {
+      try {
+        const res = await fetch(`${BASE_URL}/property/get-wishlist/${user.id}`);
+        const json = await res.json();
+        const list = json?.data || [];
+        const exists = list.some(
+          item => item?.propertyid === propertyData.propertyid,
+        );
+        setIsLiked(exists);
+      } catch (err) {
+        console.log('Wishlist check error:', err);
+      }
+    };
+    checkWishlist();
+  }, [propertyData?.propertyid, user?.id]);
 
   // ── Add visit ─────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -436,8 +539,6 @@ const PropertyDetailsScreen = () => {
   });
 
   const heroImages = selectedImage?.length > 0 ? selectedImage : allHeroImages;
-
-  // Images passed to ZoomImageModal
   const zoomImages = heroImages.map(img => ({uri: getImageUri(img)}));
 
   // ── Share helpers ─────────────────────────────────────────────────────────────
@@ -523,25 +624,62 @@ Best regards,
     }
   };
 
+  // ── Heart button handler ──────────────────────────────────────────────────────
+  // If already liked → open remove confirmation modal
+  // If not liked → add to wishlist
   const handleLikePress = async () => {
-    setIsLiked(prev => !prev);
+    if (isLiked) {
+      // Open confirmation modal to remove
+      setRemoveModalVisible(true);
+      return;
+    }
+
+    // Add to wishlist
     try {
-      const response = await fetch(
-        'https://aws-api.reparv.in/customerapp/property/add-wishlist',
-        {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({
-            user_id: user?.id,
-            property_id: propertyData?.propertyid,
-          }),
-        },
-      );
+      const response = await fetch(`${BASE_URL}/property/add-wishlist`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          user_id: user?.id,
+          property_id: propertyData?.propertyid,
+        }),
+      });
       const data = await response.json();
+      setIsLiked(true);
       ToastAndroid.show(`${data?.message}`, ToastAndroid.LONG);
     } catch (err) {
       ToastAndroid.show('Error Adding Property in Wishlist', ToastAndroid.LONG);
     }
+  };
+
+  // ── Remove from wishlist (after confirmation) ─────────────────────────────────
+  const confirmRemoveWishlist = async () => {
+    if (!user?.id || !propertyData?.propertyid) return;
+    setRemoving(true);
+    try {
+      const res = await fetch(
+        `${BASE_URL}/property/remove-wishlist/${user.id}/${propertyData.propertyid}`,
+        {method: 'DELETE'},
+      );
+      const json = await res.json();
+      if (json?.success || res.ok) {
+        setIsLiked(false);
+        setRemoveModalVisible(false);
+        ToastAndroid.show('Removed from Wishlist', ToastAndroid.SHORT);
+      } else {
+        ToastAndroid.show('Failed to remove. Try again.', ToastAndroid.SHORT);
+      }
+    } catch (err) {
+      console.error('Remove wishlist error:', err);
+      ToastAndroid.show('Something went wrong.', ToastAndroid.SHORT);
+    } finally {
+      setRemoving(false);
+    }
+  };
+
+  const cancelRemoveWishlist = () => {
+    if (removing) return;
+    setRemoveModalVisible(false);
   };
 
   // ── Data maps ─────────────────────────────────────────────────────────────────
@@ -728,6 +866,7 @@ Best regards,
                 ))}
               </View>
             )}
+
             {/* ── Hero Nav Arrows ── */}
             {heroImages.length > 1 && (
               <>
@@ -865,7 +1004,6 @@ Best regards,
                     key={key}
                     onPress={() => {
                       setActiveImage(thumbnail);
-                      // find the index of this category's first image inside allHeroImages
                       const globalIdx = allHeroImages.findIndex(
                         img => img === imagesArray[0],
                       );
@@ -913,7 +1051,6 @@ Best regards,
               availableCount={propertyData?.availableCount}
               bookedCount={propertyData?.bookedCount}
             />
-            {/* Badges */}
 
             {/* Badges */}
             <View style={styles.badgeRow}>
@@ -923,14 +1060,12 @@ Best regards,
                   {propertyData?.propertyApprovedBy} Approved
                 </Text>
               </View>
-
               <View style={styles.badge}>
                 <Navigation size={16} color="#8A38F5" />
                 <Text style={styles.badgeText}>
                   {propertyData?.distanceFromCityCenter} km from City
                 </Text>
               </View>
-
               <View style={styles.badge}>
                 <BadgeCheck size={16} color="#8A38F5" />
                 <Text style={styles.badgeText}>Assured Quality</Text>
@@ -965,6 +1100,7 @@ Best regards,
               </Text>
               <View style={styles.divider} />
             </View>
+
             {/* Pricing & EMI Card */}
             <View style={Pricingstyles.card}>
               {propertyData?.propertyCategory !== 'RentalOffice' &&
@@ -1015,6 +1151,7 @@ Best regards,
                 </TouchableOpacity>
               </View>
             </View>
+
             {/* CTA Buttons */}
             <View style={styles.actionRow}>
               <ActionButton
@@ -1173,6 +1310,15 @@ Best regards,
         initialIndex={zoomIndex}
         onClose={() => setZoomVisible(false)}
       />
+
+      {/* ── REMOVE WISHLIST CONFIRM MODAL ─────────────────────────────────── */}
+      <RemoveWishlistModal
+        visible={removeModalVisible}
+        onCancel={cancelRemoveWishlist}
+        onConfirm={confirmRemoveWishlist}
+        loading={removing}
+        propertyName={propertyData?.propertyName}
+      />
     </SafeAreaView>
   );
 };
@@ -1234,12 +1380,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     zIndex: 10,
   },
-  heroArrowLeft: {
-    left: 12,
-  },
-  heroArrowRight: {
-    right: 12,
-  },
+  heroArrowLeft: {left: 12},
+  heroArrowRight: {right: 12},
   iconBtn: {
     width: 36,
     height: 36,
@@ -1248,8 +1390,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-
-  // ── Dot indicators ──
   dotsRow: {
     position: 'absolute',
     bottom: 10,
@@ -1270,8 +1410,6 @@ const styles = StyleSheet.create({
     width: 18,
     backgroundColor: '#8A38F5',
   },
-
-  // ── Counter pill ──
   counterPill: {
     position: 'absolute',
     top: 10,
@@ -1286,8 +1424,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
-
-  // ── Thumbnails ──
   thumbnailRow: {
     marginTop: 10,
   },
@@ -1343,8 +1479,6 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-
-  // ── Property card ──
   title: {
     fontSize: 20,
     fontWeight: '700',
@@ -1382,7 +1516,6 @@ const styles = StyleSheet.create({
     color: '#8A38F5',
     fontSize: 12,
     fontWeight: '600',
-
     marginLeft: 8,
   },
   locationRow: {
@@ -1392,9 +1525,7 @@ const styles = StyleSheet.create({
     marginTop: 14,
     paddingHorizontal: 6,
   },
-  locationTextWrapper: {
-    flex: 1,
-  },
+  locationTextWrapper: {flex: 1},
   locationText: {
     fontSize: 14,
     fontWeight: '600',
@@ -1446,8 +1577,6 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     color: '#868686',
   },
-
-  // ── Tabs ──
   tabsWrapper: {
     marginTop: 16,
     borderBottomWidth: 1,
@@ -1479,8 +1608,6 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   tabContent: {},
-
-  // ── Similar properties header ──
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1499,8 +1626,6 @@ const styles = StyleSheet.create({
     height: 3,
     borderRadius: 1,
   },
-
-  // ── Video overlay ──
   videoWrapper: {
     position: 'absolute',
     bottom: 12,
@@ -1565,14 +1690,12 @@ const Pricingstyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 4,
-    color: '#000',
   },
   totalPrice: {
     fontSize: 20,
     fontWeight: '800',
     color: '#000',
     marginLeft: 4,
-    color: '#000',
   },
   subText: {
     fontSize: 13,
@@ -1638,5 +1761,121 @@ const zoomStyles = StyleSheet.create({
     backgroundColor: '#000',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+});
+
+// ─── REMOVE WISHLIST MODAL STYLES ─────────────────────────────────────────────
+const removeStyles = StyleSheet.create({
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.52)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 26,
+  },
+  card: {
+    width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    paddingTop: 36,
+    paddingBottom: 26,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 12},
+    shadowOpacity: 0.2,
+    shadowRadius: 28,
+    elevation: 20,
+  },
+  closeBtn: {
+    position: 'absolute',
+    top: 14,
+    right: 14,
+    padding: 7,
+    borderRadius: 99,
+    backgroundColor: '#F3F4F6',
+  },
+  iconOuter: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: '#FEE2E2',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  iconInner: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 2,
+    borderColor: '#FECACA',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#111827',
+    fontFamily: 'SegoeUI-Bold',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 22,
+    fontFamily: 'SegoeUI',
+    paddingHorizontal: 6,
+  },
+  divider: {
+    width: '100%',
+    height: 1,
+    backgroundColor: '#F3F4F6',
+    marginVertical: 22,
+  },
+  btnRow: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  cancelBtn: {
+    flex: 1,
+    height: 50,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+  },
+  cancelText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#374151',
+    fontFamily: 'SegoeUI-Bold',
+  },
+  confirmBtn: {
+    flex: 1,
+    height: 50,
+    borderRadius: 14,
+    backgroundColor: '#EF4444',
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 7,
+    shadowColor: '#EF4444',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  confirmText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFF',
+    fontFamily: 'SegoeUI-Bold',
   },
 });
