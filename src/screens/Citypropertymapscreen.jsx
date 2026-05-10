@@ -710,8 +710,8 @@ const cp = StyleSheet.create({
 });
 
 // ─── Property Bottom Card ─────────────────────────────────────────────────────
-const PropertyCard = ({property, onClose, navigation}) => {
-  const slideY = useRef(new Animated.Value(300)).current;
+const PropertyCard = ({property, onClose, navigation, userCoords}) => {
+  const slideY = useRef(new Animated.Value(340)).current;
   const [imgLoaded, setImgLoaded] = useState(false);
   const [imgError, setImgError] = useState(false);
 
@@ -729,115 +729,157 @@ const PropertyCard = ({property, onClose, navigation}) => {
   const image = getFirstImage(property.frontView);
   const offerPrice = formatPrice(property.totalOfferPrice);
   const salesPrice = formatPrice(property.totalSalesPrice);
+  const hasDiscount =
+    property.totalSalesPrice &&
+    property.totalOfferPrice !== property.totalSalesPrice;
+
   const types = Array.isArray(property.propertyType)
     ? property.propertyType.join(' · ')
     : property.propertyType || '';
 
-  return (
-    <Animated.View style={[s.sheet, {transform: [{translateY: slideY}]}]}>
-      <View style={s.sheetHandle} />
+  const distance = useMemo(() => {
+    if (!userCoords) return null;
+    const lat = parseFloat(property.latitude);
+    const lon = parseFloat(property.longitude);
+    if (!lat || !lon) return null;
+    return haversineKm(userCoords.lat, userCoords.lon, lat, lon);
+  }, [property, userCoords]);
 
-      {/* Header */}
-      <View style={s.sheetHeader}>
-        <View style={{flex: 1}}>
-          <Text style={s.sheetName} numberOfLines={1}>
+  const locationLine = [property.location, property.city, property.state]
+    .filter(Boolean)
+    .join(', ');
+
+  return (
+    <Animated.View style={[pc.sheet, {transform: [{translateY: slideY}]}]}>
+      {/* ── Drag handle ── */}
+      <View style={pc.handle} />
+
+      {/* ── Hero image banner ── */}
+      <View style={pc.heroBanner}>
+        {image && !imgError ? (
+          <>
+            {!imgLoaded && (
+              <View style={StyleSheet.absoluteFill}>
+                <SkeletonBox width="100%" height={148} borderRadius={0} />
+              </View>
+            )}
+            <Image
+              source={{uri: getImageUri(image)}}
+              style={[StyleSheet.absoluteFill, {opacity: imgLoaded ? 1 : 0}]}
+              resizeMode="cover"
+              onLoad={() => setImgLoaded(true)}
+              onError={() => setImgError(true)}
+            />
+          </>
+        ) : (
+          <View style={pc.heroFallback}>
+            <Text style={pc.heroFallbackIcon}>🏗️</Text>
+          </View>
+        )}
+
+        {/* Dark gradient scrim */}
+        <View style={pc.heroScrim} />
+
+        {/* Top badges row */}
+        <View style={pc.heroBadgeRow}>
+          <View style={pc.categoryBadge}>
+            <Text style={pc.categoryBadgeTxt}>
+              {prettifyCategory(property.propertyCategory)}
+            </Text>
+          </View>
+          {property.loanAvailability === 'Yes' && (
+            <View style={pc.loanBadge}>
+              <Text style={pc.loanBadgeTxt}>🏦 Loan</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Close button */}
+        <TouchableOpacity
+          style={pc.closeBtn}
+          onPress={onClose}
+          activeOpacity={0.85}>
+          <Text style={pc.closeTxt}>✕</Text>
+        </TouchableOpacity>
+
+        {/* Location line at bottom of hero */}
+        <View style={pc.heroLocationRow}>
+          <Text style={pc.heroLocationIcon}>📍</Text>
+          <Text style={pc.heroLocationTxt} numberOfLines={1}>
+            {locationLine}
+          </Text>
+        </View>
+      </View>
+
+      {/* ── Card body ── */}
+      <View style={pc.body}>
+        {/* Property name + price */}
+        <View style={pc.nameRow}>
+          <Text style={pc.propName} numberOfLines={2}>
             {property.propertyName}
           </Text>
-          <View style={s.tagRow}>
-            <View style={s.tagBlue}>
-              <Text style={s.tagBlueTxt}>
-                {prettifyCategory(property.propertyCategory)}
-              </Text>
-            </View>
+          <View style={pc.priceBlock}>
+            <Text style={pc.priceLabel}>Offer Price</Text>
+            <Text style={pc.priceMain}>{offerPrice}</Text>
+            {hasDiscount && (
+              <Text style={pc.priceStrike}>MRP {salesPrice}</Text>
+            )}
           </View>
         </View>
-        <TouchableOpacity style={s.closeBtn} onPress={onClose}>
-          <X size={14} color={C.textSub} strokeWidth={2.5} />
-        </TouchableOpacity>
-      </View>
 
-      {/* City strip */}
-      <View style={s.cityStrip}>
-        <MapPin size={13} color={C.primary} strokeWidth={2} />
-        <Text style={s.cityStripTxt} numberOfLines={1}>
-          {property.location ? `${property.location}, ` : ''}
-          {property.city}, {property.state}
-        </Text>
-      </View>
-
-      {/* Card row */}
-      <View style={s.cardRow}>
-        <View style={[s.cardImg, {overflow: 'hidden'}]}>
-          {image && !imgError ? (
-            <>
-              {!imgLoaded && (
-                <View style={StyleSheet.absoluteFill}>
-                  <SkeletonBox width={84} height={84} borderRadius={12} />
-                </View>
-              )}
-              <Image
-                source={{uri: getImageUri(image)}}
-                style={[s.cardImg, {opacity: imgLoaded ? 1 : 0}]}
-                resizeMode="cover"
-                onLoad={() => setImgLoaded(true)}
-                onError={() => setImgError(true)}
-              />
-            </>
-          ) : (
-            <View style={[s.cardImg, s.cardImgFallback]}>
-              <Building2 size={28} color={C.textMuted} strokeWidth={1.5} />
-            </View>
-          )}
-        </View>
-
-        <View style={s.cardInfo}>
-          {!!types && (
-            <View style={s.infoRow}>
-              <Home size={12} color={C.textMuted} strokeWidth={2} />
-              <Text style={s.infoTxt} numberOfLines={2}>
-                {types}
-              </Text>
-            </View>
-          )}
+        {/* Stat chips */}
+        <View style={pc.statsRow}>
           {!!property.carpetArea && (
-            <View style={s.infoRow}>
-              <Ruler size={12} color={C.textMuted} strokeWidth={2} />
-              <Text style={s.infoTxt}>{property.carpetArea} sq.ft</Text>
+            <View style={pc.statChip}>
+              <Text style={pc.statIcon}>📐</Text>
+              <View>
+                <Text style={pc.statLabel}>Area</Text>
+                <Text style={pc.statValue}>{property.carpetArea} sq.ft</Text>
+              </View>
             </View>
           )}
           {!!property.propertyFacing && (
-            <View style={s.infoRow}>
-              <Compass size={12} color={C.textMuted} strokeWidth={2} />
-              <Text style={s.infoTxt}>{property.propertyFacing}</Text>
+            <View style={pc.statChip}>
+              <Text style={pc.statIcon}>🧭</Text>
+              <View>
+                <Text style={pc.statLabel}>Facing</Text>
+                <Text style={pc.statValue}>{property.propertyFacing}</Text>
+              </View>
             </View>
           )}
-          {property.loanAvailability === 'Yes' && (
-            <View style={s.infoRow}>
-              <CreditCard size={12} color={C.primary} strokeWidth={2} />
-              <Text style={[s.infoTxt, {color: C.primary}]}>
-                Loan Available
-              </Text>
+          {distance != null && (
+            <View style={[pc.statChip, pc.statChipGreen]}>
+              <Text style={pc.statIcon}>📍</Text>
+              <View>
+                <Text style={pc.statLabel}>Distance</Text>
+                <Text style={[pc.statValue, pc.statValueGreen]}>
+                  {formatDistance(distance)}
+                </Text>
+              </View>
+            </View>
+          )}
+          {!!types && (
+            <View style={[pc.statChip, pc.statChipWide]}>
+              <Text style={pc.statIcon}>🏠</Text>
+              <View>
+                <Text style={pc.statLabel}>Type</Text>
+                <Text style={pc.statValue} numberOfLines={1}>
+                  {types}
+                </Text>
+              </View>
             </View>
           )}
         </View>
-      </View>
 
-      {/* Price row */}
-      <View style={s.priceRow}>
-        <View>
-          <Text style={s.priceLabel}>Offer Price</Text>
-          <Text style={s.priceMain}>{offerPrice}</Text>
-          {property.totalSalesPrice !== property.totalOfferPrice && (
-            <Text style={s.priceStrike}>MRP {salesPrice}</Text>
-          )}
-        </View>
+        {/* CTA */}
         <TouchableOpacity
-          style={s.detailsBtn}
-          activeOpacity={0.85}
+          style={pc.ctaBtn}
+          activeOpacity={0.88}
           onPress={() =>
             navigation.navigate('PropertyDetails', {seoSlug: property.seoSlug})
           }>
-          <Text style={s.detailsBtnTxt}>View Details →</Text>
+          <Text style={pc.ctaBtnTxt}>View Details</Text>
+          <Text style={pc.ctaArrow}>→</Text>
         </TouchableOpacity>
       </View>
     </Animated.View>
@@ -2061,4 +2103,245 @@ const s = StyleSheet.create({
     shadowRadius: 10,
   },
   applyTxt: {color: C.white, fontSize: 15, fontWeight: '700'},
+});
+
+// ─── Property Card Styles (redesigned) ───────────────────────────────────────
+const pc = StyleSheet.create({
+  sheet: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: C.white,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: -8},
+    shadowOpacity: 0.12,
+    shadowRadius: 24,
+    elevation: 16,
+  },
+  handle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: C.border,
+    alignSelf: 'center',
+    marginTop: 10,
+    marginBottom: 0,
+  },
+
+  // ── Hero banner ──
+  heroBanner: {
+    height: 148,
+    backgroundColor: C.accentBlue,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  heroFallback: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E6F1FB',
+  },
+  heroFallbackIcon: {
+    fontSize: 44,
+  },
+  heroScrim: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0)',
+    // top scrim for badges
+  },
+  // Gradient-like scrim at bottom of hero for location text legibility
+  heroBadgeRow: {
+    position: 'absolute',
+    top: 10,
+    left: 12,
+    flexDirection: 'row',
+    gap: 6,
+  },
+  categoryBadge: {
+    backgroundColor: C.primary,
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: 0.5,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  categoryBadgeTxt: {
+    color: '#FFF',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  loanBadge: {
+    backgroundColor: C.success,
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  loanBadgeTxt: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  closeBtn: {
+    position: 'absolute',
+    top: 10,
+    right: 12,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: 'rgba(0,0,0,0.28)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 0.5,
+    borderColor: 'rgba(255,255,255,0.25)',
+  },
+  closeTxt: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 14,
+  },
+  heroLocationRow: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: 'rgba(0,0,0,0.42)',
+  },
+  heroLocationIcon: {
+    fontSize: 12,
+  },
+  heroLocationTxt: {
+    color: 'rgba(255,255,255,0.92)',
+    fontSize: 12,
+    fontWeight: '500',
+    flex: 1,
+  },
+
+  // ── Body ──
+  body: {
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: Platform.OS === 'ios' ? 30 : 18,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 10,
+    marginBottom: 12,
+  },
+  propName: {
+    flex: 1,
+    color: C.text,
+    fontSize: 15,
+    fontWeight: '700',
+    lineHeight: 21,
+  },
+  priceBlock: {
+    alignItems: 'flex-end',
+    flexShrink: 0,
+  },
+  priceLabel: {
+    color: C.textMuted,
+    fontSize: 9,
+    fontWeight: '500',
+    textTransform: 'uppercase',
+    letterSpacing: 0.7,
+    marginBottom: 2,
+  },
+  priceMain: {
+    color: C.primary,
+    fontSize: 20,
+    fontWeight: '700',
+    lineHeight: 23,
+  },
+  priceStrike: {
+    color: C.textMuted,
+    fontSize: 11,
+    textDecorationLine: 'line-through',
+    marginTop: 1,
+  },
+
+  // ── Stat chips ──
+  statsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 14,
+  },
+  statChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    backgroundColor: C.bg,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: C.border,
+  },
+  statChipGreen: {
+    backgroundColor: '#EAF3DE',
+    borderColor: '#C0DD97',
+  },
+  statChipWide: {
+    flex: 1,
+    flexWrap: 'wrap',
+  },
+  statIcon: {
+    fontSize: 14,
+  },
+  statLabel: {
+    color: C.textMuted,
+    fontSize: 9,
+    fontWeight: '500',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  statValue: {
+    color: C.text,
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 1,
+  },
+  statValueGreen: {
+    color: '#27500A',
+  },
+
+  // ── CTA button ──
+  ctaBtn: {
+    backgroundColor: C.primary,
+    borderRadius: 14,
+    paddingVertical: 13,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    shadowColor: C.accentBlueDark,
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  ctaBtnTxt: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
+  ctaArrow: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
 });

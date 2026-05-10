@@ -22,37 +22,38 @@ import {Highlights} from '../components/PropertyDetails/Highlights';
 import {Overview} from '../components/PropertyDetails/Overview';
 import {Amenities} from '../components/PropertyDetails/Amenities';
 import {Location} from '../components/PropertyDetails/Location';
-import {ActionButton} from '../components/PropertyDetails/ActionButton';
-import Svg, {G, Mask, Path, Rect} from 'react-native-svg';
+import Svg, {Path} from 'react-native-svg';
 import {
   ArrowRight,
   Award,
   BadgeCheck,
   Building2,
+  Calendar,
   Car,
+  CheckCircle,
   ChevronLeft,
   ChevronRight,
+  ClipboardList,
+  Clock,
   Cpu,
   Droplet,
-  Dumbbell,
-  FileCheck,
-  Gamepad,
   Heart,
   Home,
   IndianRupee,
   Layers,
   Leaf,
-  MapIcon,
   MapPin,
-  Navigation,
+  Phone,
+  Receipt,
   Share2,
   ShieldCheck,
+  Tag,
   Trash2,
   Trees,
   TrendingUp,
-  Waves,
   X,
   Zap,
+  CalendarCheck,
 } from 'lucide-react-native';
 import {PropertyIntro} from '../components/PropertyDetails/PropertyIntro';
 import LinearGradient from 'react-native-linear-gradient';
@@ -61,7 +62,6 @@ import {useNavigation, useRoute} from '@react-navigation/native';
 import {useSelector} from 'react-redux';
 import {formatIndianAmount} from '../utils/formatIndianAmount';
 import HomeLoan from '../components/home/HomeLoan';
-import ProjectStatusBar from '../components/PropertyDetails/projectStatusBar';
 import PropertyUploadModal from '../components/property/PropertyBookModal';
 import PriceSummaryDrawer from '../components/property/PriceSummaryDrawer';
 import PropertyVideoModal from '../components/PropertyDetails/VideoModel';
@@ -73,6 +73,49 @@ const {width} = Dimensions.get('window');
 const isTablet = width >= 768;
 const TABS = ['Highlights', 'Overview', 'Amenities', 'About', 'Location'];
 const BASE_URL = 'https://aws-api.reparv.in/customerapp';
+
+const AVAILABILITY_CATEGORIES = [
+  'NewPlot',
+  'NewFlat',
+  'RentalFlat',
+  'RentalPlot',
+];
+
+const THUMBNAIL_CATEGORIES = [
+  {key: 'frontView', label: 'Front View'},
+  {key: 'sideView', label: 'Side View'},
+  {key: 'balconyView', label: 'Balcony View'},
+  {key: 'bedroomView', label: 'Bedroom View'},
+  {key: 'bathroomView', label: 'Bathroom View'},
+  {key: 'kitchenView', label: 'Kitchen View'},
+  {key: 'hallView', label: 'Hall View'},
+  {key: 'nearestLandmark', label: 'Landmark'},
+  {key: 'developedAmenities', label: 'Amenities'},
+];
+
+const ALL_CATEGORY_KEYS = [
+  'frontView',
+  'sideView',
+  'balconyView',
+  'bedroomView',
+  'bathroomView',
+  'kitchenView',
+  'hallView',
+  'nearestLandmark',
+  'developedAmenities',
+];
+
+// ─── HELPERS ──────────────────────────────────────────────────────────────────
+const safeParseImages = raw => {
+  try {
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr : [];
+  } catch {
+    return [];
+  }
+};
+
+const safeTrim = str => (str ? str.trim() : '');
 
 // ─── SKELETON BOX ─────────────────────────────────────────────────────────────
 const SkeletonBox = ({width: w, height: h, style = {}, borderRadius = 8}) => {
@@ -119,88 +162,45 @@ const SkeletonBox = ({width: w, height: h, style = {}, borderRadius = 8}) => {
 };
 
 // ─── SKELETON SCREEN ──────────────────────────────────────────────────────────
-const PropertyDetailsSkeleton = () => {
-  return (
-    <SafeAreaView style={{flex: 1, backgroundColor: '#F7F7F7'}}>
-      <SkeletonBox width={width} height={250} borderRadius={0} />
-      <View style={{flexDirection: 'row', gap: 10, padding: 12, marginTop: 8}}>
-        {[1, 2, 3, 4].map(i => (
-          <SkeletonBox key={i} width={100} height={71} borderRadius={8} />
+const PropertyDetailsSkeleton = () => (
+  <SafeAreaView style={{flex: 1, backgroundColor: '#F7F7F7'}}>
+    <SkeletonBox width={width} height={250} borderRadius={0} />
+    <View style={{flexDirection: 'row', gap: 10, padding: 12, marginTop: 8}}>
+      {[1, 2, 3].map(i => (
+        <SkeletonBox key={i} width={120} height={62} borderRadius={14} />
+      ))}
+    </View>
+    <View
+      style={{
+        backgroundColor: '#FFF',
+        margin: 12,
+        borderRadius: 20,
+        padding: 16,
+        gap: 14,
+        elevation: 2,
+      }}>
+      <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
+        <SkeletonBox width="60%" height={28} borderRadius={6} />
+        <SkeletonBox width={110} height={48} borderRadius={12} />
+      </View>
+      <SkeletonBox width="50%" height={18} borderRadius={6} />
+      <SkeletonBox width="70%" height={16} borderRadius={6} />
+      <View style={{flexDirection: 'row', gap: 10}}>
+        {[1, 2, 3].map(i => (
+          <SkeletonBox
+            key={i}
+            width={(width - 68) / 3}
+            height={80}
+            borderRadius={14}
+          />
         ))}
       </View>
-      <View
-        style={{
-          backgroundColor: '#FFF',
-          margin: 12,
-          borderRadius: 12,
-          padding: 16,
-          gap: 12,
-          elevation: 2,
-        }}>
-        <SkeletonBox width="80%" height={22} borderRadius={6} />
-        <SkeletonBox width="50%" height={16} borderRadius={6} />
-        <View style={{flexDirection: 'row', gap: 10, marginTop: 4}}>
-          <SkeletonBox width={110} height={34} borderRadius={20} />
-          <SkeletonBox width={110} height={34} borderRadius={20} />
-        </View>
-        <View style={{flexDirection: 'row', gap: 8, marginTop: 8}}>
-          <SkeletonBox width={14} height={18} borderRadius={4} />
-          <View style={{gap: 6, flex: 1}}>
-            <SkeletonBox width="70%" height={14} borderRadius={4} />
-            <SkeletonBox width="55%" height={12} borderRadius={4} />
-          </View>
-        </View>
-        <View
-          style={{height: 1, backgroundColor: '#E5E5E5', marginVertical: 4}}
-        />
-        <SkeletonBox width="45%" height={28} borderRadius={6} />
-        <SkeletonBox width="35%" height={16} borderRadius={6} />
-        <View
-          style={{height: 1, backgroundColor: '#E5E5E5', marginVertical: 4}}
-        />
-        <View
-          style={{
-            backgroundColor: '#F9F9F9',
-            borderRadius: 12,
-            padding: 14,
-            gap: 12,
-          }}>
-          <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
-            <View style={{gap: 6}}>
-              <SkeletonBox width={90} height={12} borderRadius={4} />
-              <SkeletonBox width={130} height={22} borderRadius={4} />
-            </View>
-            <SkeletonBox width={130} height={38} borderRadius={12} />
-          </View>
-          <View style={{height: 1, backgroundColor: '#E5E5E5'}} />
-          <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
-            <View style={{gap: 6}}>
-              <SkeletonBox width={130} height={22} borderRadius={4} />
-              <SkeletonBox width={90} height={12} borderRadius={4} />
-            </View>
-            <SkeletonBox width={130} height={38} borderRadius={12} />
-          </View>
-        </View>
-        <View style={{flexDirection: 'row', gap: 12, marginTop: 4}}>
-          <SkeletonBox width="48%" height={48} borderRadius={10} />
-          <SkeletonBox width="48%" height={48} borderRadius={10} />
-        </View>
-        <SkeletonBox
-          width="100%"
-          height={50}
-          borderRadius={12}
-          style={{marginTop: 4}}
-        />
-        <SkeletonBox
-          width="60%"
-          height={14}
-          borderRadius={4}
-          style={{alignSelf: 'center'}}
-        />
-      </View>
-    </SafeAreaView>
-  );
-};
+      <SkeletonBox width="100%" height={140} borderRadius={18} />
+      <SkeletonBox width="100%" height={68} borderRadius={14} />
+      <SkeletonBox width="100%" height={68} borderRadius={14} />
+    </View>
+  </SafeAreaView>
+);
 
 // ─── ZOOM IMAGE MODAL ─────────────────────────────────────────────────────────
 const ZoomImageModal = ({visible, images, initialIndex, onClose}) => {
@@ -209,12 +209,10 @@ const ZoomImageModal = ({visible, images, initialIndex, onClose}) => {
   const {width: w, height: h} = Dimensions.get('window');
 
   useEffect(() => {
-    if (images.length === 0) return;
-    if (visible && flatRef.current) {
-      setTimeout(() => {
-        flatRef.current?.scrollToIndex({index: initialIndex, animated: false});
-      }, 100);
-    }
+    if (!visible || images.length === 0) return;
+    setTimeout(() => {
+      flatRef.current?.scrollToIndex({index: initialIndex, animated: false});
+    }, 100);
     setCurrentIdx(initialIndex);
   }, [visible, initialIndex]);
 
@@ -244,8 +242,7 @@ const ZoomImageModal = ({visible, images, initialIndex, onClose}) => {
           initialScrollIndex={initialIndex}
           getItemLayout={(_, index) => ({length: w, offset: w * index, index})}
           onMomentumScrollEnd={e => {
-            const idx = Math.round(e.nativeEvent.contentOffset.x / w);
-            setCurrentIdx(idx);
+            setCurrentIdx(Math.round(e.nativeEvent.contentOffset.x / w));
           }}
           renderItem={({item}) => (
             <ScrollView
@@ -269,7 +266,7 @@ const ZoomImageModal = ({visible, images, initialIndex, onClose}) => {
   );
 };
 
-// ─── REMOVE WISHLIST CONFIRM MODAL ────────────────────────────────────────────
+// ─── REMOVE WISHLIST MODAL ────────────────────────────────────────────────────
 const RemoveWishlistModal = ({
   visible,
   onCancel,
@@ -309,43 +306,34 @@ const RemoveWishlistModal = ({
       statusBarTranslucent
       onRequestClose={!loading ? onCancel : undefined}>
       <Animated.View style={[removeStyles.backdrop, {opacity: opacityAnim}]}>
-        {/* tap-outside to dismiss */}
         <TouchableOpacity
           style={StyleSheet.absoluteFill}
           activeOpacity={1}
           onPress={!loading ? onCancel : undefined}
         />
-
         <Animated.View
           style={[
             removeStyles.card,
             {transform: [{scale: scaleAnim}], opacity: opacityAnim},
           ]}>
-          {/* ✕ Close */}
           {!loading && (
             <TouchableOpacity style={removeStyles.closeBtn} onPress={onCancel}>
               <X size={16} color="#9CA3AF" />
             </TouchableOpacity>
           )}
-
-          {/* Icon rings */}
           <View style={removeStyles.iconOuter}>
             <View style={removeStyles.iconInner}>
               <Heart size={30} color="#EF4444" fill="#EF4444" />
             </View>
           </View>
-
           <Text style={removeStyles.title}>Remove from Wishlist?</Text>
           <Text style={removeStyles.subtitle}>
             {propertyName
               ? `"${propertyName}" will be removed\nfrom your saved properties.`
               : 'This property will be removed\nfrom your saved properties.'}
           </Text>
-
           <View style={removeStyles.divider} />
-
           <View style={removeStyles.btnRow}>
-            {/* Keep it */}
             <TouchableOpacity
               activeOpacity={0.75}
               disabled={loading}
@@ -353,8 +341,6 @@ const RemoveWishlistModal = ({
               style={removeStyles.cancelBtn}>
               <Text style={removeStyles.cancelText}>Keep it</Text>
             </TouchableOpacity>
-
-            {/* Remove */}
             <TouchableOpacity
               activeOpacity={0.8}
               disabled={loading}
@@ -379,41 +365,36 @@ const RemoveWishlistModal = ({
 // ─── MAIN SCREEN ──────────────────────────────────────────────────────────────
 const PropertyDetailsScreen = () => {
   const route = useRoute();
+  const navigation = useNavigation();
   const {token, user} = useSelector(state => state.auth);
+  const {seoSlug} = route.params || {};
+
   const [activeTab, setActiveTab] = useState('Highlights');
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [activeImage, setActiveImage] = useState();
+  const [activeCategory, setActiveCategory] = useState('frontView');
   const [propertyData, setPropertyData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const [open, setOpen] = useState(false);
-  const [showDrawer, setshowDrawer] = useState(false);
-  const [data, setData] = useState([]);
+  const [showDrawer, setShowDrawer] = useState(false);
+  const [plotData, setPlotData] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
-  const mainImageRef = useRef(null);
-  const thumbnailRef = useRef(null);
-  const cardScrollRef = useRef(null);
-  const navigation = useNavigation();
-  const [zoomVisible, setZoomVisible] = useState(false);
-  const [zoomIndex, setZoomIndex] = useState(0);
-  const {seoSlug} = route.params || {};
-  const [selectedImage, setImages] = useState([]);
+  const [selectedImages, setSelectedImages] = useState([]);
   const [videoModel, setVideoModel] = useState(false);
-
-  // ── Wishlist remove modal state ───────────────────────────────────────────────
   const [removeModalVisible, setRemoveModalVisible] = useState(false);
   const [removing, setRemoving] = useState(false);
+  const [zoomVisible, setZoomVisible] = useState(false);
+  const [zoomIndex, setZoomIndex] = useState(0);
 
-  // ── Guard ────────────────────────────────────────────────────────────────────
-  if (seoSlug === '' || seoSlug === null) {
-    navigation.goBack();
-  }
+  const mainImageRef = useRef(null);
+  const cardScrollRef = useRef(null);
 
+  // ── Guard: seoSlug required ────────────────────────────────────────────────
   useEffect(() => {
     if (!seoSlug) navigation.goBack();
   }, [seoSlug]);
 
-  // ── Fetch property ────────────────────────────────────────────────────────────
+  // ── Fetch property data ────────────────────────────────────────────────────
   useEffect(() => {
     if (!seoSlug) return;
     const fetchPropertyData = async () => {
@@ -433,7 +414,7 @@ const PropertyDetailsScreen = () => {
     fetchPropertyData();
   }, [seoSlug]);
 
-  // ── Check wishlist status when propertyData loads ─────────────────────────────
+  // ── Check wishlist status ──────────────────────────────────────────────────
   useEffect(() => {
     if (!propertyData?.propertyid || !user?.id) return;
     const checkWishlist = async () => {
@@ -441,10 +422,9 @@ const PropertyDetailsScreen = () => {
         const res = await fetch(`${BASE_URL}/property/get-wishlist/${user.id}`);
         const json = await res.json();
         const list = json?.data || [];
-        const exists = list.some(
-          item => item?.propertyid === propertyData.propertyid,
+        setIsLiked(
+          list.some(item => item?.propertyid === propertyData.propertyid),
         );
-        setIsLiked(exists);
       } catch (err) {
         console.log('Wishlist check error:', err);
       }
@@ -452,169 +432,101 @@ const PropertyDetailsScreen = () => {
     checkWishlist();
   }, [propertyData?.propertyid, user?.id]);
 
-  // ── Add visit ─────────────────────────────────────────────────────────────────
+  // ── Track visit ───────────────────────────────────────────────────────────
   useEffect(() => {
-    if (!propertyData) return;
-    const addVisit = async () => {
-      try {
-        await fetch('https://aws-api.reparv.in/customerapp/enquiry/addvisits', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({propertyid: propertyData.propertyid}),
-        });
-      } catch (error) {
-        console.log('Add visit error:', error);
-      }
-    };
-    addVisit();
-  }, [propertyData]);
+    if (!propertyData?.propertyid) return;
+    fetch('https://aws-api.reparv.in/customerapp/enquiry/addvisits', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({propertyid: propertyData.propertyid}),
+    }).catch(err => console.log('Add visit error:', err));
+  }, [propertyData?.propertyid]);
 
-  // ── Sync images when seoSlug changes ─────────────────────────────────────────
+  // ── Reset images when slug changes ────────────────────────────────────────
   useEffect(() => {
-    setImages(() => {
-      const rawValue = propertyData?.['frontView'];
-      return rawValue ? JSON.parse(rawValue) : [];
-    });
+    setSelectedImages([]);
+    setActiveCategory('frontView');
     setCurrentIndex(0);
     cardScrollRef.current?.scrollTo({y: 0, animated: true});
   }, [seoSlug]);
 
-  // ── Fetch plot/flat data ──────────────────────────────────────────────────────
+  // ── Fetch plot / flat availability data ───────────────────────────────────
   useEffect(() => {
-    fetchPlotData();
-  }, [propertyData]);
-
-  const fetchPlotData = async () => {
     if (!propertyData?.propertyid) return;
-    try {
-      const isNewFlat = propertyData?.propertyCategory === 'NewFlat';
-      const url = isNewFlat
-        ? `https://aws-api.reparv.in/frontend/properties/additionalinfo/flat/get/all/${propertyData?.propertyid}`
-        : `https://aws-api.reparv.in/frontend/properties/additionalinfo/plot/get/all/${propertyData?.propertyid}`;
-      const response = await fetch(url);
-      const json = await response.json();
-      setData(json);
-    } catch (error) {
-      console.error('Fetch Plot Data Error:', error);
-    }
-  };
+    const fetchPlotData = async () => {
+      try {
+        const isNewFlat = propertyData?.propertyCategory === 'NewFlat';
+        const url = isNewFlat
+          ? `https://aws-api.reparv.in/frontend/properties/additionalinfo/flat/get/all/${propertyData.propertyid}`
+          : `https://aws-api.reparv.in/frontend/properties/additionalinfo/plot/get/all/${propertyData.propertyid}`;
+        const response = await fetch(url);
+        const json = await response.json();
+        setPlotData(json);
+      } catch (error) {
+        console.error('Fetch Plot Data Error:', error);
+      }
+    };
+    fetchPlotData();
+  }, [propertyData?.propertyid]);
 
-  // ── Helpers ───────────────────────────────────────────────────────────────────
-  const safeParse = str => {
-    try {
-      const arr = JSON.parse(str);
-      return Array.isArray(arr) ? arr[0] : null;
-    } catch {
-      return null;
-    }
-  };
+  // ── Derived data ──────────────────────────────────────────────────────────
+  const allHeroImages = ALL_CATEGORY_KEYS.flatMap(key =>
+    safeParseImages(propertyData?.[key]),
+  );
 
-  const parsedFrontView = (() => {
-    try {
-      return JSON.parse(propertyData?.frontView || '[]');
-    } catch {
-      return [];
-    }
-  })();
-
-  const allCategoryKeys = [
-    'frontView',
-    'sideView',
-    'balconyView',
-    'bedroomView',
-    'bathroomView',
-    'kitchenView',
-    'hallView',
-    'nearestLandmark',
-    'developedAmenities',
-  ];
-
-  const allHeroImages = allCategoryKeys.flatMap(key => {
-    try {
-      const raw = propertyData?.[key];
-      return raw ? JSON.parse(raw) : [];
-    } catch {
-      return [];
-    }
-  });
-
-  const heroImages = selectedImage?.length > 0 ? selectedImage : allHeroImages;
+  // FIX: when a category is selected show only those images; otherwise show all
+  const heroImages = selectedImages.length > 0 ? selectedImages : allHeroImages;
   const zoomImages = heroImages.map(img => ({uri: getImageUri(img)}));
 
-  // ── Share helpers ─────────────────────────────────────────────────────────────
-  const buildPropertyShareText = data => {
+  const savings =
+    (propertyData?.totalSalesPrice || 0) - (propertyData?.totalOfferPrice || 0);
+
+  const showAvailability = AVAILABILITY_CATEGORIES.includes(
+    propertyData?.propertyCategory,
+  );
+
+  const isRental = [
+    'RentalOffice',
+    'RentalFlat',
+    'RentalPlot',
+    'RentalShop',
+  ].includes(propertyData?.propertyCategory);
+
+  // ── Share ─────────────────────────────────────────────────────────────────
+  const buildShareText = data => {
     if (!data) return '';
     const price = data?.totalOfferPrice || data?.totalSalesPrice;
     const formattedPrice = price
       ? `₹${Number(price).toLocaleString('en-IN')}`
       : 'Price on Request';
-    return `🏡 *Property for Sale on Reparv*
-
-*${data?.propertyName || 'Premium Residential Property'}*
-
-📍 *Location:* ${data?.location ? `${data.location}, ${data.city}` : 'N/A'}
-
-💰 *Price:* ${formattedPrice}
-
-✨ *Key Highlights:*
-• ${data?.propertyCategory || 'Residential'}
-• ${data?.furnishing || 'Well maintained'}
-• ${data?.propertyFacing || 'Good ventilation'}
-
-🔗 *View complete details, photos & book a site visit*
-https://www.reparv.in/property-info/${data?.seoSlug}
-
-📞 *Interested? Enquire now before it's gone!*`;
+    return (
+      `🏡 *Property for Sale on Reparv*\n\n*${
+        data?.propertyName || 'Premium Residential Property'
+      }*\n\n` +
+      `📍 *Location:* ${
+        data?.location ? `${data.location}, ${data.city}` : 'N/A'
+      }\n\n` +
+      `💰 *Price:* ${formattedPrice}\n\n` +
+      `🔗 https://www.reparv.in/property-info/${data?.seoSlug}`
+    );
   };
 
   const onShareProperty = async () => {
     try {
-      await Share.share({message: buildPropertyShareText(propertyData)});
+      await Share.share({message: buildShareText(propertyData)});
     } catch (error) {
       console.warn('Error sharing property', error);
     }
   };
 
-  const onWhatsAppProperty = async () => {
-    try {
-      const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(
-        buildPropertyShareText(propertyData),
-      )}`;
-      await Linking.openURL(url);
-    } catch {
-      Alert.alert(
-        'WhatsApp Not Available',
-        'Please install or update WhatsApp.',
-      );
-    }
-  };
-
+  // ── WhatsApp enquiry ──────────────────────────────────────────────────────
   const sendHelloOnWhatsApp = async () => {
     const phoneNumber = propertyData?.projectPartnerContact || '918010881965';
-    const message = `Hello,
-
-You have received a new property enquiry. Please find the details below:
-
-━━━━━━━━━━━━━━━━━━
-📌 *Property Enquiry Details*
-━━━━━━━━━━━━━━━━━━
-
-👤 *Client Name:* ${user?.fullname}
-📞 *Contact Number:* ${user?.contact}
-
-🏠 *Property Type:* ${propertyData?.propertyCategory}
-📍 *Location:* ${propertyData?.address}, ${propertyData?.city}, ${propertyData?.state} – ${propertyData?.pincode}
-💰 *Budget:* ₹${propertyData?.totalOfferPrice}
-
-🔗 *Property Details:*
-https://www.reparv.in/property-info/${seoSlug}
-
-━━━━━━━━━━━━━━━━━━
-
-Kindly reach out to the client at your earliest convenience.
-
-Best regards,
-*Reparv Team*`;
+    const message =
+      `Hello,\n\nNew property enquiry:\n\n👤 *Client:* ${user?.fullname}\n` +
+      `📞 *Contact:* ${user?.contact}\n🏠 *Property:* ${propertyData?.propertyCategory}\n` +
+      `📍 ${propertyData?.address}, ${propertyData?.city}\n💰 ₹${propertyData?.totalOfferPrice}\n\n` +
+      `https://www.reparv.in/property-info/${seoSlug}\n\nBest regards,\n*Reparv Team*`;
     try {
       await Linking.openURL(
         `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`,
@@ -624,17 +536,12 @@ Best regards,
     }
   };
 
-  // ── Heart button handler ──────────────────────────────────────────────────────
-  // If already liked → open remove confirmation modal
-  // If not liked → add to wishlist
+  // ── Wishlist ──────────────────────────────────────────────────────────────
   const handleLikePress = async () => {
     if (isLiked) {
-      // Open confirmation modal to remove
       setRemoveModalVisible(true);
       return;
     }
-
-    // Add to wishlist
     try {
       const response = await fetch(`${BASE_URL}/property/add-wishlist`, {
         method: 'POST',
@@ -647,12 +554,11 @@ Best regards,
       const data = await response.json();
       setIsLiked(true);
       ToastAndroid.show(`${data?.message}`, ToastAndroid.LONG);
-    } catch (err) {
+    } catch {
       ToastAndroid.show('Error Adding Property in Wishlist', ToastAndroid.LONG);
     }
   };
 
-  // ── Remove from wishlist (after confirmation) ─────────────────────────────────
   const confirmRemoveWishlist = async () => {
     if (!user?.id || !propertyData?.propertyid) return;
     setRemoving(true);
@@ -669,8 +575,7 @@ Best regards,
       } else {
         ToastAndroid.show('Failed to remove. Try again.', ToastAndroid.SHORT);
       }
-    } catch (err) {
-      console.error('Remove wishlist error:', err);
+    } catch {
       ToastAndroid.show('Something went wrong.', ToastAndroid.SHORT);
     } finally {
       setRemoving(false);
@@ -682,7 +587,7 @@ Best regards,
     setRemoveModalVisible(false);
   };
 
-  // ── Data maps ─────────────────────────────────────────────────────────────────
+  // ── Prop shapes for tab components ────────────────────────────────────────
   const propertyFeatures = {
     plotType: propertyData?.propertyType,
     area: propertyData?.sizeAreaFeature
@@ -691,7 +596,7 @@ Best regards,
     facing: propertyData?.propertyFacing,
     furnishingFeature: propertyData?.furnishing,
     status: propertyData?.propertyStatusFeature,
-    approval: propertyData?.propertyApprovedBy?.trim(),
+    approval: safeTrim(propertyData?.propertyApprovedBy),
     parking:
       propertyData?.parkingAvailability === 'Yes'
         ? 'Parking Available'
@@ -764,24 +669,13 @@ Best regards,
   const property = {
     title: propertyData?.propertyName,
     location: `${propertyData?.city}, ${propertyData?.state} - ${propertyData?.pincode}`,
-    images: [
-      safeParse(propertyData?.frontView),
-      safeParse(propertyData?.sideView),
-      safeParse(propertyData?.hallView),
-      safeParse(propertyData?.kitchenView),
-      safeParse(propertyData?.bedroomView),
-      safeParse(propertyData?.nearestLandmark),
-      safeParse(propertyData?.developedAmenities),
-    ],
     videoLink: propertyData?.videoLink,
   };
 
-  // ── Skeleton ──────────────────────────────────────────────────────────────────
-  if (loading) {
-    return <PropertyDetailsSkeleton />;
-  }
+  // ── Loading state ─────────────────────────────────────────────────────────
+  if (loading) return <PropertyDetailsSkeleton />;
 
-  // ── Render ────────────────────────────────────────────────────────────────────
+  // ─── RENDER ───────────────────────────────────────────────────────────────
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar
@@ -791,9 +685,8 @@ Best regards,
       />
       <View style={styles.container}>
         <ScrollView ref={cardScrollRef} showsVerticalScrollIndicator={false}>
-          {/* ── IMAGE SECTION ────────────────────────────────────────────────── */}
+          {/* ── HERO IMAGE SECTION ────────────────────────────────────────── */}
           <View style={styles.imageWrapper}>
-            {/* Back Button */}
             <TouchableOpacity
               style={styles.backButton}
               onPress={() => navigation.goBack()}>
@@ -808,7 +701,6 @@ Best regards,
               </Svg>
             </TouchableOpacity>
 
-            {/* ── Swipeable Hero FlatList ── */}
             {heroImages.length > 0 ? (
               <ScrollView
                 ref={mainImageRef}
@@ -816,10 +708,11 @@ Best regards,
                 pagingEnabled
                 showsHorizontalScrollIndicator={false}
                 scrollEventThrottle={16}
-                onScroll={e => {
-                  const idx = Math.round(e.nativeEvent.contentOffset.x / width);
-                  setCurrentIndex(idx);
-                }}>
+                onScroll={e =>
+                  setCurrentIndex(
+                    Math.round(e.nativeEvent.contentOffset.x / width),
+                  )
+                }>
                 {heroImages.map((item, index) => (
                   <TouchableOpacity
                     key={index}
@@ -855,7 +748,6 @@ Best regards,
               </TouchableOpacity>
             )}
 
-            {/* ── Dot Indicators ── */}
             {heroImages.length > 1 && (
               <View style={styles.dotsRow}>
                 {heroImages.map((_, i) => (
@@ -867,7 +759,6 @@ Best regards,
               </View>
             )}
 
-            {/* ── Hero Nav Arrows ── */}
             {heroImages.length > 1 && (
               <>
                 <TouchableOpacity
@@ -882,7 +773,6 @@ Best regards,
                   }}>
                   <ChevronLeft size={20} color="#fff" />
                 </TouchableOpacity>
-
                 <TouchableOpacity
                   style={[styles.heroArrowBtn, styles.heroArrowRight]}
                   onPress={() => {
@@ -901,7 +791,6 @@ Best regards,
               </>
             )}
 
-            {/* ── Counter Pill ── */}
             {heroImages.length > 1 && (
               <View style={styles.counterPill}>
                 <Text style={styles.counterText}>
@@ -910,7 +799,6 @@ Best regards,
               </View>
             )}
 
-            {/* Like & Share */}
             <View style={styles.imageActions}>
               <TouchableOpacity
                 style={styles.iconBtn}
@@ -928,7 +816,6 @@ Best regards,
               </TouchableOpacity>
             </View>
 
-            {/* Property Video Overlay */}
             {propertyData?.videoLink && (
               <TouchableOpacity
                 style={styles.videoWrapper}
@@ -940,7 +827,7 @@ Best regards,
                 />
                 <LinearGradient
                   colors={['rgba(0,0,0,0)', 'rgba(94,35,220,0.76)']}
-                  locations={[0, 0.6819]}
+                  locations={[0, 0.68]}
                   style={styles.videoGradient}
                 />
                 <View style={styles.playButton}>
@@ -962,224 +849,339 @@ Best regards,
             )}
           </View>
 
-          {/* ── THUMBNAILS ──────────────────────────────────────────────────── */}
-          <View style={styles.thumbnailWrapper}>
-            <TouchableOpacity
-              style={[styles.arrowBtn, styles.leftArrow]}
-              onPress={() =>
-                thumbnailRef.current?.scrollTo({x: 0, animated: true})
-              }>
-              <ChevronLeft size={16} style={styles.arrowText} />
-            </TouchableOpacity>
+          {/* ── THUMBNAIL PILLS ───────────────────────────────────────────── */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={thumbStyles.scrollContent}>
+            {THUMBNAIL_CATEGORIES.map(({key, label}) => {
+              const imagesArray = safeParseImages(propertyData?.[key]);
+              if (imagesArray.length === 0) return null;
 
-            <ScrollView
-              ref={thumbnailRef}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.thumbnailRow}
-              contentContainerStyle={{paddingHorizontal: 12}}>
-              {[
-                {key: 'frontView', label: 'Front View'},
-                {key: 'sideView', label: 'Side View'},
-                {key: 'balconyView', label: 'Balcony View'},
-                {key: 'bedroomView', label: 'Bedroom View'},
-                {key: 'bathroomView', label: 'Bathroom View'},
-                {key: 'kitchenView', label: 'Kitchen View'},
-                {key: 'hallView', label: 'Hall View'},
-                {key: 'nearestLandmark', label: 'Landmark'},
-                {key: 'developedAmenities', label: 'Amenities'},
-              ].map(({key, label}) => {
-                const rawValue = propertyData?.[key];
-                let imagesArray = [];
-                try {
-                  imagesArray = rawValue ? JSON.parse(rawValue) : [];
-                } catch {
-                  imagesArray = [];
-                }
-                if (imagesArray.length === 0) return null;
-                const thumbnail = imagesArray[0];
+              const isActive = activeCategory === key;
 
-                return (
-                  <TouchableOpacity
-                    key={key}
-                    onPress={() => {
-                      setActiveImage(thumbnail);
-                      const globalIdx = allHeroImages.findIndex(
-                        img => img === imagesArray[0],
-                      );
-                      const targetIdx = globalIdx >= 0 ? globalIdx : 0;
-                      setCurrentIndex(targetIdx);
-                      mainImageRef.current?.scrollTo({
-                        x: targetIdx * width,
-                        animated: true,
-                      });
-                    }}
+              return (
+                <TouchableOpacity
+                  key={key}
+                  activeOpacity={0.85}
+                  // FIX: always reset to index 0 when switching category
+                  // so the hero scroll never references an out-of-range offset
+                  onPress={() => {
+                    setActiveCategory(key);
+                    const globalIdx = allHeroImages.findIndex(
+                      img => img === imagesArray[0],
+                    );
+                    const targetIdx = globalIdx >= 0 ? globalIdx : 0;
+                    setCurrentIndex(targetIdx);
+                    mainImageRef.current?.scrollTo({
+                      x: targetIdx * width,
+                      animated: true,
+                    });
+                  }}
+                  style={[
+                    thumbStyles.pill,
+                    isActive && thumbStyles.activePill,
+                  ]}>
+                  <Image
+                    source={{uri: getImageUri(imagesArray[0])}}
                     style={[
-                      styles.thumbnailBox,
-                      activeImage === thumbnail && styles.activeThumb,
-                    ]}>
-                    <Image
-                      source={{uri: getImageUri(thumbnail)}}
-                      style={styles.thumbnail}
-                    />
-                    <View style={styles.thumbLabel}>
-                      <Text style={styles.thumbLabelText} numberOfLines={1}>
-                        {label}
+                      thumbStyles.pillImage,
+                      isActive && thumbStyles.activePillImage,
+                    ]}
+                  />
+                  <Text
+                    style={[
+                      thumbStyles.pillText,
+                      isActive && thumbStyles.activePillText,
+                    ]}
+                    numberOfLines={1}>
+                    {label}
+                  </Text>
+                  {isActive && imagesArray.length > 1 && (
+                    <View style={thumbStyles.countBadge}>
+                      <Text style={thumbStyles.countBadgeText}>
+                        {imagesArray.length}
                       </Text>
                     </View>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
 
-            <TouchableOpacity
-              style={[styles.arrowBtn, styles.rightArrow]}
-              onPress={() =>
-                thumbnailRef.current?.scrollToEnd({animated: true})
-              }>
-              <ChevronRight size={16} style={styles.arrowText} />
-            </TouchableOpacity>
-          </View>
+          {/* ── PROPERTY INFO CARD ────────────────────────────────────────── */}
+          <View style={cardStyles.card}>
+            {/* Title + Approval Badge */}
+            <View style={cardStyles.titleRow}>
+              <Text style={cardStyles.propertyName} numberOfLines={2}>
+                {propertyData?.propertyName}
+              </Text>
+              {/* FIX: null-check before rendering badge and calling trim() */}
+              {propertyData?.propertyApprovedBy ? (
+                <View style={cardStyles.nmrdaBadge}>
+                  <View style={cardStyles.nmrdaIconBox}>
+                    <ClipboardList size={18} color="#6D28D9" strokeWidth={2} />
+                  </View>
+                  <View style={cardStyles.nmrdaTextCol}>
+                    <Text style={cardStyles.nmrdaTopText}>
+                      {safeTrim(propertyData.propertyApprovedBy) || 'NMRDA'}
+                    </Text>
+                    <Text style={cardStyles.nmrdaBottomText}>APPROVED</Text>
+                  </View>
+                </View>
+              ) : null}
+            </View>
 
-          {/* ── PROPERTY INFO CARD ───────────────────────────────────────────── */}
-          <View style={styles.card}>
-            <Text style={[styles.title, {paddingHorizontal: 6}]}>
-              {propertyData?.propertyName}
+            {/* Project By */}
+            <Text style={cardStyles.projectByText}>
+              Project by{' '}
+              <Text style={cardStyles.projectByName}>
+                {propertyData?.projectBy}
+              </Text>
             </Text>
-            <ProjectStatusBar
-              projectBy={propertyData?.projectBy}
-              availableCount={propertyData?.availableCount}
-              bookedCount={propertyData?.bookedCount}
-            />
 
-            {/* Badges */}
-            <View style={styles.badgeRow}>
-              <View style={styles.badge}>
-                <FileCheck size={16} color="#8A38F5" />
-                <Text style={styles.badgeText}>
-                  {propertyData?.propertyApprovedBy} Approved
-                </Text>
-              </View>
-              <View style={styles.badge}>
-                <Navigation size={16} color="#8A38F5" />
-                <Text style={styles.badgeText}>
-                  {propertyData?.distanceFromCityCenter} km from City
-                </Text>
-              </View>
-              <View style={styles.badge}>
-                <BadgeCheck size={16} color="#8A38F5" />
-                <Text style={styles.badgeText}>Assured Quality</Text>
-              </View>
-            </View>
-
-            {/* Location */}
-            <View style={styles.locationRow}>
-              <Svg width="14" height="18" viewBox="0 0 12 17" fill="none">
-                <Path
-                  d="M2.04 10.98C2.23096 10.9243 2.43622 10.9467 2.61062 11.0424C2.78503 11.138 2.9143 11.299 2.97 11.49C3.0257 11.681 3.00325 11.8862 2.90761 12.0606C2.81197 12.235 2.65096 12.3643 2.46 12.42C2.085 12.5295 1.815 12.645 1.64175 12.75C1.82025 12.8573 2.10225 12.9773 2.49375 13.089C3.36 13.3365 4.59975 13.5 6 13.5C7.40025 13.5 8.64 13.3365 9.50625 13.089C9.8985 12.9773 10.1797 12.8573 10.3582 12.75C10.1858 12.645 9.91575 12.5295 9.54075 12.42C9.3528 12.3619 9.19522 12.2322 9.10199 12.0589C9.00875 11.8857 8.98732 11.6827 9.04232 11.4939C9.09731 11.305 9.22433 11.1452 9.39599 11.0491C9.56765 10.953 9.77021 10.9282 9.96 10.98C10.461 11.1262 10.92 11.3138 11.2725 11.5545C11.5987 11.7788 12 12.1695 12 12.75C12 13.3372 11.589 13.731 11.2575 13.9552C10.899 14.1968 10.4303 14.385 9.918 14.5312C8.8845 14.8275 7.5 15 6 15C4.5 15 3.1155 14.8275 2.082 14.5312C1.56975 14.385 1.101 14.1968 0.7425 13.9552C0.411 13.7303 0 13.3372 0 12.75C0 12.1695 0.40125 11.7788 0.7275 11.5545C1.08 11.3138 1.539 11.1262 2.04 10.98ZM6 0C7.49184 0 8.92258 0.592632 9.97748 1.64752C11.0324 2.70242 11.625 4.13316 11.625 5.625C11.625 7.551 10.575 9.117 9.4875 10.23C9.0552 10.6679 8.59065 11.0728 8.09775 11.4412C7.65225 11.7757 6.63375 12.4028 6.63375 12.4028C6.44058 12.5125 6.22219 12.5703 6 12.5703C5.7778 12.5703 5.55942 12.5125 5.36625 12.4028C4.86079 12.1097 4.37204 11.7887 3.90225 11.4412C3.40863 11.0737 2.94401 10.6688 2.5125 10.23C1.425 9.117 0.375 7.551 0.375 5.625C0.375 4.13316 0.967632 2.70242 2.02252 1.64752C3.07742 0.592632 4.50816 0 6 0ZM6 1.5C4.90598 1.5 3.85677 1.9346 3.08318 2.70818C2.3096 3.48177 1.875 4.53098 1.875 5.625C1.875 6.987 2.622 8.196 3.585 9.18C4.3095 9.921 5.1075 10.485 5.66025 10.8315L6 11.037L6.33975 10.8315C6.89175 10.485 7.6905 9.921 8.415 9.18075C9.378 8.196 10.125 6.98775 10.125 5.625C10.125 4.53098 9.6904 3.48177 8.91681 2.70818C8.14323 1.9346 7.09402 1.5 6 1.5ZM6 3.375C6.29547 3.375 6.58805 3.4332 6.86104 3.54627C7.13402 3.65934 7.38206 3.82508 7.59099 4.03401C7.79992 4.24294 7.96566 4.49098 8.07873 4.76396C8.1918 5.03694 8.25 5.32953 8.25 5.625C8.25 5.92047 8.1918 6.21306 8.07873 6.48604C7.96566 6.75902 7.79992 7.00706 7.59099 7.21599C7.38206 7.42492 7.13402 7.59066 6.86104 7.70373C6.58805 7.8168 6.29547 7.875 6 7.875C5.40326 7.875 4.83097 7.63795 4.40901 7.21599C3.98705 6.79403 3.75 6.22174 3.75 5.625C3.75 5.02826 3.98705 4.45597 4.40901 4.03401C4.83097 3.61205 5.40326 3.375 6 3.375ZM6 4.875C5.80109 4.875 5.61032 4.95402 5.46967 5.09467C5.32902 5.23532 5.25 5.42609 5.25 5.625C5.25 5.82391 5.32902 6.01468 5.46967 6.15533C5.61032 6.29598 5.80109 6.375 6 6.375C6.19891 6.375 6.38968 6.29598 6.53033 6.15533C6.67098 6.01468 6.75 5.82391 6.75 5.625C6.75 5.42609 6.67098 5.23532 6.53033 5.09467C6.38968 4.95402 6.19891 4.875 6 4.875Z"
-                  fill="black"
-                />
-              </Svg>
-              <View style={styles.locationTextWrapper}>
-                <Text style={styles.locationText} numberOfLines={2}>
-                  {propertyData?.address}
-                </Text>
-                <Text style={styles.locationSubText}>
-                  {propertyData?.city}, {propertyData?.state} –{' '}
-                  {propertyData?.pincode}
-                </Text>
-              </View>
-            </View>
-            <View style={styles.divider} />
-            <View style={{marginBottom: 0, paddingHorizontal: 12}}>
-              <Text style={styles.price}>
-                ₹{formatIndianAmount(propertyData?.totalOfferPrice)}
-              </Text>
-              <Text style={styles.strikePrice}>
-                ₹{formatIndianAmount(propertyData?.totalSalesPrice)}
-              </Text>
-              <View style={styles.divider} />
-            </View>
-
-            {/* Pricing & EMI Card */}
-            <View style={Pricingstyles.card}>
-              {propertyData?.propertyCategory !== 'RentalOffice' &&
-                propertyData?.propertyCategory !== 'RentalFlat' &&
-                propertyData?.propertyCategory !== 'RentalPlot' &&
-                propertyData?.propertyCategory !== 'RentalShop' && (
-                  <>
-                    <View style={Pricingstyles.row}>
-                      <View>
-                        <Text style={Pricingstyles.subText}>EMI starts at</Text>
-                        <View style={Pricingstyles.priceRow}>
-                          <Text style={Pricingstyles.totalPrice}>
-                            ₹ {formatIndianAmount(propertyData?.emi)} /mo
-                          </Text>
-                        </View>
-                      </View>
-                      <TouchableOpacity
-                        style={Pricingstyles.actionBtn}
-                        onPress={() =>
-                          navigation.navigate('HomeLoan', {
-                            propertyid: propertyData?.propertyid,
-                          })
-                        }>
-                        <Text style={Pricingstyles.actionText}>
-                          Check eligibility
-                        </Text>
-                        <ArrowRight size={18} color="#6D28D9" />
-                      </TouchableOpacity>
-                    </View>
-                    <View style={Pricingstyles.divider} />
-                  </>
-                )}
-
-              <View style={Pricingstyles.row}>
-                <View>
-                  <View style={Pricingstyles.priceRow}>
-                    <Text style={Pricingstyles.totalPrice}>
-                      ₹ {formatIndianAmount(propertyData?.totalOfferPrice)}
+            {/* Available / Booked Pills */}
+            {(propertyData?.availableCount > 0 ||
+              propertyData?.bookedCount > 0) && (
+              <View style={cardStyles.availabilityRow}>
+                {propertyData?.availableCount > 0 && (
+                  <View style={cardStyles.availablePill}>
+                    <View style={cardStyles.greenDot} />
+                    <Text style={cardStyles.availableText}>
+                      {propertyData.availableCount} Available
                     </Text>
                   </View>
-                  <Text style={Pricingstyles.subText}>+ Other Charges</Text>
+                )}
+                {propertyData?.availableCount > 0 &&
+                  propertyData?.bookedCount > 0 && (
+                    <View style={cardStyles.pillDivider} />
+                  )}
+                {/* {propertyData?.bookedCount > 0 && ( */}
+                <View style={cardStyles.bookedPill}>
+                  <View style={cardStyles.redDot} />
+                  <Text style={cardStyles.bookedText}>
+                    {propertyData.bookedCount} Booked
+                  </Text>
+                </View>
+                {/* )} */}
+              </View>
+            )}
+
+            {/* Location */}
+            <View style={cardStyles.locationRow}>
+              <MapPin size={14} color="#9CA3AF" />
+              <Text style={cardStyles.locationText} numberOfLines={2}>
+                {propertyData?.address ? `${propertyData.address}, ` : ''}
+                {propertyData?.city}, {propertyData?.state} –{' '}
+                {propertyData?.pincode}
+              </Text>
+            </View>
+
+            {/* 3 Feature Boxes */}
+            <View style={cardStyles.featureBoxRow}>
+              <View style={cardStyles.featureBox}>
+                <View
+                  style={[
+                    cardStyles.featureIconCircle,
+                    {backgroundColor: '#EEF2FF'},
+                  ]}>
+                  <ShieldCheck size={20} color="#6366F1" strokeWidth={2} />
+                </View>
+                {/* FIX: null-safe trim for featureBoxText */}
+                <Text style={cardStyles.featureBoxText}>
+                  {safeTrim(propertyData?.propertyApprovedBy) || 'NMRDA'}
+                  {'\n'}Approved
+                </Text>
+              </View>
+              <View style={cardStyles.featureBox}>
+                <View
+                  style={[
+                    cardStyles.featureIconCircle,
+                    {backgroundColor: '#FDF2F8'},
+                  ]}>
+                  <MapPin size={20} color="#C026D3" strokeWidth={2} />
+                </View>
+                <Text style={cardStyles.featureBoxText}>
+                  {propertyData?.distanceFromCityCenter || '—'} km{'\n'}from
+                  City
+                </Text>
+              </View>
+              <View style={cardStyles.featureBox}>
+                <View
+                  style={[
+                    cardStyles.featureIconCircle,
+                    {backgroundColor: '#FFF1F2'},
+                  ]}>
+                  <BadgeCheck size={20} color="#E11D48" strokeWidth={2} />
+                </View>
+                <Text style={cardStyles.featureBoxText}>
+                  Assured{'\n'}Quality
+                </Text>
+              </View>
+            </View>
+
+            {/* Price Card */}
+            <LinearGradient
+              colors={['#F9F7FF', '#FFFFFF']}
+              start={{x: 0, y: 0}}
+              end={{x: 0.97, y: 0.26}}
+              style={cardStyles.priceCard}>
+              <Text style={cardStyles.startingFromLabel}>STARTING FROM</Text>
+              <View style={cardStyles.priceMainRow}>
+                <Text style={cardStyles.offerPrice}>
+                  ₹{formatIndianAmount(propertyData?.totalOfferPrice)}
+                </Text>
+                {savings > 0 && (
+                  <View style={cardStyles.savingsPill}>
+                    <Tag size={12} color="#059669" strokeWidth={2.5} />
+                    <Text style={cardStyles.savingsText}>
+                      Save ₹{formatIndianAmount(savings)}
+                    </Text>
+                  </View>
+                )}
+              </View>
+              {propertyData?.totalSalesPrice &&
+                propertyData.totalSalesPrice !==
+                  propertyData?.totalOfferPrice && (
+                  <Text style={cardStyles.strikePriceCard}>
+                    ₹{formatIndianAmount(propertyData?.totalSalesPrice)}
+                  </Text>
+                )}
+              <View style={cardStyles.priceDivider} />
+              <View style={cardStyles.limitedRow}>
+                <Clock size={14} color="#7C3AED" strokeWidth={2} />
+                <Text style={cardStyles.limitedText}>Limited Time Offer</Text>
+              </View>
+            </LinearGradient>
+
+            {/* EMI Card */}
+            {!isRental && propertyData?.emi && (
+              <View style={cardStyles.emiCard}>
+                <View style={cardStyles.serviceIconBox}>
+                  <Receipt size={20} color="#6D28D9" strokeWidth={2} />
+                </View>
+                <View style={cardStyles.serviceTextCol}>
+                  <Text style={cardStyles.serviceLabel}>EMI starts at</Text>
+                  <Text style={cardStyles.serviceAmount}>
+                    ₹{formatIndianAmount(propertyData?.emi)}
+                    <Text style={cardStyles.serviceUnit}> /mo</Text>
+                  </Text>
                 </View>
                 <TouchableOpacity
-                  style={Pricingstyles.actionBtn}
-                  onPress={() => setshowDrawer(true)}>
-                  <Text style={Pricingstyles.actionText}>Pricing Breakup</Text>
-                  <ArrowRight size={18} color="#6D28D9" />
+                  style={cardStyles.serviceBtn}
+                  activeOpacity={0.8}
+                  onPress={() =>
+                    navigation.navigate('HomeLoan', {
+                      propertyid: propertyData?.propertyid,
+                    })
+                  }>
+                  <Text style={cardStyles.serviceBtnText}>
+                    Check Eligibility
+                  </Text>
+                  <ArrowRight size={15} color="#6D28D9" strokeWidth={2.5} />
                 </TouchableOpacity>
+              </View>
+            )}
+
+            {/* Total Price Card */}
+            <View style={cardStyles.totalCard}>
+              <View style={cardStyles.serviceIconBox}>
+                <Building2 size={20} color="#6D28D9" strokeWidth={2} />
+              </View>
+              <View style={cardStyles.serviceTextCol}>
+                <Text style={cardStyles.serviceLabel}>Total Price</Text>
+                <Text style={cardStyles.serviceAmount}>
+                  ₹{formatIndianAmount(propertyData?.totalOfferPrice)}
+                </Text>
+                <Text style={cardStyles.otherCharges}>+ Other Charges</Text>
+              </View>
+              <TouchableOpacity
+                style={[cardStyles.serviceBtn, cardStyles.serviceBtnWide]}
+                activeOpacity={0.8}
+                onPress={() => setShowDrawer(true)}>
+                <Text style={cardStyles.serviceBtnText}>
+                  View Full Cost{'\n'}Sheet
+                </Text>
+                <ArrowRight size={15} color="#6D28D9" strokeWidth={2.5} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Trust Row */}
+            <View style={cardStyles.trustRow}>
+              <View style={cardStyles.trustItem}>
+                <CheckCircle size={13} color="#9CA3AF" />
+                <Text style={cardStyles.trustText}>
+                  Transparent{'\n'}Pricing
+                </Text>
+              </View>
+              <View style={cardStyles.trustDivider} />
+              <View style={cardStyles.trustItem}>
+                <X size={13} color="#9CA3AF" strokeWidth={2.5} />
+                <Text style={cardStyles.trustText}>No Hidden{'\n'}Charges</Text>
+              </View>
+              <View style={cardStyles.trustDivider} />
+              <View style={cardStyles.trustItem}>
+                <Building2 size={13} color="#9CA3AF" />
+                <Text style={cardStyles.trustText}>RERA{'\n'}Registered</Text>
               </View>
             </View>
 
             {/* CTA Buttons */}
-            <View style={styles.actionRow}>
-              <ActionButton
-                label="Call Promoter"
-                iconButton={'call'}
+            <View style={ctaStyles.row}>
+              <TouchableOpacity
+                style={ctaStyles.callBtn}
+                activeOpacity={0.8}
                 onPress={() =>
                   Linking.openURL(
                     `tel:${propertyData?.projectPartnerContact || 8010881965}`,
                   )
-                }
-              />
-              <ActionButton
-                label="WhatsApp"
-                iconButton={'whatsapp'}
-                onPress={sendHelloOnWhatsApp}
-              />
+                }>
+                <Phone size={18} color="#7C3AED" strokeWidth={2} />
+                <Text style={ctaStyles.callBtnText}>Call Promoter</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={ctaStyles.whatsappBtn}
+                activeOpacity={0.8}
+                onPress={sendHelloOnWhatsApp}>
+                <Svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <Path
+                    d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"
+                    fill="#25D366"
+                  />
+                </Svg>
+                <Text style={ctaStyles.whatsappBtnText}>WhatsApp</Text>
+              </TouchableOpacity>
             </View>
+
             <TouchableOpacity
-              style={styles.bookBtn}
+              style={ctaStyles.bookBtn}
+              activeOpacity={0.85}
               onPress={() => setOpen(true)}>
-              <Text style={styles.bookText}>Book Site Visit</Text>
+              <Calendar size={20} color="#FFF" strokeWidth={2} />
+              <Text style={ctaStyles.bookBtnText}>Book Site Visit</Text>
             </TouchableOpacity>
-            <Text style={styles.infoText}>
+
+            {showAvailability &&
+              (propertyData?.availableCount > 0 ||
+                propertyData?.bookedCount > 0) && (
+                <TouchableOpacity
+                  style={ctaStyles.availabilityBtn}
+                  activeOpacity={0.85}
+                  onPress={() => setModalVisible(true)}>
+                  <CalendarCheck size={20} color="#7C3AED" strokeWidth={2} />
+                  <Text style={ctaStyles.availabilityBtnText}>
+                    Check Availability
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+            <Text style={ctaStyles.infoText}>
               Free site visit • No brokerage charges
             </Text>
           </View>
 
-          {/* ── TABS ─────────────────────────────────────────────────────────── */}
+          {/* ── TABS ──────────────────────────────────────────────────────── */}
           <View style={styles.tabsWrapper}>
             <ScrollView
               horizontal
@@ -1207,7 +1209,7 @@ Best regards,
             </ScrollView>
           </View>
 
-          {/* ── TAB CONTENT ──────────────────────────────────────────────────── */}
+          {/* ── TAB CONTENT ───────────────────────────────────────────────── */}
           <View style={styles.tabContent}>
             {activeTab === 'Highlights' && (
               <Highlights
@@ -1240,7 +1242,7 @@ Best regards,
             )}
           </View>
 
-          {/* ── SIMILAR PROPERTIES ───────────────────────────────────────────── */}
+          {/* ── SIMILAR PROPERTIES ────────────────────────────────────────── */}
           <View style={styles.sectionHeader}>
             <LinearGradient
               colors={['#8A38F5', '#FAF8FF']}
@@ -1267,7 +1269,7 @@ Best regards,
           <HomeLoan />
         </ScrollView>
 
-        {/* ── MODALS ───────────────────────────────────────────────────────── */}
+        {/* ── MODALS ────────────────────────────────────────────────────── */}
         <PropertyUploadModal
           visible={open}
           onClose={() => setOpen(false)}
@@ -1276,14 +1278,12 @@ Best regards,
           user={user}
           token={token}
         />
-
         <PriceSummaryDrawer
           visible={showDrawer}
-          onClose={() => setshowDrawer(false)}
+          onClose={() => setShowDrawer(false)}
           propertyData={propertyData}
           totalPrice={propertyData?.totalSalesPrice}
         />
-
         <PropertyVideoModal
           visible={videoModel}
           onClose={() => setVideoModel(false)}
@@ -1299,19 +1299,16 @@ Best regards,
         seoSlug={propertyData?.seoSlug}
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
-        apiData={data}
+        apiData={plotData}
         onBook={() => setOpen(true)}
         propertyCategory={propertyData?.propertyCategory}
       />
-
       <ZoomImageModal
         visible={zoomVisible}
         images={zoomImages}
         initialIndex={zoomIndex}
         onClose={() => setZoomVisible(false)}
       />
-
-      {/* ── REMOVE WISHLIST CONFIRM MODAL ─────────────────────────────────── */}
       <RemoveWishlistModal
         visible={removeModalVisible}
         onCancel={cancelRemoveWishlist}
@@ -1325,33 +1322,12 @@ Best regards,
 
 export default PropertyDetailsScreen;
 
-// ─── STYLES ───────────────────────────────────────────────────────────────────
+// ─── BASE STYLES ──────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#F7F7F7',
-  },
-  container: {
-    flex: 1,
-    backgroundColor: '#FAF8FF',
-  },
-  heroImage: {
-    width,
-    height: isTablet ? 360 : 250,
-  },
-  card: {
-    backgroundColor: '#FFF',
-    padding: 10,
-    margin: 12,
-    borderRadius: 12,
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  imageWrapper: {
-    position: 'relative',
-  },
+  safeArea: {flex: 1, backgroundColor: 'white'},
+  container: {flex: 1, backgroundColor: 'white'},
+  heroImage: {width, height: isTablet ? 360 : 250},
+  imageWrapper: {position: 'relative'},
   backButton: {
     position: 'absolute',
     marginTop: 5,
@@ -1392,7 +1368,7 @@ const styles = StyleSheet.create({
   },
   dotsRow: {
     position: 'absolute',
-    bottom: 10,
+    bottom: 12,
     alignSelf: 'center',
     left: 0,
     right: 0,
@@ -1406,10 +1382,7 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     backgroundColor: 'rgba(255,255,255,0.5)',
   },
-  dotActive: {
-    width: 18,
-    backgroundColor: '#8A38F5',
-  },
+  dotActive: {width: 18, backgroundColor: '#8A38F5'},
   counterPill: {
     position: 'absolute',
     top: 10,
@@ -1420,186 +1393,49 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   counterText: {
-    color: '#FFF',
-    fontSize: 12,
-    fontWeight: '600',
+    display: 'none',
   },
-  thumbnailRow: {
-    marginTop: 10,
-  },
-  thumbnailBox: {
-    width: 100,
-    height: 71,
-    borderRadius: 8,
-    overflow: 'hidden',
-    marginRight: 10,
-    borderWidth: 2,
-    borderColor: '#E0E0E0',
-  },
-  thumbnailWrapper: {
-    position: 'relative',
-  },
-  thumbLabel: {
+  heroBadgeGradient: {
     position: 'absolute',
     bottom: 0,
-    width: '100%',
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    paddingVertical: 4,
-    alignItems: 'center',
-  },
-  thumbLabelText: {
-    color: '#FFF',
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  arrowBtn: {
-    position: 'absolute',
-    top: '50%',
-    transform: [{translateY: -16}],
-    width: 22,
-    height: 22,
-    borderRadius: 16,
-    backgroundColor: '#FFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 3,
-    zIndex: 10,
-  },
-  leftArrow: {left: 6},
-  rightArrow: {right: 6},
-  arrowText: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#6C2BD9',
-  },
-  activeThumb: {
-    borderColor: '#6C2BD9',
-  },
-  thumbnail: {
-    width: '100%',
-    height: '100%',
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '700',
-    marginBottom: 10,
-    fontFamily: 'SegoeUI-Bold',
-    color: '#000',
-  },
-  price: {
-    fontFamily: 'SegoeUI-Bold',
-    fontSize: 26,
-    color: '#000',
-  },
-  strikePrice: {
-    fontSize: 16,
-    color: '#9CA3AF',
-    textDecorationLine: 'line-through',
-    marginTop: 4,
-  },
-  badgeRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 14,
-    marginTop: 10,
-  },
-  badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'nowrap',
-    backgroundColor: '#F1E9FF',
-    paddingVertical: 8,
+    left: 0,
+    right: 0,
+    height: 80,
+    justifyContent: 'flex-end',
+    paddingBottom: 10,
     paddingHorizontal: 14,
-    borderRadius: 20,
+    zIndex: 5,
   },
-  badgeText: {
-    color: '#8A38F5',
-    fontSize: 12,
-    fontWeight: '600',
-    marginLeft: 8,
+  heroBadgeRow: {flexDirection: 'row', alignItems: 'center'},
+  heroBadgePill: {
+    backgroundColor: 'rgba(138,56,245,0.88)',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    alignSelf: 'flex-start',
   },
-  locationRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
-    marginTop: 14,
-    paddingHorizontal: 6,
-  },
-  locationTextWrapper: {flex: 1},
-  locationText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1C1C1E',
-  },
-  locationSubText: {
-    fontSize: 13,
-    color: '#555',
-    marginTop: 4,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#E5E5E5',
-    marginVertical: 14,
-  },
-  actionRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 5,
-  },
-  bookBtn: {
-    width: '99%',
-    height: 50,
-    marginTop: 20,
-    alignSelf: 'center',
-    backgroundColor: '#8A38F5',
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 8,
-    shadowColor: '#8A38F5',
-    shadowOffset: {width: 0, height: 7},
-    shadowOpacity: 0.25,
-    shadowRadius: 13,
-    marginBottom: 20,
-  },
-  bookText: {
+  heroBadgeText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 12,
     fontWeight: '700',
-    fontFamily: 'Poppins',
-  },
-  infoText: {
-    width: '90%',
-    alignSelf: 'center',
-    textAlign: 'center',
-    fontFamily: 'Segoe UI',
-    fontSize: 16,
-    fontWeight: '400',
-    color: '#868686',
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
   },
   tabsWrapper: {
     marginTop: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E5E5',
+    backgroundColor: '#FFF',
   },
-  tabsRow: {
-    paddingHorizontal: 12,
-    flexDirection: 'row',
-  },
-  tabContainer: {
-    marginRight: 24,
-    alignItems: 'center',
-  },
+  tabsRow: {paddingHorizontal: 12, flexDirection: 'row'},
+  tabContainer: {marginRight: 24, alignItems: 'center'},
   tabText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#777',
+    color: '#9CA3AF',
     paddingVertical: 12,
   },
-  activeTabText: {
-    color: '#6C2BD9',
-    fontWeight: '700',
-  },
+  activeTabText: {color: '#6C2BD9', fontWeight: '700'},
   activeIndicator: {
     height: 3,
     width: '100%',
@@ -1615,17 +1451,8 @@ const styles = StyleSheet.create({
     gap: 12,
     marginVertical: 16,
   },
-  titleText: {
-    fontFamily: 'Segoe UI',
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#000000',
-  },
-  line: {
-    width: '25%',
-    height: 3,
-    borderRadius: 1,
-  },
+  titleText: {fontSize: 17, fontWeight: '700', color: '#000000'},
+  line: {width: '25%', height: 3, borderRadius: 1},
   videoWrapper: {
     position: 'absolute',
     bottom: 12,
@@ -1640,11 +1467,9 @@ const styles = StyleSheet.create({
     shadowOffset: {width: 0, height: 4},
     shadowOpacity: 0.3,
     shadowRadius: 8,
+    zIndex: 6,
   },
-  videoPreview: {
-    width: '100%',
-    height: '100%',
-  },
+  videoPreview: {width: '100%', height: '100%'},
   videoGradient: {
     position: 'absolute',
     left: 0,
@@ -1664,65 +1489,441 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 5,
     left: 36,
-    justifyContent: 'center',
     color: '#FFF',
     fontSize: 12,
     fontWeight: '700',
-    fontFamily: 'Poppins',
   },
 });
 
-const Pricingstyles = StyleSheet.create({
+// ─── THUMBNAIL PILL STYLES ────────────────────────────────────────────────────
+const thumbStyles = StyleSheet.create({
+  scrollContent: {
+    paddingHorizontal: 14,
+    paddingTop: 14,
+    paddingBottom: 12,
+    gap: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 4,
+    paddingLeft: 7,
+    paddingRight: 14,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 1},
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+  },
+  activePill: {
+    backgroundColor: '#8A38F5',
+    borderColor: '#8A38F5',
+    shadowColor: '#8A38F5',
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  pillImage: {
+    width: 46,
+    height: 46,
+    borderRadius: 10,
+    backgroundColor: '#EDE9FE',
+  },
+  activePillImage: {borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.4)'},
+  pillText: {fontSize: 13, fontWeight: '600', color: '#374151', maxWidth: 88},
+  activePillText: {color: '#FFFFFF'},
+  countBadge: {
+    backgroundColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 20,
+    minWidth: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 5,
+  },
+  countBadgeText: {color: '#FFF', fontSize: 11, fontWeight: '700'},
+});
+
+// ─── PROPERTY CARD STYLES ─────────────────────────────────────────────────────
+const cardStyles = StyleSheet.create({
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    paddingHorizontal: 18,
-    width: '100%',
-    alignSelf: 'center',
-    marginBottom: 20,
+    marginHorizontal: 12,
+    marginTop: 4,
+    marginBottom: 8,
+    borderRadius: 20,
+    paddingTop: 20,
+    paddingHorizontal: 16,
+    paddingBottom: 4,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.07,
+    shadowRadius: 10,
+    elevation: 3,
   },
-  row: {
+  titleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    gap: 12,
+    marginBottom: 8,
   },
-  priceRow: {
+  propertyName: {
+    flex: 1,
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#0F172A',
+    letterSpacing: -0.4,
+    lineHeight: 32,
+  },
+  nmrdaBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 4,
+    gap: 8,
+    backgroundColor: '#F5F3FF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#DDD6FE',
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    paddingLeft: 8,
+    flexShrink: 0,
+    minWidth: 112,
   },
-  totalPrice: {
-    fontSize: 20,
+  nmrdaIconBox: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    backgroundColor: '#EDE9FE',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  nmrdaTextCol: {gap: 1},
+  nmrdaTopText: {
+    fontSize: 10,
+    fontWeight: '500',
+    color: '#6B7280',
+    letterSpacing: 0.1,
+  },
+  nmrdaBottomText: {
+    fontSize: 11,
     fontWeight: '800',
-    color: '#000',
-    marginLeft: 4,
+    color: '#6D28D9',
+    letterSpacing: 0.4,
   },
-  subText: {
+  projectByText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#6B7280',
+    marginBottom: 10,
+  },
+  projectByName: {
+    color: '#7C3AED',
+    fontWeight: '700',
+    textDecorationLine: 'underline',
+  },
+  availabilityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 0,
+    marginBottom: 12,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+    alignSelf: 'flex-start',
+    overflow: 'hidden',
+  },
+  availablePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+  },
+  bookedPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+  },
+  pillDivider: {width: 1, height: 18, backgroundColor: '#E5E7EB'},
+  greenDot: {width: 8, height: 8, borderRadius: 4, backgroundColor: '#22C55E'},
+  redDot: {width: 8, height: 8, borderRadius: 4, backgroundColor: '#EF4444'},
+  availableText: {fontSize: 13, fontWeight: '600', color: '#16A34A'},
+  bookedText: {fontSize: 13, fontWeight: '600', color: '#DC2626'},
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    marginBottom: 18,
+  },
+  locationText: {
+    flex: 1,
     fontSize: 13,
     color: '#6B7280',
-    marginTop: 2,
+    fontWeight: '400',
+    lineHeight: 20,
+    marginTop: 1,
   },
-  divider: {
-    height: 1,
-    backgroundColor: '#E5E7EB',
-    marginVertical: 14,
-  },
-  actionBtn: {
-    flexDirection: 'row',
+  featureBoxRow: {flexDirection: 'row', gap: 6, marginBottom: 16},
+  featureBox: {
+    flex: 1,
+    backgroundColor: '#FAFAFF',
+    borderRadius: 16,
+    paddingVertical: 3,
+    paddingHorizontal: 8,
     alignItems: 'center',
-    backgroundColor: '#F5F3FF',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#EDE9FE',
+    gap: 4,
+  },
+  featureIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  featureBoxText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#1E1B4B',
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  priceCard: {
+    borderRadius: 18,
+    paddingTop: 18,
+    paddingHorizontal: 18,
+    paddingBottom: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#EDE9FE',
+  },
+  startingFromLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#7C3AED',
+    letterSpacing: 1.5,
+    marginBottom: 8,
+  },
+  priceMainRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: 4,
     gap: 6,
   },
-  actionText: {
-    fontSize: 14,
-    fontWeight: '600',
+  offerPrice: {
+    fontSize: 34,
+    fontWeight: '900',
+    color: '#0F172A',
+    letterSpacing: -1,
+  },
+  savingsPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#F0FDF4',
+    borderRadius: 30,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    marginTop: 6,
+  },
+  savingsText: {fontSize: 13, fontWeight: '700', color: '#059669'},
+  strikePriceCard: {
+    fontSize: 16,
+    color: '#9CA3AF',
+    textDecorationLine: 'line-through',
+    fontWeight: '500',
+    marginBottom: 14,
+  },
+  priceDivider: {height: 1, backgroundColor: '#E5E7EB', marginBottom: 12},
+  limitedRow: {flexDirection: 'row', alignItems: 'center', gap: 6},
+  limitedText: {fontSize: 13, color: '#7C3AED', fontWeight: '600'},
+  emiCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 1},
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+  },
+  totalCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 1},
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+  },
+  serviceIconBox: {
+    width: 46,
+    height: 46,
+    borderRadius: 13,
+    backgroundColor: '#EDE9FE',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  serviceTextCol: {flex: 1},
+  serviceLabel: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    fontWeight: '500',
+    marginBottom: 3,
+  },
+  serviceAmount: {fontSize: 19, fontWeight: '800', color: '#0F172A'},
+  serviceUnit: {fontSize: 13, fontWeight: '500', color: '#9CA3AF'},
+  otherCharges: {
+    fontSize: 11,
+    color: '#9CA3AF',
+    fontWeight: '400',
+    marginTop: 2,
+  },
+  serviceBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#EDE9FE',
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    flexShrink: 0,
+  },
+  serviceBtnWide: {paddingHorizontal: 14},
+  serviceBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
     color: '#6D28D9',
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  trustRow: {
+    backgroundColor: '#F6F8F7',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    paddingVertical: 14,
+    borderTopWidth: 1,
+    borderRadius: 12,
+    borderTopColor: '#F3F4F6',
+    marginBottom: 16,
+  },
+  trustItem: {flexDirection: 'row', alignItems: 'center', gap: 5},
+  trustText: {
+    fontSize: 11,
+    color: '#9CA3AF',
+    fontWeight: '500',
+    lineHeight: 16,
+  },
+  trustDivider: {width: 1, height: 28, backgroundColor: '#E5E7EB'},
+});
+
+// ─── CTA STYLES ───────────────────────────────────────────────────────────────
+const ctaStyles = StyleSheet.create({
+  row: {flexDirection: 'row', gap: 12, marginBottom: 14},
+  callBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    height: 52,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: '#C4B5FD',
+    backgroundColor: '#FAFAFF',
+  },
+  callBtnText: {fontSize: 14, fontWeight: '700', color: '#7C3AED'},
+  whatsappBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    height: 52,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: '#BBF7D0',
+    backgroundColor: '#F0FFF4',
+  },
+  whatsappBtnText: {fontSize: 14, fontWeight: '700', color: '#16A34A'},
+  bookBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    width: '100%',
+    height: 54,
+    borderRadius: 16,
+    backgroundColor: '#8A38F5',
+    shadowColor: '#8A38F5',
+    shadowOffset: {width: 0, height: 6},
+    shadowOpacity: 0.4,
+    shadowRadius: 14,
+    elevation: 8,
+    marginBottom: 12,
+  },
+  bookBtnText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: 0.2,
+  },
+  availabilityBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    width: '100%',
+    height: 52,
+    borderRadius: 16,
+    backgroundColor: '#F5F3FF',
+    borderWidth: 1.5,
+    borderColor: '#C4B5FD',
+    marginBottom: 12,
+  },
+  availabilityBtnText: {
+    color: '#7C3AED',
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: 0.1,
+  },
+  infoText: {
+    textAlign: 'center',
+    fontSize: 13,
+    color: '#9CA3AF',
+    fontWeight: '500',
+    marginBottom: 10,
   },
 });
 
+// ─── ZOOM STYLES ──────────────────────────────────────────────────────────────
 const zoomStyles = StyleSheet.create({
   header: {
     position: 'absolute',
@@ -1738,11 +1939,7 @@ const zoomStyles = StyleSheet.create({
     paddingBottom: 12,
     backgroundColor: 'rgba(0,0,0,0.5)',
   },
-  counter: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '600',
-  },
+  counter: {color: '#fff', fontSize: 15, fontWeight: '600'},
   closeBtn: {
     width: 36,
     height: 36,
@@ -1751,11 +1948,7 @@ const zoomStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  closeTxt: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '700',
-  },
+  closeTxt: {color: '#fff', fontSize: 18, fontWeight: '700'},
   scrollContent: {
     flex: 1,
     backgroundColor: '#000',
@@ -1764,7 +1957,7 @@ const zoomStyles = StyleSheet.create({
   },
 });
 
-// ─── REMOVE WISHLIST MODAL STYLES ─────────────────────────────────────────────
+// ─── REMOVE WISHLIST STYLES ───────────────────────────────────────────────────
 const removeStyles = StyleSheet.create({
   backdrop: {
     flex: 1,
@@ -1818,7 +2011,6 @@ const removeStyles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     color: '#111827',
-    fontFamily: 'SegoeUI-Bold',
     textAlign: 'center',
     marginBottom: 8,
   },
@@ -1827,7 +2019,6 @@ const removeStyles = StyleSheet.create({
     color: '#6B7280',
     textAlign: 'center',
     lineHeight: 22,
-    fontFamily: 'SegoeUI',
     paddingHorizontal: 6,
   },
   divider: {
@@ -1836,11 +2027,7 @@ const removeStyles = StyleSheet.create({
     backgroundColor: '#F3F4F6',
     marginVertical: 22,
   },
-  btnRow: {
-    flexDirection: 'row',
-    gap: 12,
-    width: '100%',
-  },
+  btnRow: {flexDirection: 'row', gap: 12, width: '100%'},
   cancelBtn: {
     flex: 1,
     height: 50,
@@ -1851,12 +2038,7 @@ const removeStyles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#F9FAFB',
   },
-  cancelText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#374151',
-    fontFamily: 'SegoeUI-Bold',
-  },
+  cancelText: {fontSize: 15, fontWeight: '600', color: '#374151'},
   confirmBtn: {
     flex: 1,
     height: 50,
@@ -1872,10 +2054,5 @@ const removeStyles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 6,
   },
-  confirmText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#FFF',
-    fontFamily: 'SegoeUI-Bold',
-  },
+  confirmText: {fontSize: 15, fontWeight: '700', color: '#FFF'},
 });

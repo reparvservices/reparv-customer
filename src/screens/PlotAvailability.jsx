@@ -8,13 +8,70 @@ import {
   Modal,
   ScrollView,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
-import Svg, {Path} from 'react-native-svg';
 import PropertyPlotDetailsView from '../components/PropertyDetails/plotDetailsModel';
 import {formatIndianAmount} from '../utils/formatIndianAmount';
 
 const {width} = Dimensions.get('window');
-const BOX_WIDTH = Math.min((width - 160) / 3, 110);
+
+// Skeleton Components
+const SkeletonBox = ({width, height, style}) => (
+  <View style={[styles.skeleton, {width, height}, style]} />
+);
+
+const PlotAvailabilitySkeleton = () => (
+  <View style={styles.container}>
+    {/* Header Skeleton */}
+    <View style={styles.header}>
+      <SkeletonBox width={150} height={24} />
+      <SkeletonBox width={32} height={32} style={{borderRadius: 16}} />
+    </View>
+
+    {/* Tabs Skeleton */}
+    <View style={{flexDirection: 'row', gap: 12, marginBottom: 16}}>
+      <SkeletonBox width={100} height={60} style={{borderRadius: 12}} />
+      <SkeletonBox width={100} height={60} style={{borderRadius: 12}} />
+      <SkeletonBox width={100} height={60} style={{borderRadius: 12}} />
+    </View>
+
+    {/* Legend Skeleton */}
+    <View style={{flexDirection: 'row', gap: 16, marginBottom: 12}}>
+      <View style={{flexDirection: 'row', alignItems: 'center', gap: 6}}>
+        <SkeletonBox width={10} height={10} style={{borderRadius: 5}} />
+        <SkeletonBox width={60} height={14} />
+      </View>
+      <View style={{flexDirection: 'row', alignItems: 'center', gap: 6}}>
+        <SkeletonBox width={10} height={10} style={{borderRadius: 5}} />
+        <SkeletonBox width={60} height={14} />
+      </View>
+      <View style={{flexDirection: 'row', alignItems: 'center', gap: 6}}>
+        <SkeletonBox width={10} height={10} style={{borderRadius: 5}} />
+        <SkeletonBox width={60} height={14} />
+      </View>
+    </View>
+
+    {/* Filter Skeleton */}
+    <View style={{flexDirection: 'row', gap: 8, marginBottom: 16}}>
+      <SkeletonBox width={60} height={32} style={{borderRadius: 20}} />
+      <SkeletonBox width={80} height={32} style={{borderRadius: 20}} />
+      <SkeletonBox width={70} height={32} style={{borderRadius: 20}} />
+      <SkeletonBox width={70} height={32} style={{borderRadius: 20}} />
+    </View>
+
+    {/* Grid Skeleton */}
+    <View style={styles.unitsGrid}>
+      {[...Array(16)].map((_, i) => (
+        <SkeletonBox
+          key={i}
+          width={(width - 60) / 4}
+          height={60}
+          style={{borderRadius: 12}}
+        />
+      ))}
+    </View>
+  </View>
+);
 
 export default function PlotAvailabilityModal({
   seoSlug,
@@ -26,77 +83,61 @@ export default function PlotAvailabilityModal({
 }) {
   const [filter, setFilter] = useState('All');
   const [selectedKhasra, setSelectedKhasra] = useState(null);
-  const [showKhasraPopup, setShowKhasraPopup] = useState(false);
-  const [layoutData, setLayoutData] = useState([]);
+  const [allUnits, setAllUnits] = useState([]);
   const [selectedUnit, setSelectedUnit] = useState(null);
-  const [selectedFloor, setSelectedFloor] = useState('All');
   const [open, setOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const getGroupKey = item => item.khasrano || item.wing || item.wing;
+  const isPlotCategory = propertyCategory === 'NewPlot';
+  const unitLabel = isPlotCategory ? 'Plot' : 'Flat';
+
+  const getGroupKey = item => item.khasrano || item.wing;
 
   useEffect(() => {
-    if (apiData.length > 0 && !selectedKhasra) {
-      setSelectedKhasra(getGroupKey(apiData[0]));
+    if (apiData.length > 0) {
+      setIsLoading(true);
+      setTimeout(() => {
+        if (!selectedKhasra) {
+          setSelectedKhasra(getGroupKey(apiData[0]));
+        }
+        setIsLoading(false);
+      }, 500);
+    } else {
+      setIsLoading(false);
     }
   }, [apiData]);
-  /* ---------- PREPARE DATA ---------- */
+
   useEffect(() => {
     if (!selectedKhasra) return;
 
-    const groupObj = apiData.find(item => getGroupKey(item) === selectedKhasra);
-
-    if (!groupObj || !groupObj.rows?.length) return;
-
-    const rows = groupObj.rows;
-
-    /* ---------- PLOT TYPE ---------- */
-    if (rows[0]?.plotno && !rows[0]?.floorno) {
-      setLayoutData([
-        {
-          label: 'Plots',
-          units: rows,
-        },
-      ]);
-      setSelectedFloor('All');
+    setIsLoading(true);
+    setTimeout(() => {
+      const groupObj = apiData.find(
+        item => getGroupKey(item) === selectedKhasra,
+      );
+      if (!groupObj || !groupObj.rows?.length) {
+        setAllUnits([]);
+      } else {
+        setAllUnits(groupObj.rows);
+      }
       setSelectedUnit(null);
-      return;
-    }
-
-    /* ---------- FLAT TYPE ---------- */
-    const floorMap = {};
-    rows.forEach(r => {
-      if (!floorMap[r.floorno]) floorMap[r.floorno] = [];
-      floorMap[r.floorno].push(r);
-    });
-
-    const formatted = Object.keys(floorMap)
-      .sort((a, b) => b - a)
-      .map(floor => ({
-        label: floor === '0' ? 'G' : `${floor}F`,
-        units: floorMap[floor],
-      }));
-
-    setLayoutData(formatted);
-    setSelectedFloor('All');
-    setSelectedUnit(null);
+      setIsLoading(false);
+    }, 300);
   }, [selectedKhasra]);
 
-  /* ---------- FILTER ---------- */
   const applyFilter = unit => {
     if (filter === 'All') return true;
     return unit.status === filter;
   };
 
-  /* ---------- UNIT CARD ---------- */
+  const filteredUnits = allUnits.length > 0 ? allUnits.filter(applyFilter) : [];
+
+  const getUnitNo = unit => (isPlotCategory ? unit.plotno : unit.flatno);
+
   const renderUnit = unit => {
-    if (!applyFilter(unit)) return null;
+    const unitNo = getUnitNo(unit);
 
-    const isPlot = !!unit.plotno;
-    const unitNo = isPlot ? unit.plotno : unit.flatno;
-    const label = isPlot ? 'Plot' : 'Flat';
-
-    const selected =
-      selectedUnit && (selectedUnit.plotno || selectedUnit.flatno) === unitNo;
+    const selected = selectedUnit && getUnitNo(selectedUnit) === unitNo;
 
     const isBooked = unit.status === 'Booked';
     const isReserved = unit.status === 'Reserved';
@@ -104,26 +145,17 @@ export default function PlotAvailabilityModal({
 
     return (
       <TouchableOpacity
+        key={unitNo}
         disabled={isDisabled}
         onPress={() => setSelectedUnit(unit)}
         style={[
-          styles.flatBox,
+          styles.unitBox,
           isBooked && styles.bookedBox,
           isReserved && styles.reservedBox,
           selected && styles.selectedBox,
         ]}>
-        <Text style={styles.unitLabel}>{label}</Text>
-
-        <Text style={styles.flatNo}>{unitNo}</Text>
-
-        <Text
-          style={[
-            styles.flatStatus,
-            isBooked && styles.statusBooked,
-            isReserved && styles.statusReserved,
-            !isDisabled && styles.statusAvailable,
-          ]}>
-          {isBooked ? 'Booked' : isReserved ? 'Reserved' : 'Available'}
+        <Text style={styles.unitLabel}>
+          {unitLabel} {unitNo}
         </Text>
       </TouchableOpacity>
     );
@@ -131,279 +163,168 @@ export default function PlotAvailabilityModal({
 
   return (
     <>
-      {/* ================= MAIN MODAL ================= */}
       <Modal visible={visible} transparent animationType="slide">
         <View style={styles.overlay}>
-          <View style={styles.container}>
-            {/* ---------- HEADER ---------- */}
-            <View style={styles.header}>
-              <View>
-                <Text style={styles.title}>Plot Availability</Text>
-
-                <Text style={styles.subTitle}>
-                  {propertyCategory === 'NewPlot' ? 'Khasra No. ' : 'Wing '}{' '}
-                  {selectedKhasra}
+          {isLoading ? (
+            <View style={[styles.container, {paddingBottom: 20}]}>
+              <PlotAvailabilitySkeleton />
+            </View>
+          ) : apiData.length === 0 ? (
+            // ── No data at all ──────────────────────────────────────────────
+            <View style={styles.container}>
+              <View style={styles.header}>
+                <Text style={styles.title}>{unitLabel} Availability</Text>
+                <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+                  <Text style={styles.close}>✕</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyIcon}>🏠</Text>
+                <Text style={styles.emptyTitle}>No Data Available</Text>
+                <Text style={styles.emptySubtitle}>
+                  Availability information for this property has not been added
+                  yet. Please check back later.
                 </Text>
               </View>
-
-              <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-                <Text style={styles.close}>✕</Text>
-              </TouchableOpacity>
             </View>
+          ) : (
+            // ── Normal content ───────────────────────────────────────────────
+            <View style={styles.container}>
+              {/* Header */}
+              <View style={styles.header}>
+                <Text style={styles.title}>{unitLabel} Availability</Text>
+                <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+                  <Text style={styles.close}>✕</Text>
+                </TouchableOpacity>
+              </View>
 
-            {/* ---------- LEGEND ---------- */}
-            <View
-              style={{justifyContent: 'space-between', flexDirection: 'row'}}>
+              {/* Khasra/Wing Tabs */}
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.tabsContainer}>
+                {apiData?.length > 0 &&
+                  apiData.map(item => {
+                    const value = getGroupKey(item);
+                    const isActive = selectedKhasra === value;
+                    return (
+                      <TouchableOpacity
+                        key={value}
+                        onPress={() => setSelectedKhasra(value)}
+                        style={[styles.tab, isActive && styles.tabActive]}>
+                        <Text
+                          style={[
+                            styles.tabText,
+                            isActive && styles.tabTextActive,
+                          ]}>
+                          {isPlotCategory ? 'KHASRA' : 'WING'}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.tabNumber,
+                            isActive && styles.tabNumberActive,
+                          ]}>
+                          {value}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+              </ScrollView>
+
+              {/* Legend */}
               <View style={styles.legend}>
                 <View style={styles.legendItem}>
                   <View style={[styles.dot, {backgroundColor: '#22C55E'}]} />
                   <Text style={styles.legendText}>Available</Text>
                 </View>
                 <View style={styles.legendItem}>
+                  <View style={[styles.dot, {backgroundColor: '#F59E0B'}]} />
+                  <Text style={styles.legendText}>Reserved</Text>
+                </View>
+                <View style={styles.legendItem}>
                   <View style={[styles.dot, {backgroundColor: '#EF4444'}]} />
                   <Text style={styles.legendText}>Booked</Text>
                 </View>
               </View>
-              <TouchableOpacity
-                style={styles.towerBtn}
-                onPress={() => setShowKhasraPopup(true)}>
-                <Text style={styles.towerText}>
-                  {propertyCategory === 'NewPlot' ? 'Khasra No. ' : 'Wing '}{' '}
-                  {selectedKhasra}
-                </Text>
-                <ChevronDown size={16} color="#666" />
-              </TouchableOpacity>
-            </View>
 
-            {/* ---------- STATUS FILTER ---------- */}
-            <View style={styles.filterRow}>
-              {['All', 'Available', 'Booked'].map(f => (
-                <TouchableOpacity
-                  key={f}
-                  onPress={() => setFilter(f)}
-                  style={[
-                    styles.filterBtn,
-                    filter === f && styles.filterActive,
-                  ]}>
-                  <Text
-                    style={[
-                      styles.filterText,
-                      filter === f && styles.filterTextActive,
-                    ]}>
-                    {f}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            {/* ---------- FLOOR FILTER ---------- */}
-            {/* {layoutData.length > 1 && (
+              {/* Status Filter */}
               <View style={styles.filterRow}>
-                {['All', ...layoutData.map(f => f.label)].map(floor => (
+                {['All', 'Available', 'Reserved', 'Booked'].map(f => (
                   <TouchableOpacity
-                    key={floor}
-                    onPress={() => setSelectedFloor(floor)}
+                    key={f}
+                    onPress={() => setFilter(f)}
                     style={[
                       styles.filterBtn,
-                      selectedFloor === floor && styles.filterActive,
+                      filter === f && styles.filterActive,
                     ]}>
                     <Text
                       style={[
                         styles.filterText,
-                        selectedFloor === floor && styles.filterTextActive,
+                        filter === f && styles.filterTextActive,
                       ]}>
-                      {floor}
+                      {f}
                     </Text>
                   </TouchableOpacity>
                 ))}
               </View>
-            )} */}
 
-            {/* ---------- BUILDING ---------- */}
-
-            {propertyCategory === 'NewFlat' ? (
-              <View style={{flex: 1, marginTop: 12}}>
-                <ScrollView
-                  showsVerticalScrollIndicator={false}
-                  contentContainerStyle={{paddingBottom: 20}}>
-                  <View
-                    style={{
-                      backgroundColor: '#F3F4F6',
-                      borderRadius: 20,
-                      paddingVertical: 14,
-                      paddingHorizontal: 10,
-                    }}>
-                    {layoutData
-                      .filter(section =>
-                        selectedFloor === 'All'
-                          ? true
-                          : section.label === selectedFloor,
-                      )
-                      .map(section => (
-                        <View
-                          key={section.label}
-                          style={{
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            marginBottom: 12,
-                          }}>
-                          <Text
-                            style={{
-                              width: 34,
-                              textAlign: 'center',
-                              fontWeight: '700',
-                              color: '#111',
-                            }}>
-                            {section.label}
-                          </Text>
-
-                          <ScrollView
-                            horizontal
-                            showsHorizontalScrollIndicator={false}
-                            contentContainerStyle={{
-                              flexDirection: 'row',
-                              gap: 12,
-                              paddingVertical: 8,
-                            }}>
-                            {section.units.map(renderUnit)}
-                          </ScrollView>
-                        </View>
-                      ))}
-                  </View>
-                </ScrollView>
-              </View>
-            ) : (
-              <>
-                {/* ---------- BUILDING ---------- */}
-                <ScrollView
-                  showsVerticalScrollIndicator={false}
-                  contentContainerStyle={{paddingBottom: 20}}>
-                  <View style={styles.building}>
-                    {layoutData
-                      .filter(section =>
-                        selectedFloor === 'All'
-                          ? true
-                          : section.label === selectedFloor,
-                      )
-                      .map(section => (
-                        <View key={section.label} style={styles.floorRow}>
-                          <View style={styles.floorFlats}>
-                            {section.units.map(renderUnit)}
-                          </View>
-                        </View>
-                      ))}
-                  </View>
-                </ScrollView>
-              </>
-            )}
-
-            {/* ---------- SELECTED FLAT ---------- */}
-            {selectedUnit && (
-              <View style={styles.bottom}>
-                <View>
-                  <Text style={styles.small}>Selected Flat</Text>
-
-                  <View style={styles.areaContainer}>
-                    <Svg
-                      width={16}
-                      height={16}
-                      viewBox="0 0 16 16"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                      style={{marginRight: 4}} // optional spacing
-                    >
-                      <Path
-                        d="M13.5 11.0705V4.92855C13.8412 4.84112 14.1532 4.66495 14.4043 4.41794C14.6554 4.17094 14.8367 3.86188 14.9297 3.52217C15.0227 3.18245 15.0242 2.82417 14.934 2.4837C14.8437 2.14323 14.665 1.8327 14.4159 1.58364C14.1669 1.33458 13.8564 1.15586 13.5159 1.06563C13.1754 0.975398 12.8171 0.976869 12.4774 1.06989C12.1377 1.16291 11.8286 1.34417 11.5816 1.59527C11.3346 1.84636 11.1585 2.15835 11.071 2.49955H4.92904C4.8416 2.15835 4.66544 1.84636 4.41843 1.59527C4.17143 1.34417 3.86237 1.16291 3.52266 1.06989C3.18294 0.976869 2.82465 0.975398 2.48419 1.06563C2.14372 1.15586 1.83319 1.33458 1.58413 1.58364C1.33507 1.8327 1.15635 2.14323 1.06612 2.4837C0.975887 2.82417 0.977357 3.18245 1.07038 3.52217C1.1634 3.86188 1.34466 4.17094 1.59576 4.41794C1.84685 4.66495 2.15884 4.84112 2.50004 4.92855V11.0705C2.15884 11.158 1.84685 11.3341 1.59576 11.5812C1.34466 11.8282 1.1634 12.1372 1.07038 12.4769C0.977357 12.8166 0.975887 13.1749 1.06612 13.5154C1.15635 13.8559 1.33507 14.1664 1.58413 14.4155C1.83319 14.6645 2.14372 14.8432 2.48419 14.9335C2.82465 15.0237 3.18294 15.0222 3.52266 14.9292C3.86237 14.8362 4.17143 14.6549 4.41843 14.4038C4.66544 14.1527 4.8416 13.8407 4.92904 13.4995H11.071C11.1585 13.8407 11.3346 14.1527 11.5816 14.4038C11.8286 14.6549 12.1377 14.8362 12.4774 14.9292C12.8171 15.0222 13.1754 15.0237 13.5159 14.9335C13.8564 14.8432 14.1669 14.6645 14.4159 14.4155C14.665 14.1664 14.8437 13.8559 14.934 13.5154C15.0242 13.1749 15.0227 12.8166 14.9297 12.4769C14.8367 12.1372 14.6554 11.8282 14.4043 11.5812C14.1532 11.3341 13.8412 11.158 13.5 11.0705Z"
-                        fill="gray"
-                      />
-                    </Svg>
-                    <Text style={styles.areaText}>
-                      {selectedUnit?.payablearea} sq.ft
+              {/* Units Grid */}
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.gridContainer}>
+                {filteredUnits.length === 0 ? (
+                  <View style={styles.emptyState}>
+                    <Text style={styles.emptyIcon}>🏠</Text>
+                    <Text style={styles.emptyTitle}>No Units Found</Text>
+                    <Text style={styles.emptySubtitle}>
+                      {filter !== 'All'
+                        ? `No ${filter.toLowerCase()} units in this section.`
+                        : 'No units available for this section.'}
                     </Text>
                   </View>
-                </View>
-                <View style={{flexDirection: 'column'}}>
-                  <Text style={styles.bold}>
-                    {selectedUnit.plotno ? 'Plot ' : 'Flat '}
-                    {selectedUnit.plotno || selectedUnit.flatno}
-                  </Text>
-                  <Text style={styles.price}>
-                    ₹{formatIndianAmount(selectedUnit.totalcost)}
-                  </Text>
-                </View>
-              </View>
-            )}
+                ) : (
+                  <View style={styles.unitsGrid}>
+                    {filteredUnits.map(renderUnit)}
+                  </View>
+                )}
+              </ScrollView>
 
-            {/* ---------- CTA ---------- */}
-            <TouchableOpacity style={styles.cta} onPress={() => setOpen(true)}>
-              <Text style={styles.ctaText}>View Detail</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* ================= KHASRA MODAL ================= */}
-      <Modal visible={showKhasraPopup} transparent animationType="fade">
-        <View style={styles.overlay}>
-          <View style={styles.khasraModal}>
-            <Text style={styles.modalTitle}>
-              Select {propertyCategory === 'NewPlot' ? 'Khasra ' : 'Wing  '}{' '}
-            </Text>
-
-            <ScrollView
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={{paddingBottom: 8}}>
-              {apiData.length > 0 &&
-                apiData.map(item => {
-                  const value = getGroupKey(item);
-
-                  return (
+              {/* Selected Unit Footer */}
+              {selectedUnit && (
+                <View style={styles.footer}>
+                  <View>
+                    <Text style={styles.selectedLabel}>
+                      {unitLabel} {getUnitNo(selectedUnit)}
+                    </Text>
+                    <Text style={styles.selectedArea}>
+                      {selectedUnit.payablearea} sq.ft
+                    </Text>
+                  </View>
+                  <View style={{alignItems: 'flex-end'}}>
+                    <Text style={styles.selectedPrice}>
+                      ₹{formatIndianAmount(selectedUnit.totalcost)}
+                    </Text>
                     <TouchableOpacity
-                      key={value}
-                      activeOpacity={0.85}
-                      onPress={() => {
-                        setSelectedKhasra(value);
-                        setShowKhasraPopup(false);
-                      }}
-                      style={[
-                        styles.khasraItem,
-                        selectedKhasra === value && styles.khasraActive,
-                      ]}>
-                      <Text
-                        style={[
-                          styles.khasraText,
-                          selectedKhasra === value && styles.khasraTextActive,
-                        ]}>
-                        {propertyCategory === 'NewPlot' ? 'Khasra No.' : 'Wing'}{' '}
-                        {value}
-                      </Text>
+                      style={styles.viewBtn}
+                      onPress={() => setOpen(true)}>
+                      <Text style={styles.viewBtnText}>View Details</Text>
                     </TouchableOpacity>
-                  );
-                })}
-            </ScrollView>
-          </View>
+                  </View>
+                </View>
+              )}
+            </View>
+          )}
         </View>
       </Modal>
 
+      {/* Details Modal */}
       <Modal
         visible={open}
         animationType="slide"
         transparent
         statusBarTranslucent>
-        <View
-          style={{
-            flex: 1,
-            backgroundColor: 'rgba(0,0,0,0.35)',
-            justifyContent: 'flex-end',
-          }}>
-          <View
-            style={{
-              height: '92%',
-              backgroundColor: '#FFFFFF',
-              borderTopLeftRadius: 20,
-              borderTopRightRadius: 20,
-              overflow: 'hidden',
-            }}>
+        <View style={styles.detailsOverlay}>
+          <View style={styles.detailsContainer}>
             <PropertyPlotDetailsView
               propertyInfo={selectedUnit}
               seoSlug={seoSlug}
@@ -419,261 +340,246 @@ export default function PlotAvailabilityModal({
   );
 }
 
-/* ================= STYLES ================= */
-
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.35)',
+    backgroundColor: 'rgba(0,0,0,0.4)',
     justifyContent: 'flex-end',
   },
   container: {
     backgroundColor: '#fff',
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    padding: 18,
-    maxHeight: '95%',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingTop: 20,
+    paddingHorizontal: 20,
+    maxHeight: '92%',
+  },
+
+  skeleton: {
+    backgroundColor: '#E5E7EB',
+    borderRadius: 8,
+    overflow: 'hidden',
   },
 
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
   },
   title: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '700',
-  },
-  subTitle: {
-    // color: '#7C3AED',
-    marginTop: 2,
-    fontWeight: '600',
+    color: '#111',
   },
   closeBtn: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#F4F4F5',
+    backgroundColor: '#F3F4F6',
     alignItems: 'center',
     justifyContent: 'center',
   },
   close: {
-    fontSize: 16,
+    fontSize: 18,
+    color: '#666',
+  },
+
+  tabsContainer: {
+    paddingBottom: 16,
+    gap: 12,
+  },
+  tab: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    backgroundColor: '#F9FAFB',
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    alignItems: 'center',
+    minWidth: 100,
+    minHeight: 60,
+    marginBottom: 20,
+  },
+  tabActive: {
+    backgroundColor: '#7C3AED',
+    borderColor: '#7C3AED',
+  },
+  tabText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#000',
+    letterSpacing: 0.5,
+  },
+  tabTextActive: {
+    color: '#E9D5FF',
+  },
+  tabNumber: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#111',
+    marginTop: 2,
+  },
+  tabNumberActive: {
+    color: '#FFF',
   },
 
   legend: {
+    marginTop: 10,
     flexDirection: 'row',
     gap: 16,
-    marginTop: 12,
+    marginBottom: 12,
   },
   legendItem: {
     flexDirection: 'row',
-    gap: 6,
     alignItems: 'center',
+    gap: 6,
+  },
+  dot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
   legendText: {
     fontSize: 13,
     fontWeight: '600',
-  },
-  towerBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 14,
-    borderColor: '#D9D9D9',
-    backgroundColor: '#FAF8FF',
-  },
-
-  towerText: {
-    fontWeight: '700',
-    color: '#111',
-  },
-
-  towerArrow: {
-    fontSize: 14,
-    color: '#666',
-  },
-
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    color: '#374151',
   },
 
   filterRow: {
     flexDirection: 'row',
-    gap: 10,
-    marginTop: 12,
+    gap: 8,
+    marginBottom: 16,
     flexWrap: 'wrap',
   },
   filterBtn: {
-    paddingVertical: 10,
-    paddingHorizontal: 18,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
     borderRadius: 20,
-    backgroundColor: '#F4F4F5',
+    backgroundColor: '#F3F4F6',
   },
   filterActive: {
     backgroundColor: '#7C3AED',
   },
   filterText: {
+    fontSize: 14,
     fontWeight: '600',
+    color: '#6B7280',
   },
   filterTextActive: {
-    color: '#fff',
+    color: '#FFF',
   },
 
-  building: {
-    marginTop: 12,
-    backgroundColor: '#F3F4F6',
-    borderRadius: 22,
-    padding: 14,
-    alignItems: 'center',
+  gridContainer: {
+    paddingBottom: 20,
   },
-  floorRow: {
-    marginBottom: 14,
-  },
-  floorFlats: {
+  unitsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: 12,
+    gap: 4,
   },
 
-  flatBox: {
-    width: BOX_WIDTH,
-    height: 78,
-    borderRadius: 16,
+  unitBox: {
+    width: (width - 60) / 4,
+    paddingVertical: 6,
+    borderRadius: 12,
+    backgroundColor: '#ECFDF5',
     borderWidth: 2,
     borderColor: '#22C55E',
-    backgroundColor: '#ECFDF5',
     alignItems: 'center',
     justifyContent: 'center',
   },
   bookedBox: {
-    borderColor: '#EF4444',
     backgroundColor: '#FEE2E2',
+    borderColor: '#EF4444',
+  },
+  reservedBox: {
+    backgroundColor: '#FFFBEB',
+    borderColor: '#F59E0B',
   },
   selectedBox: {
+    backgroundColor: '#F5F3FF',
     borderColor: '#7C3AED',
-    backgroundColor: '#F5F3FF',
+    borderWidth: 3,
   },
-
   unitLabel: {
-    fontSize: 11,
-    color: '#6B7280',
-    fontWeight: '600',
-  },
-  flatNo: {
-    fontSize: 18,
+    fontSize: 13,
     fontWeight: '700',
-  },
-  flatStatus: {
-    fontSize: 12,
-    marginTop: 2,
-    fontWeight: '600',
-  },
-  statusBooked: {
-    color: '#EF4444',
-  },
-  statusAvailable: {
-    color: '#22C55E',
+    color: '#111',
   },
 
-  bottom: {
-    marginTop: 14,
-    backgroundColor: '#F5F3FF',
-    borderRadius: 18,
-    padding: 16,
+  footer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 16,
+    marginBottom: 16,
   },
-  small: {
-    fontSize: 18,
-    color: 'black',
+  selectedLabel: {
+    fontSize: 16,
     fontWeight: '700',
+    color: '#111',
   },
-  bold: {
-    fontWeight: '700',
-    fontSize: 18,
+  selectedArea: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginTop: 2,
   },
-  areaContainer: {
-    flexDirection: 'row', // align icon and text horizontally
-    alignItems: 'center', // vertically center
-  },
-  areaText: {
-    color: '#868686',
-    fontSize: 14,
-  },
-  price: {
+  selectedPrice: {
+    fontSize: 16,
     fontWeight: '700',
     color: '#7C3AED',
-    fontSize: 12,
+    marginBottom: 8,
+  },
+  viewBtn: {
+    backgroundColor: '#7C3AED',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+  },
+  viewBtnText: {
+    color: '#FFF',
+    fontSize: 13,
+    fontWeight: '600',
   },
 
-  cta: {
-    marginTop: 14,
-    backgroundColor: '#6D28D9',
-    paddingVertical: 16,
-    borderRadius: 18,
+  // ── Empty State ────────────────────────────────────────────────────────────
+  emptyState: {
     alignItems: 'center',
-  },
-  ctaText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 16,
-  },
-
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
     justifyContent: 'center',
-    alignItems: 'center',
+    paddingVertical: 48,
+    paddingHorizontal: 24,
   },
-
-  khasraModal: {
-    width: '85%',
-    maxHeight: '65%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 18,
-
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 8},
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 10,
+  emptyIcon: {
+    fontSize: 48,
+    marginBottom: 12,
   },
-
-  modalTitle: {
+  emptyTitle: {
     fontSize: 18,
     fontWeight: '700',
     color: '#111827',
-    textAlign: 'center',
-    marginBottom: 14,
+    marginBottom: 6,
   },
-
-  khasraItem: {
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 14,
-    backgroundColor: '#F4F4F5',
-    marginBottom: 10,
-  },
-
-  khasraActive: {
-    backgroundColor: '#7C3AED',
-  },
-
-  khasraText: {
+  emptySubtitle: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#111827',
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 20,
   },
 
-  khasraTextActive: {
-    color: '#FFFFFF',
+  detailsOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
   },
-  reservedBox: {borderColor: '#F59E0B', backgroundColor: '#FFFBEB'},
-  statusReserved: {color: '#F59E0B', fontWeight: '600'},
+  detailsContainer: {
+    height: '92%',
+    backgroundColor: '#FFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    overflow: 'hidden',
+  },
 });

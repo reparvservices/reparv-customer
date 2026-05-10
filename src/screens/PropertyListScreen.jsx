@@ -786,10 +786,14 @@ const PropertyListScreen = () => {
                   </Text>
                   <View style={styles.rangeRow}>
                     <View style={styles.rangeBox}>
-                      <Text>₹ {formatPrice(budget[0])}</Text>
+                      <Text style={{color: '#000'}}>
+                        ₹ {formatPrice(budget[0])}
+                      </Text>
                     </View>
                     <View style={styles.rangeBox}>
-                      <Text>₹ {formatPrice(budget[1])}</Text>
+                      <Text style={{color: '#000'}}>
+                        ₹ {formatPrice(budget[1])}
+                      </Text>
                     </View>
                   </View>
                   <CustomSlider
@@ -804,7 +808,7 @@ const PropertyListScreen = () => {
                   {/* Radius */}
                   <Text style={styles.sectionTitle}>Location Radius</Text>
                   <View style={styles.radiusRow}>
-                    <Text>Within {radius} km</Text>
+                    <Text style={{color: '#000'}}>Within {radius} km</Text>
                     <Text style={{color: '#7A2EFF', fontWeight: '600'}}>
                       {radius} km
                     </Text>
@@ -1120,6 +1124,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
+    color: '#000',
   },
 
   resetText: {
@@ -1132,6 +1137,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 10,
     marginTop: 18,
+    color: '#000',
   },
 
   chipWrap: {
@@ -1170,6 +1176,7 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 8,
     width: '45%',
+    color: '#000',
   },
 
   radiusRow: {

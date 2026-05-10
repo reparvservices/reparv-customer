@@ -1,4 +1,9 @@
 {
   "name": "reparv",
-  "displayName": "reparv"
+  "displayName": "reparv",
+  "extra": {
+    "eas": {
+      "projectId": "ffdb3ac1-6f0b-448b-aef2-c4a97a417c51"
+    }
+  }
 }

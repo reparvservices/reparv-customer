@@ -1641,7 +1641,7 @@ const pc = StyleSheet.create({
     gap: 6,
   },
   categoryBadge: {
-    backgroundColor: 'rgba(255,255,255,0.20)',
+    backgroundColor: C.primary,
     borderRadius: 20,
     paddingHorizontal: 10,
     paddingVertical: 4,
@@ -1649,7 +1649,7 @@ const pc = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.3)',
   },
   categoryBadgeTxt: {
-    color: '#fff',
+    color: '#FFF',
     fontSize: 11,
     fontWeight: '600',
   },
@@ -1774,6 +1774,7 @@ const pc = StyleSheet.create({
   },
   statChipWide: {
     flex: 1,
+    flexWrap: 'wrap',
   },
   statIcon: {
     fontSize: 14,
