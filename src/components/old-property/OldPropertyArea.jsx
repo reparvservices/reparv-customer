@@ -78,7 +78,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontFamily: 'SegoeUI-Bold',
     color: '#000',
-    fontFamily: 'Segoe UI',
+    fontFamily: 'SegoeUI-Regular',
   },
   required: {
     color: '#E33629',
@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     color: '#000',
     marginRight: 6,
-    fontFamily: 'Segoe UI',
+    fontFamily: 'SegoeUI-Regular',
   },
   arrow: {
     fontSize: 18,

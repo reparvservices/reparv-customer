@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     flex: 1,
     fontSize: 17,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'SegoeUI-Bold',
     fontWeight: '700',
     color: '#000',
     textAlign: 'center',
@@ -225,7 +225,7 @@ const styles = StyleSheet.create({
   },
   tabText: {
     fontSize: 14,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'SegoeUI-Bold',
     color: '#9585C0',
   },
   tabTextActive: {
@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 15,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'SegoeUI-Bold',
     fontWeight: '800',
     color: '#3F2D62',
 

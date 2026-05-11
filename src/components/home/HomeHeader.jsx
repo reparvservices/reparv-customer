@@ -1,9 +1,9 @@
-import React, {useCallback, useState, useEffect, useRef} from 'react';
+import React, {useCallback, useState, useEffect, useRef, useMemo} from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  Dimensions,
+  useWindowDimensions,
   Image,
   TouchableOpacity,
   Platform,
@@ -18,14 +18,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {getImageUri} from '../../utils/imageHandle';
 
 const heroBanner = require('../../assets/image/home/Hero-Banner.png');
-
-// ── Responsive helpers ──────────────────────────────────────────────────────
-const {width} = Dimensions.get('window');
-const BASE_WIDTH = 390;
-const scale = width / BASE_WIDTH;
-const rs = size => Math.round(PixelRatio.roundToNearestPixel(size * scale));
-const rf = (size, min = size * 0.8, max = size * 1.2) =>
-  Math.min(max, Math.max(min, rs(size)));
 
 const API_HOST = 'https://aws-api.reparv.in';
 
@@ -223,7 +215,16 @@ export default function HomeHeader() {
   // ── Dynamic placeholder ─────────────────────────────────────────────────
   const {displayText, cursorAnim} = useTypewriterPlaceholder(user?.city);
 
-  const styles = makeStyles();
+  const {width: screenW} = useWindowDimensions();
+  const {styles, rs} = useMemo(() => {
+    const BASE_WIDTH = 390;
+    const scale = screenW / BASE_WIDTH;
+    const rsFn = size =>
+      Math.round(PixelRatio.roundToNearestPixel(size * scale));
+    const rfFn = (size, min = size * 0.8, max = size * 1.2) =>
+      Math.min(max, Math.max(min, rsFn(size)));
+    return {styles: buildHomeStyles(rsFn, rfFn), rs: rsFn};
+  }, [screenW]);
 
   return (
     <View style={styles.topBlock}>
@@ -293,7 +294,7 @@ export default function HomeHeader() {
 }
 
 // ── Styles ────────────────────────────────────────────────────────────────────
-function makeStyles() {
+function buildHomeStyles(rs, rf) {
   const avatarSize = Math.min(60, Math.max(44, rs(52)));
   const pinSize = Math.min(50, Math.max(38, rs(44)));
 
@@ -369,6 +370,8 @@ function makeStyles() {
 
     // ── Search bar ─────────────────────────────────────────────────────────
     searchShell: {
+      alignSelf: 'stretch',
+      width: '100%',
       flexDirection: 'row',
       alignItems: 'center',
       backgroundColor: '#FFFFFF',

@@ -1,4 +1,4 @@
-import React, {useEffect, useRef} from 'react';
+import React, {useEffect, useRef, useMemo} from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import {
   Building2,
 } from 'lucide-react-native';
 
+import {useResponsiveMetrics} from '../../utils/responsive';
 // ─────────────────────────────────────────────────────────────
 // Ripple ring
 // ─────────────────────────────────────────────────────────────
@@ -402,7 +403,8 @@ const map = StyleSheet.create({
 // ─────────────────────────────────────────────────────────────
 // Main Banner
 // ─────────────────────────────────────────────────────────────
-export default function MapExplorerBanner({navigation, style}) {
+export default function MapExplorerBanner({navigation}) {
+  const {width, ms, font} = useResponsiveMetrics();
   const shimmer = useRef(new Animated.Value(0)).current;
   const btnScale = useRef(new Animated.Value(1)).current;
   const dotPulse = useRef(new Animated.Value(1)).current;
@@ -454,8 +456,172 @@ export default function MapExplorerBanner({navigation, style}) {
       useNativeDriver: true,
     }).start();
 
+  const b = useMemo(
+    () =>
+      StyleSheet.create({
+        card: {
+          marginHorizontal: ms(16, 0.25),
+          marginVertical: ms(12, 0.2),
+          borderRadius: ms(32, 0.2),
+          alignSelf: 'stretch',
+          paddingTop: ms(20, 0.2),
+          paddingHorizontal: ms(20, 0.2),
+          paddingBottom: ms(26, 0.22),
+          gap: ms(14, 0.15),
+          overflow: 'hidden',
+          backgroundColor: '#F7F5FF',
+          shadowColor: '#6136D8',
+          shadowOffset: {width: 0, height: ms(8, 0.15)},
+          shadowOpacity: 0.12,
+          shadowRadius: ms(16, 0.15),
+          elevation: 10,
+        },
+
+        topRow: {
+          flexDirection: 'row',
+          alignItems: 'flex-start',
+          height: ms(26, 0.12),
+          zIndex: 5,
+        },
+        liveTag: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: ms(6, 0.1),
+          backgroundColor: 'rgba(97,54,216,0.07)',
+          borderWidth: 1,
+          borderColor: 'rgba(97,54,216,0.18)',
+          borderRadius: 999,
+          paddingHorizontal: ms(10, 0.12),
+          paddingVertical: ms(4, 0.08),
+          alignSelf: 'flex-start',
+        },
+        liveDot: {
+          width: ms(7, 0.1),
+          height: ms(7, 0.1),
+          borderRadius: ms(4, 0.1),
+          backgroundColor: '#6136D8',
+          shadowColor: '#6136D8',
+          shadowOffset: {width: 0, height: 0},
+          shadowOpacity: 0.6,
+          shadowRadius: 5,
+          elevation: 4,
+        },
+        liveTagTxt: {
+          color: '#6136D8',
+          fontSize: font(11, 0.35),
+          fontWeight: '700',
+          letterSpacing: 0.8,
+          textTransform: 'uppercase',
+          lineHeight: font(16, 0.3),
+        },
+
+        headingBlock: {
+          paddingTop: ms(4, 0.1),
+          gap: ms(6, 0.1),
+          alignSelf: 'stretch',
+          width: '100%',
+          zIndex: 5,
+        },
+        heading: {
+          color: '#1A0A3E',
+          fontSize: font(22, 0.28),
+          fontWeight: '800',
+          lineHeight: font(29, 0.25),
+          letterSpacing: -0.3,
+        },
+        sub: {
+          color: '#6B7280',
+          fontSize: font(13, 0.28),
+          fontWeight: '400',
+          lineHeight: font(19, 0.28),
+        },
+
+        statsRow: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: ms(12, 0.15),
+          paddingTop: ms(4, 0.12),
+          zIndex: 5,
+        },
+        stat: {flexDirection: 'row', alignItems: 'center', gap: ms(8, 0.12)},
+        statIconWrap: {
+          width: ms(32, 0.18),
+          height: ms(32, 0.18),
+          borderRadius: ms(16, 0.18),
+          backgroundColor: 'rgba(97,54,216,0.09)',
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        statNum: {
+          color: '#1A0A3E',
+          fontSize: font(14, 0.28),
+          fontWeight: '800',
+          lineHeight: font(16, 0.25),
+        },
+        statLbl: {
+          color: '#9CA3AF',
+          fontSize: font(10, 0.35),
+          fontWeight: '400',
+          lineHeight: font(14, 0.3),
+          marginTop: 1,
+        },
+        statDivider: {
+          width: 1,
+          height: ms(32, 0.18),
+          backgroundColor: 'rgba(97,54,216,0.12)',
+        },
+
+        btnRow: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          paddingTop: ms(4, 0.12),
+          zIndex: 6,
+        },
+        viewBtn: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: ms(8, 0.12),
+          backgroundColor: '#6136D8',
+          borderRadius: 999,
+          paddingVertical: ms(10, 0.15),
+          paddingLeft: ms(18, 0.15),
+          paddingRight: ms(10, 0.12),
+          overflow: 'hidden',
+          shadowColor: '#6136D8',
+          shadowOffset: {width: 0, height: ms(6, 0.12)},
+          shadowOpacity: 0.35,
+          shadowRadius: ms(10, 0.12),
+          elevation: 6,
+        },
+        btnShimmer: {
+          position: 'absolute',
+          left: -ms(60, 0.15),
+          top: 0,
+          bottom: 0,
+          width: ms(60, 0.15),
+          backgroundColor: 'rgba(255,255,255,0.2)',
+        },
+        viewBtnTxt: {
+          color: '#FFFFFF',
+          fontSize: font(14, 0.28),
+          fontWeight: '700',
+          lineHeight: font(20, 0.28),
+        },
+        arrowCircle: {
+          width: ms(22, 0.15),
+          height: ms(22, 0.15),
+          borderRadius: ms(11, 0.15),
+          backgroundColor: '#fff',
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+      }),
+    [width, ms, font],
+  );
+
   return (
-    <View style={[b.card, style]}>
+    <View style={b.card}>
       {/* Map fills right half */}
       <MapGraphic />
 
@@ -525,7 +691,7 @@ export default function MapExplorerBanner({navigation, style}) {
                     {
                       translateX: shimmer.interpolate({
                         inputRange: [0, 1],
-                        outputRange: [-120, 160],
+                        outputRange: [-width * 0.36, width * 0.42],
                       }),
                     },
                   ],
@@ -543,157 +709,3 @@ export default function MapExplorerBanner({navigation, style}) {
     </View>
   );
 }
-
-// ─────────────────────────────────────────────────────────────
-// Styles — single `b` object, zero missing refs
-// ─────────────────────────────────────────────────────────────
-const b = StyleSheet.create({
-  card: {
-    marginHorizontal: 16,
-    marginVertical: 12,
-    borderRadius: 32,
-    width: 343,
-    padding: 20,
-    gap: 16,
-    overflow: 'hidden',
-    backgroundColor: '#F7F5FF',
-    shadowColor: '#6136D8',
-    shadowOffset: {width: 0, height: 8},
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    elevation: 10,
-    alignSelf: 'center',
-  },
-
-  // Live tag
-  topRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    height: 26,
-    zIndex: 5,
-  },
-  liveTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(97,54,216,0.07)',
-    borderWidth: 1,
-    borderColor: 'rgba(97,54,216,0.18)',
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    alignSelf: 'flex-start',
-  },
-  liveDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: '#6136D8',
-    shadowColor: '#6136D8',
-    shadowOffset: {width: 0, height: 0},
-    shadowOpacity: 0.6,
-    shadowRadius: 5,
-    elevation: 4,
-  },
-  liveTagTxt: {
-    color: '#6136D8',
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-    lineHeight: 16,
-  },
-
-  // Heading
-  headingBlock: {paddingTop: 4, gap: 6, width: 190, zIndex: 5},
-  heading: {
-    color: '#1A0A3E',
-    fontSize: 22,
-    fontWeight: '800',
-    lineHeight: 29,
-    letterSpacing: -0.3,
-  },
-  sub: {
-    color: '#6B7280',
-    fontSize: 13,
-    fontWeight: '400',
-    lineHeight: 19,
-  },
-
-  // Stats
-  statsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingTop: 4,
-    zIndex: 5,
-  },
-  stat: {flexDirection: 'row', alignItems: 'center', gap: 8},
-  statIconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(97,54,216,0.09)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  statNum: {color: '#1A0A3E', fontSize: 14, fontWeight: '800', lineHeight: 16},
-  statLbl: {
-    color: '#9CA3AF',
-    fontSize: 10,
-    fontWeight: '400',
-    lineHeight: 14,
-    marginTop: 1,
-  },
-  statDivider: {
-    width: 1,
-    height: 32,
-    backgroundColor: 'rgba(97,54,216,0.12)',
-  },
-
-  // Button
-  btnRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingTop: 4,
-    zIndex: 6,
-  },
-  viewBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#6136D8',
-    borderRadius: 999,
-    paddingVertical: 10,
-    paddingLeft: 18,
-    paddingRight: 10,
-    overflow: 'hidden',
-    shadowColor: '#6136D8',
-    shadowOffset: {width: 0, height: 6},
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 6,
-  },
-  btnShimmer: {
-    position: 'absolute',
-    left: -60,
-    top: 0,
-    bottom: 0,
-    width: 60,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-  },
-  viewBtnTxt: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '700',
-    lineHeight: 20,
-  },
-  arrowCircle: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});

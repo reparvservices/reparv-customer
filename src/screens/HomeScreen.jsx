@@ -8,7 +8,6 @@ import {
   StatusBar,
   TouchableOpacity,
   Image,
-  Dimensions,
   FlatList,
   ActivityIndicator,
 } from 'react-native';
@@ -23,13 +22,11 @@ import ActionCards from '../components/home/ActionCards';
 import RentProperty from '../components/home/RentProperty';
 import HomeLoan from '../components/home/HomeLoan';
 import NewLaunchShowcase from '../components/home/NewLauncCard';
-import {SafeAreaProvider, SafeAreaView} from 'react-native-safe-area-context';
+import {SafeAreaView} from 'react-native-safe-area-context';
 import {getImageUri} from '../utils/imageHandle';
 import NearbyPropertiesBanner from '../components/home/NearbyPropertiesBanner';
 import TrendingProperties from '../components/home/TrendingProperties';
 import MapExplorerBanner from '../components/home/MapExplorerBanner';
-
-const {width} = Dimensions.get('window');
 
 /* ─────────────────────────────────────────────────────
    MAIN HOME SCREEN
@@ -57,13 +54,13 @@ export default function HomeScreen() {
   }, []);
 
   return (
-    <SafeAreaView style={{flex: 1}}>
+    <SafeAreaView style={{flex: 1}} edges={['top', 'left', 'right']}>
       <View style={styles.container}>
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}>
           <HomeHeader />
-          <NearbyPropertiesBanner navigation={navigation} style={styles} />
+          <NearbyPropertiesBanner navigation={navigation} />
           <ActionCards />
           <TrendingProperties />
           <HomeLoan />
@@ -71,7 +68,7 @@ export default function HomeScreen() {
           <RentProperty />
 
           <NewLaunchShowcase />
-          <MapExplorerBanner navigation={navigation} style={styles} />
+          <MapExplorerBanner navigation={navigation} />
           <View style={{height: 32}} />
         </ScrollView>
       </View>

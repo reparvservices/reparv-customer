@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useState, useCallback} from 'react';
 import {
   Text,
   TextInput,
@@ -9,8 +9,10 @@ import {
   Platform,
   PermissionsAndroid,
   AppState,
+  StyleSheet,
 } from 'react-native';
 import {Provider, useDispatch, useSelector} from 'react-redux';
+import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import VersionCheck from 'react-native-version-check';
 import {GoogleSignin} from '@react-native-google-signin/google-signin';
@@ -19,25 +21,28 @@ import AppNavigator from './src/navigation/AppNavigator';
 
 import {loadUser} from './src/features/auth/authSlice';
 import {Settings} from 'react-native-fbsdk-next';
-import {getApps} from '@react-native-firebase/app';
 import messaging from '@react-native-firebase/messaging';
 import {navigationRef} from './src/navigation/Navigationref';
 import {refreshTuyaSessionOnLaunch} from './src/services/tuyaApi';
 import {tuyaApi} from './src/features/tuya/tuyaApiSlice';
 import {devLog} from './src/utils/devLog';
+import {AppErrorBoundary} from './src/components/AppErrorBoundary';
+import {Fonts} from './src/theme/fonts';
 
 Settings.initializeSDK();
 
-/* Set global font once */
+/* Global default: must match a linked font (see ios/reparv/Info.plist UIAppFonts). */
 Text.defaultProps = Text.defaultProps || {};
-Text.defaultProps.style = {fontFamily: 'Inter-Regular'};
+Text.defaultProps.style = {fontFamily: Fonts.regular};
 
 TextInput.defaultProps = TextInput.defaultProps || {};
-TextInput.defaultProps.style = {fontFamily: 'Inter-Regular'};
+TextInput.defaultProps.style = {fontFamily: Fonts.regular};
 
 // ── Helper: navigate to PropertyDetails from notification data ────────────────
 function handleNotificationNavigation(data) {
-  if (!data) return;
+  if (!data) {
+    return;
+  }
 
   const {screen, propertyid} = data;
 
@@ -62,7 +67,7 @@ const Root = () => {
   const [storeUrl, setStoreUrl] = useState('');
 
   // 🔔 Request Notification Permission
-  const requestNotificationPermission = async userId => {
+  const requestNotificationPermission = useCallback(async userId => {
     try {
       if (Platform.OS === 'android') {
         await PermissionsAndroid.request(
@@ -80,7 +85,9 @@ const Root = () => {
         const token = await messaging().getToken();
         devLog('🔥 FCM TOKEN:', token);
 
-        if (!userId) return;
+        if (!userId) {
+          return;
+        }
 
         await fetch(
           'https://aws-api.reparv.in/customerapp/notifications/save-fcm-token',
@@ -97,7 +104,7 @@ const Root = () => {
     } catch (error) {
       devLog('Notification permission error:', error);
     }
-  };
+  }, []);
 
   // 📍 Request Location Permission (check first, ask only if not granted)
   const requestLocationPermission = async () => {
@@ -161,7 +168,7 @@ const Root = () => {
     if (user?.id) {
       requestNotificationPermission(user.id);
     }
-  }, [user]);
+  }, [user?.id, requestNotificationPermission]);
 
   // 🔔 Foreground — app is open, notification arrives
   useEffect(() => {
@@ -186,7 +193,9 @@ const Root = () => {
     messaging()
       .getInitialNotification()
       .then(remoteMessage => {
-        if (!remoteMessage) return;
+        if (!remoteMessage) {
+          return;
+        }
         devLog('🚀 Quit state notification tap:', remoteMessage);
         handleNotificationNavigation(remoteMessage.data);
       });
@@ -245,12 +254,20 @@ const Root = () => {
   );
 };
 
+const styles = StyleSheet.create({
+  rootFlex: {flex: 1},
+});
+
 export default function App() {
   return (
-    <Provider store={store}>
-      <SafeAreaProvider>
-        <Root />
-      </SafeAreaProvider>
-    </Provider>
+    <GestureHandlerRootView style={styles.rootFlex}>
+      <AppErrorBoundary>
+        <Provider store={store}>
+          <SafeAreaProvider>
+            <Root />
+          </SafeAreaProvider>
+        </Provider>
+      </AppErrorBoundary>
+    </GestureHandlerRootView>
   );
 }

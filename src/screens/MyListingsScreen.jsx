@@ -864,14 +864,14 @@ const styles = StyleSheet.create({
 
   /* ENQUIRY CARD FONTS UPDATED */
   enqName: {
-    fontSize: 14, // Figma font size
-    fontWeight: '700', // Bold
-    fontFamily: 'Inter', // Match Figma
+    fontSize: 14,
+    fontWeight: '700',
+    fontFamily: 'SegoeUI-Bold',
     color: '#111111',
   },
 
   enqSub: {
-    fontFamily: 'Segoe UI',
+    fontFamily: 'SegoeUI-Regular',
     //fontWeight: '400',
     fontSize: 12,
     // 100% of font size
@@ -881,8 +881,8 @@ const styles = StyleSheet.create({
 
   enqTime: {
     fontSize: 11,
-    fontWeight: '400', // Regular
-    fontFamily: 'Inter',
+    fontWeight: '400',
+    fontFamily: 'SegoeUI-Regular',
     color: '#9CA3AF',
     marginTop: 4,
   },

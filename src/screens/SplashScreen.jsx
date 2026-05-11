@@ -1,11 +1,13 @@
 import React, {useEffect, useRef} from 'react';
-import {View, StyleSheet, Animated, Dimensions} from 'react-native';
+import {View, StyleSheet, Animated, useWindowDimensions} from 'react-native';
 import Logo from '../assets/image/common/logo2.svg';
 import HomeIcon from '../assets/image/common/homeIcon.svg';
 
-const {width} = Dimensions.get('window');
-
 const SplashScreen = ({navigation}) => {
+  const {width} = useWindowDimensions();
+  const logoW = Math.min(300, Math.round(width * 0.82));
+  const logoH = Math.round(logoW * (130 / 300));
+
   const bgAnim = useRef(new Animated.Value(0)).current;
   const homeOpacity = useRef(new Animated.Value(1)).current;
   const logoX = useRef(new Animated.Value(width)).current;
@@ -85,7 +87,7 @@ const SplashScreen = ({navigation}) => {
           transform: [{translateX: logoX}],
           opacity: logoOpacity,
         }}>
-        <Logo width={300} height={130} />
+        <Logo width={logoW} height={logoH} />
       </Animated.View>
     </Animated.View>
   );

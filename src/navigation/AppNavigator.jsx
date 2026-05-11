@@ -134,7 +134,8 @@ function AppStack() {
       />
       <Stack.Screen
         name="NoPropertyFound"
-        component={NoPropertyFound}></Stack.Screen>
+        component={NoPropertyFound}
+      />
     </Stack.Navigator>
   );
 }

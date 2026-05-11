@@ -1,11 +1,11 @@
-import React from 'react';
+import React, {useMemo} from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   Platform,
-  Dimensions,
+  useWindowDimensions,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import {
@@ -15,8 +15,8 @@ import {
   CheckCircle2,
   ArrowRight,
 } from 'lucide-react-native';
-
-const {width: SCREEN_WIDTH} = Dimensions.get('window');
+import {Fonts} from '../../theme/fonts';
+import {moderateScale, scaleFont, scaleWidth} from '../../utils/responsive';
 
 const PlusSparkle = ({color, style}) => (
   <View style={[{position: 'absolute', width: 12, height: 12}, style]}>
@@ -89,8 +89,200 @@ const cardData = [
   },
 ];
 
+function createStyles(width, fontScale) {
+  const ms = (size, factor = 0.35) => moderateScale(size, width, factor);
+  const sf = (size, factor = 0.35) => scaleFont(size, width, fontScale, factor);
+
+  const horizontalPadding = ms(16, 0.3);
+  const cardGap = ms(10, 0.3);
+  const rawCardWidth =
+    (width - horizontalPadding * 2 - cardGap * 2) / 3;
+  const cardWidth = Math.max(76, rawCardWidth);
+
+  const iconRingSize = ms(52, 0.25);
+  const iconRingRadius = iconRingSize / 2;
+
+  return StyleSheet.create({
+    section: {
+      marginTop: 4,
+      marginBottom: 10,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: ms(20, 0.25),
+      marginBottom: ms(14, 0.25),
+    },
+    sectionTitle: {
+      fontSize: sf(18),
+      fontFamily: Fonts.bold,
+      fontWeight: '700',
+      color: '#1F2937',
+    },
+    cardsRow: {
+      flexDirection: 'row',
+      paddingHorizontal: horizontalPadding,
+      gap: cardGap,
+      paddingTop: ms(12, 0.25),
+      paddingBottom: ms(6, 0.25),
+      alignItems: 'stretch',
+    },
+    cardWrapper: {
+      width: cardWidth,
+      minWidth: 0,
+    },
+
+    shadowLayer: {
+      borderRadius: ms(20, 0.2),
+      flex: 1,
+      ...Platform.select({
+        ios: {
+          shadowOffset: {width: 0, height: scaleWidth(5, width)},
+          shadowOpacity: 0.22,
+          shadowRadius: scaleWidth(10, width),
+        },
+      }),
+    },
+
+    cardClip: {
+      borderRadius: ms(20, 0.2),
+      overflow: 'hidden',
+      flex: 1,
+    },
+
+    card: {
+      flex: 1,
+      borderRadius: ms(20, 0.2),
+      paddingHorizontal: ms(10, 0.25),
+      paddingTop: ms(30, 0.2),
+      paddingBottom: ms(14, 0.25),
+      alignItems: 'center',
+    },
+
+    dotPattern: {
+      position: 'absolute',
+      top: 0,
+      right: 0,
+      width: scaleWidth(60, width),
+      height: scaleWidth(60, width),
+      borderRadius: ms(20, 0.2),
+    },
+
+    ribbon: {
+      position: 'absolute',
+      top: ms(16, 0.25),
+      right: -ms(26, 0.2),
+      width: ms(90, 0.2),
+      paddingVertical: ms(5, 0.25),
+      alignItems: 'center',
+      justifyContent: 'center',
+      transform: [{rotate: '45deg'}],
+      zIndex: 10,
+      ...Platform.select({
+        ios: {
+          shadowColor: '#000',
+          shadowOffset: {width: 0, height: 2},
+          shadowOpacity: 0.25,
+          shadowRadius: 4,
+        },
+      }),
+    },
+    ribbonText: {
+      color: '#FFFFFF',
+      fontSize: Math.max(6, ms(7.5, 0.45)),
+      fontFamily: Fonts.bold,
+      fontWeight: '800',
+      letterSpacing: 1,
+    },
+
+    iconRing: {
+      width: iconRingSize,
+      height: iconRingSize,
+      borderRadius: iconRingRadius,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: ms(12, 0.25),
+      ...Platform.select({
+        ios: {
+          shadowOffset: {width: 0, height: scaleWidth(5, width)},
+          shadowOpacity: 0.45,
+          shadowRadius: scaleWidth(8, width),
+        },
+        android: {
+          elevation: 8,
+        },
+      }),
+    },
+
+    cardTitle: {
+      fontSize: sf(13),
+      fontFamily: Fonts.bold,
+      fontWeight: '700',
+      color: '#111827',
+      textAlign: 'center',
+      marginBottom: ms(6, 0.25),
+      ...Platform.select({android: {includeFontPadding: false}}),
+    },
+    subtitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: ms(14, 0.25),
+    },
+    subtitleText: {
+      fontSize: sf(10),
+      fontFamily: Fonts.regular,
+      fontWeight: '500',
+      color: '#4B5563',
+      ...Platform.select({android: {includeFontPadding: false}}),
+    },
+    btnFilled: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      borderRadius: ms(30, 0.2),
+      paddingVertical: ms(9, 0.25),
+      paddingHorizontal: ms(6, 0.25),
+      alignSelf: 'stretch',
+      justifyContent: 'center',
+    },
+    btnFilledText: {
+      color: '#FFFFFF',
+      fontSize: sf(10),
+      fontFamily: Fonts.bold,
+      fontWeight: '700',
+      ...Platform.select({android: {includeFontPadding: false}}),
+    },
+    btnOutline: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      borderRadius: ms(30, 0.2),
+      borderWidth: 1.5,
+      paddingVertical: ms(8, 0.25),
+      paddingHorizontal: ms(6, 0.25),
+      alignSelf: 'stretch',
+      justifyContent: 'center',
+      backgroundColor: 'transparent',
+    },
+    btnOutlineText: {
+      fontSize: sf(10),
+      fontFamily: Fonts.bold,
+      fontWeight: '700',
+      ...Platform.select({android: {includeFontPadding: false}}),
+    },
+  });
+}
+
 export default function ActionCards() {
   const navigation = useNavigation();
+  const {width, fontScale} = useWindowDimensions();
+  const styles = useMemo(
+    () => createStyles(width, fontScale),
+    [width, fontScale],
+  );
+
+  const iconPx = Math.round(moderateScale(24, width, 0.25));
+  const checkIconPx = Math.round(moderateScale(13, width, 0.25));
+  const arrowIconPx = Math.round(moderateScale(12, width, 0.25));
 
   return (
     <View style={styles.section}>
@@ -103,7 +295,6 @@ export default function ActionCards() {
           const IconComp = item.Icon;
           return (
             <View key={index} style={styles.cardWrapper}>
-              {/* ── Shadow layer (outside overflow:hidden) ── */}
               <View
                 style={[
                   styles.shadowLayer,
@@ -111,7 +302,6 @@ export default function ActionCards() {
                     shadowColor: item.accentColor,
                   },
                 ]}>
-                {/* ── Clip container for ribbon overflow ── */}
                 <View style={styles.cardClip}>
                   <TouchableOpacity
                     style={[styles.card, {backgroundColor: item.cardBg}]}
@@ -119,10 +309,8 @@ export default function ActionCards() {
                     onPress={() =>
                       navigation.navigate(item.screen, item.params)
                     }>
-                    {/* Dot pattern overlay */}
                     <View style={[styles.dotPattern, {opacity: 0.06}]} />
 
-                    {/* ── POPULAR diagonal ribbon ── */}
                     {item.popular && (
                       <View
                         style={[
@@ -133,7 +321,6 @@ export default function ActionCards() {
                       </View>
                     )}
 
-                    {/* Sparkles */}
                     <PlusSparkle
                       color={item.accentColor}
                       style={{top: 10, right: 10}}
@@ -143,7 +330,6 @@ export default function ActionCards() {
                       style={{bottom: 50, left: 6}}
                     />
 
-                    {/* Icon Circle with glow ring */}
                     <View
                       style={[
                         styles.iconRing,
@@ -152,16 +338,18 @@ export default function ActionCards() {
                           shadowColor: item.accentColor,
                         },
                       ]}>
-                      <IconComp size={24} color="#FFFFFF" strokeWidth={2.2} />
+                      <IconComp
+                        size={iconPx}
+                        color="#FFFFFF"
+                        strokeWidth={2.2}
+                      />
                     </View>
 
-                    {/* Title */}
                     <Text style={styles.cardTitle}>{item.title}</Text>
 
-                    {/* Subtitle */}
                     <View style={styles.subtitleRow}>
                       <CheckCircle2
-                        size={13}
+                        size={checkIconPx}
                         color={'#FFFFFF'}
                         fill={item.accentColor}
                         strokeWidth={2}
@@ -170,7 +358,6 @@ export default function ActionCards() {
                       <Text style={styles.subtitleText}>{item.subtitle}</Text>
                     </View>
 
-                    {/* Button */}
                     {item.btnType === 'filled' ? (
                       <View
                         style={[
@@ -179,7 +366,7 @@ export default function ActionCards() {
                         ]}>
                         <Text style={styles.btnFilledText}>{item.btnText}</Text>
                         <ArrowRight
-                          size={12}
+                          size={arrowIconPx}
                           color="#FFF"
                           strokeWidth={2.5}
                           style={{marginLeft: 4}}
@@ -199,7 +386,7 @@ export default function ActionCards() {
                           {item.btnText}
                         </Text>
                         <ArrowRight
-                          size={12}
+                          size={arrowIconPx}
                           color={item.accentColor}
                           strokeWidth={2.5}
                           style={{marginLeft: 4}}
@@ -216,180 +403,3 @@ export default function ActionCards() {
     </View>
   );
 }
-
-const HORIZONTAL_PADDING = 16;
-const CARD_GAP = 10;
-const CARD_WIDTH = (SCREEN_WIDTH - HORIZONTAL_PADDING * 2 - CARD_GAP * 2) / 3;
-
-const styles = StyleSheet.create({
-  section: {
-    marginTop: 4,
-    marginBottom: 10,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    marginBottom: 14,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontFamily: 'Inter-Bold',
-    fontWeight: '700',
-    color: '#1F2937',
-  },
-  cardsRow: {
-    flexDirection: 'row',
-    paddingHorizontal: HORIZONTAL_PADDING,
-    gap: CARD_GAP,
-    paddingTop: 12,
-    paddingBottom: 6,
-    alignItems: 'stretch',
-  },
-  cardWrapper: {
-    width: CARD_WIDTH,
-  },
-
-  // ── Shadow lives OUTSIDE overflow:hidden ──
-  shadowLayer: {
-    borderRadius: 20,
-    flex: 1,
-    ...Platform.select({
-      ios: {
-        shadowOffset: {width: 0, height: 5},
-        shadowOpacity: 0.22,
-        shadowRadius: 10,
-      },
-    }),
-  },
-
-  // ── Clip container: cuts ribbon to card border ──
-  cardClip: {
-    borderRadius: 20,
-    overflow: 'hidden',
-    flex: 1,
-  },
-
-  card: {
-    flex: 1,
-    borderRadius: 20,
-    paddingHorizontal: 10,
-    paddingTop: 30,
-    paddingBottom: 14,
-    alignItems: 'center',
-  },
-
-  // ── Dot pattern (subtle texture) ──
-  dotPattern: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    width: 60,
-    height: 60,
-    borderRadius: 20,
-  },
-
-  // ── Diagonal corner ribbon ──
-  ribbon: {
-    position: 'absolute',
-    top: 16,
-    right: -26,
-    width: 90,
-    paddingVertical: 5,
-    alignItems: 'center',
-    justifyContent: 'center',
-    transform: [{rotate: '45deg'}],
-    zIndex: 10,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: {width: 0, height: 2},
-        shadowOpacity: 0.25,
-        shadowRadius: 4,
-      },
-    }),
-  },
-  ribbonText: {
-    color: '#FFFFFF',
-    fontSize: 7.5,
-    fontFamily: 'Inter-Bold',
-    fontWeight: '800',
-    letterSpacing: 1,
-  },
-
-  // ── Icon circle with colored glow ──
-  iconRing: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-    ...Platform.select({
-      ios: {
-        shadowOffset: {width: 0, height: 5},
-        shadowOpacity: 0.45,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 8,
-      },
-    }),
-  },
-
-  cardTitle: {
-    fontSize: 13,
-    fontFamily: 'Inter-Bold',
-    fontWeight: '700',
-    color: '#111827',
-    textAlign: 'center',
-    marginBottom: 6,
-    ...Platform.select({android: {includeFontPadding: false}}),
-  },
-  subtitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 14,
-  },
-  subtitleText: {
-    fontSize: 10,
-    fontFamily: 'Inter-Regular',
-    fontWeight: '500',
-    color: '#4B5563',
-    ...Platform.select({android: {includeFontPadding: false}}),
-  },
-  btnFilled: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 30,
-    paddingVertical: 9,
-    paddingHorizontal: 6,
-    alignSelf: 'stretch',
-    justifyContent: 'center',
-  },
-  btnFilledText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontFamily: 'Inter-Bold',
-    fontWeight: '700',
-    ...Platform.select({android: {includeFontPadding: false}}),
-  },
-  btnOutline: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 30,
-    borderWidth: 1.5,
-    paddingVertical: 8,
-    paddingHorizontal: 6,
-    alignSelf: 'stretch',
-    justifyContent: 'center',
-    backgroundColor: 'transparent',
-  },
-  btnOutlineText: {
-    fontSize: 10,
-    fontFamily: 'Inter-Bold',
-    fontWeight: '700',
-    ...Platform.select({android: {includeFontPadding: false}}),
-  },
-});

@@ -379,7 +379,7 @@ export default function ActivitiesScreen() {
   // RENDER
   // ─────────────────────────────────────────────
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <StatusBar backgroundColor="#FAF8FF" barStyle="dark-content" />
 
       {/* Confirm Remove Modal */}
@@ -709,7 +709,7 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     textAlign: 'center',
     lineHeight: 22,
-    fontFamily: 'SegoeUI',
+    fontFamily: 'SegoeUI-Regular',
     paddingHorizontal: 6,
   },
 

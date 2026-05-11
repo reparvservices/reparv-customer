@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   headerTitle: {
-    fontFamily: 'Segoe UI',
+    fontFamily: 'SegoeUI-Regular',
     fontSize: 16,
 
     fontFamily: 'SegoeUI-Bold',

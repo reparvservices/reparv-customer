@@ -148,7 +148,7 @@ const styles = StyleSheet.create({
 
   heading: {
     fontSize: 16,
-    fontWeigfontFamily: 'SegoeUI-Bold',
+    fontFamily: 'SegoeUI-Bold',
     marginBottom: 12,
     color: '#000',
   },

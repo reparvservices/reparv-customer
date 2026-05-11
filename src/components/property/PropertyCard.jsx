@@ -182,7 +182,7 @@ function PropertyCard({item, iswishList}) {
             />
             <Text
               style={{
-                fontFamily: 'Poppins-SemiBold',
+                fontFamily: 'SegoeUI-Bold',
                 fontWeight: '700',
                 fontSize: 12,
 
@@ -314,7 +314,7 @@ const styles = StyleSheet.create({
   infoText: {
     fontSize: 13,
     color: '#4B5563',
-    fontFamily: 'SegoeUI-Semibold',
+    fontFamily: 'SegoeUI-Bold',
   },
 
   priceOld: {

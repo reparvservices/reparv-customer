@@ -8,14 +8,14 @@ require Pod::Executable.execute_command('node', ['-p',
 platform :ios, min_ios_version_supported
 prepare_react_native_project!
 
-linkage = ENV['USE_FRAMEWORKS']
-if linkage != nil
-  Pod::UI.puts "Configuring Pod with #{linkage}ally linked Frameworks".green
-  use_frameworks! :linkage => linkage.to_sym
-end
-
 target 'reparv' do
   config = use_native_modules!
+
+  # firebase-ios-sdk (via @react-native-firebase) requires static frameworks.
+  # See https://rnfirebase.io/ — do NOT use global use_modular_headers! here;
+  # it breaks Fabric / New Architecture (e.g. "Redefinition of module 'ReactCommon'").
+  use_frameworks! :linkage => :static
+  $RNFirebaseAsStaticFramework = true
 
   use_react_native!(
     :path => config[:reactNativePath],
@@ -31,5 +31,51 @@ target 'reparv' do
       :mac_catalyst_enabled => false,
       # :ccache_enabled => true
     )
+
+    # Static frameworks + mixed ObjC/Swift pods: allow non-modular includes so
+    # Clang does not treat system/RN umbrella imports as hard errors (Xcode 16+).
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |cfg|
+        cfg.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
+      end
+    end
+
+    installer.aggregate_targets.each do |aggregate_target|
+      aggregate_target.user_project.native_targets.each do |target|
+        target.build_configurations.each do |cfg|
+          cfg.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
+        end
+      end
+      aggregate_target.user_project.save
+    end
+
+    # Workaround: fmt 11.0.2 (pinned by RN 0.78) fails to compile under
+    # newer Apple toolchains (Xcode 16+/SDKs ≥ iOS 18) because Clang now
+    # rejects its `consteval` basic_format_string constructor as not a
+    # constant expression. `fmt/include/fmt/base.h` unconditionally
+    # redefines FMT_USE_CONSTEVAL via its own #if/#elif chain, so a
+    # `-DFMT_USE_CONSTEVAL=0` build setting is overridden. Patch the
+    # header in place to force the macro to 0 (falls back to constexpr,
+    # which still compiles).
+    fmt_base_h = File.join(installer.sandbox.root, 'fmt/include/fmt/base.h')
+    if File.exist?(fmt_base_h)
+      content = File.read(fmt_base_h)
+      marker = '// FMT_USE_CONSTEVAL forced to 0 by Podfile post_install (Xcode 16+ workaround)'
+      unless content.include?(marker)
+        patched = content.sub(
+          /\/\/ Detect consteval, C\+\+20 constexpr extensions and std::is_constant_evaluated\.\n#if .*?\n#endif\n/m,
+          "// Detect consteval, C++20 constexpr extensions and std::is_constant_evaluated.\n" \
+          "#{marker}\n" \
+          "#define FMT_USE_CONSTEVAL 0\n"
+        )
+        if patched != content
+          File.chmod(0644, fmt_base_h)
+          File.write(fmt_base_h, patched)
+          Pod::UI.puts "[Podfile] Patched fmt/base.h to force FMT_USE_CONSTEVAL=0".green
+        else
+          Pod::UI.warn "[Podfile] Failed to patch fmt/base.h (regex did not match). fmt build may still fail."
+        end
+      end
+    end
   end
 end

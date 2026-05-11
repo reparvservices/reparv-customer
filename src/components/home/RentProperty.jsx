@@ -52,24 +52,27 @@ export default function RentProperty() {
             Verified Listings • Easy Move-In
           </Text>
 
-          {/* Tag */}
+          {/* Tag — minHeight + inner padding so gradient never clips text (iOS) */}
           <LinearGradient
             colors={['#6D28D9', '#A78BFA']}
             start={{x: 0, y: 0}}
             end={{x: 1, y: 0}}
             style={styles.tag}>
-            <Text
-              style={styles.tagText}
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.8}>
-              Zero Brokerage Options
-            </Text>
+            <View style={styles.tagInner}>
+              <Text
+                style={styles.tagText}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.8}>
+                Zero Brokerage Options
+              </Text>
+            </View>
           </LinearGradient>
 
           {/* CTA BUTTON – SINGLE LINE */}
           <TouchableOpacity
             style={styles.ctaBtn}
+            activeOpacity={0.85}
             onPress={() => navigation.navigate('RentProperty')}>
             <Text
               style={styles.ctaText}
@@ -115,6 +118,8 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     marginLeft: 12,
+    minWidth: 0,
+    justifyContent: 'flex-start',
   },
 
   titleRow: {
@@ -159,21 +164,27 @@ const styles = StyleSheet.create({
 
   tag: {
     alignSelf: 'stretch',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 6,
-    marginTop: 10,
-    maxWidth: '100%',
+    borderRadius: 8,
+    marginTop: 12,
+    overflow: 'hidden',
+  },
+
+  tagInner: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    minHeight: 40,
+    justifyContent: 'center',
   },
 
   tagText: {
     color: '#fff',
     fontFamily: 'SegoeUI-Bold',
     fontSize: 12,
-    lineHeight: 16,
+    lineHeight: 18,
     textAlign: 'center',
     ...Platform.select({
       android: {includeFontPadding: false, textAlignVertical: 'center'},
+      ios: {paddingTop: 1},
       default: {},
     }),
   },
@@ -181,13 +192,12 @@ const styles = StyleSheet.create({
   /* CTA BUTTON */
   ctaBtn: {
     backgroundColor: '#5E23DC',
-    paddingVertical: 10,
+    paddingVertical: 12,
     paddingHorizontal: 16,
-    borderRadius: 6,
-    marginTop: 14,
+    borderRadius: 8,
+    marginTop: 10,
     alignItems: 'center',
-    alignSelf: 'flex-start',
-    minWidth: '90%', // ensures one-line space
+    alignSelf: 'stretch',
   },
 
   ctaText: {

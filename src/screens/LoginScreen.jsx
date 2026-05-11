@@ -1,12 +1,11 @@
-import React, {useRef, useState, useEffect} from 'react';
+import React, {useRef, useState, useEffect, useMemo} from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   TouchableOpacity,
   TextInput,
   FlatList,
-  Dimensions,
+  useWindowDimensions,
   Modal,
   StatusBar,
   ActivityIndicator,
@@ -35,19 +34,10 @@ import {
 } from '../features/auth/authSlice';
 import {GoogleSignin} from '@react-native-google-signin/google-signin';
 import {facebookLogin} from '../utils/facebookLogin';
-import {Linking} from 'react-native';
 
-const {width, height} = Dimensions.get('window');
+import {createLoginStyles} from '../utils/loginScreenStyles';
 
-const bottomCardHeight =
-  height < 700 ? height * 0.58 : height < 850 ? height * 0.64 : height * 0.62;
-
-// ── Unified type scale ──────────────────────────────────────────
-// All form-related sizes derive from INPUT_SIZE so they stay in sync.
-const INPUT_SIZE = 15; // actual typed text
-const LABEL_SIZE = 13; // field label above input
-const HELPER_SIZE = 11; // error / terms / "or" lines
-
+/** Carousel slides — must stay as plain data, not inside StyleSheet.create */
 const slides = [
   {
     id: 1,
@@ -72,7 +62,15 @@ const slides = [
 // ─────────────────────────────────────────────
 // LOGIN MODAL
 // ─────────────────────────────────────────────
-function LoginModal({visible, onClose, onSwitchToSignUp, onOtpSent}) {
+function LoginModal({
+  visible,
+  onClose,
+  onSwitchToSignUp,
+  onOtpSent,
+  styles,
+  width,
+  height,
+}) {
   const dispatch = useDispatch();
   const {isLoading} = useSelector(state => state.auth);
   const navigation = useNavigation();
@@ -194,7 +192,7 @@ function LoginModal({visible, onClose, onSwitchToSignUp, onOtpSent}) {
             </TouchableOpacity>
 
             <Text style={styles.or}>Or login with</Text>
-            <SocialButtons />
+            <SocialButtons styles={styles} />
           </ScrollView>
         </View>
       </View>
@@ -205,7 +203,15 @@ function LoginModal({visible, onClose, onSwitchToSignUp, onOtpSent}) {
 // ─────────────────────────────────────────────
 // SIGN UP MODAL
 // ─────────────────────────────────────────────
-function SignUpModal({visible, onClose, onSwitchToLogin, onOtpSent}) {
+function SignUpModal({
+  visible,
+  onClose,
+  onSwitchToLogin,
+  onOtpSent,
+  styles,
+  width,
+  height,
+}) {
   const dispatch = useDispatch();
   const navigation = useNavigation();
   const {isLoading} = useSelector(state => state.auth);
@@ -387,7 +393,7 @@ function SignUpModal({visible, onClose, onSwitchToLogin, onOtpSent}) {
             </TouchableOpacity>
 
             <Text style={styles.or}>Or sign up with</Text>
-            <SocialButtons />
+            <SocialButtons styles={styles} />
           </ScrollView>
         </View>
       </View>
@@ -398,7 +404,7 @@ function SignUpModal({visible, onClose, onSwitchToLogin, onOtpSent}) {
 // ─────────────────────────────────────────────
 // SHARED: Social Buttons
 // ─────────────────────────────────────────────
-function SocialButtons() {
+function SocialButtons({styles}) {
   const dispatch = useDispatch();
 
   const signInWithGoogle = async () => {
@@ -444,6 +450,12 @@ function SocialButtons() {
 // MAIN LOGIN SCREEN
 // ─────────────────────────────────────────────
 export default function LoginScreen() {
+  const {width, height} = useWindowDimensions();
+  const styles = useMemo(
+    () => createLoginStyles(width, height),
+    [width, height],
+  );
+
   const flatRef = useRef();
   const [index, setIndex] = useState(0);
   const [activeModal, setActiveModal] = useState('login');
@@ -524,6 +536,9 @@ export default function LoginScreen() {
           onClose={() => {}}
           onSwitchToSignUp={() => setActiveModal('signup')}
           onOtpSent={handleOtpSent}
+          styles={styles}
+          width={width}
+          height={height}
         />
       )}
 
@@ -533,6 +548,9 @@ export default function LoginScreen() {
           onClose={() => {}}
           onSwitchToLogin={() => setActiveModal('login')}
           onOtpSent={handleOtpSent}
+          styles={styles}
+          width={width}
+          height={height}
         />
       )}
 
@@ -555,182 +573,3 @@ export default function LoginScreen() {
     </SafeAreaView>
   );
 }
-
-// ─────────────────────────────────────────────
-// STYLES
-// ─────────────────────────────────────────────
-const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: '#321376'},
-  topContainer: {height: '40%', width: '100%'},
-  slide: {width, height: '100%', position: 'relative'},
-  overlayText: {
-    position: 'absolute',
-    width,
-    top: '50%',
-    alignItems: 'flex-start',
-    transform: [{translateY: -40}],
-    paddingLeft: 28,
-  },
-  title: {
-    color: '#fff',
-    fontSize: 24,
-    fontFamily: 'SegoeUI-Bold',
-    width: '80%',
-  },
-  smallText: {
-    color: '#fff',
-    fontSize: 16,
-    fontFamily: 'SegoeUI-Bold',
-    marginTop: 6,
-    width: '90%',
-  },
-  dotsContainer: {
-    marginTop: 20,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignSelf: 'center',
-  },
-  dot: {
-    width: 19,
-    height: 4,
-    borderRadius: 7,
-    backgroundColor: '#D9D9D9',
-    marginRight: 6,
-  },
-  activeDot: {backgroundColor: '#6F00FF', width: 59},
-
-  // ── Modal shell ──
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'transparent',
-  },
-  bottomCardWrapper: {height: bottomCardHeight},
-  bottomCardContent: {
-    paddingTop: 10,
-    alignItems: 'center',
-    gap: 4,
-    zIndex: 1,
-    paddingBottom: 20,
-  },
-
-  // ── Typography ──
-  mainTitle: {
-    fontSize: 24,
-    fontFamily: 'SegoeUI-Bold',
-    textAlign: 'center',
-
-    color: '#5E23DC',
-    width: '70%',
-  },
-  loginText: {
-    fontSize: 14,
-    fontFamily: 'SegoeUI-Bold',
-    textAlign: 'center',
-    textAlignVertical: 'center',
-  },
-
-  // ── Divider ──
-  dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: '85%',
-    marginVertical: 12,
-  },
-  dividerLine: {flex: 1, height: 1},
-
-  // ── Form inputs ──────────────────────────────────────────────
-  // Label: sits above every field, smaller than input so it reads as a caption
-  label: {
-    color: '#5E23DC',
-    fontSize: LABEL_SIZE, // 13
-    marginBottom: 5,
-    fontWeight: '500',
-  },
-
-  // Text fields (First Name, Last Name)
-  inputWrapper: {width: '85%', marginBottom: 8},
-  inputField: {
-    borderBottomWidth: 2,
-    borderColor: '#5E23DC',
-    fontSize: INPUT_SIZE, // 15 — matches placeholder
-    color: '#000',
-    paddingVertical: 7,
-  },
-  inputError: {borderColor: 'red'},
-
-  // Phone row
-  phoneWrapper: {width: '85%'},
-  phoneRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderBottomWidth: 2,
-    borderColor: '#5E23DC',
-    paddingVertical: 4,
-  },
-  phoneRowFocused: {borderColor: '#321376'},
-  phoneRowError: {borderColor: 'red'},
-
-  countryRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginRight: 8,
-  },
-  // +91 is same size as what the user types — feels like part of the same field
-  country: {
-    fontSize: INPUT_SIZE, // 15
-    color: '#000',
-    fontWeight: '500',
-  },
-
-  // Phone TextInput — no inline override needed anymore
-  input: {
-    flex: 1,
-    fontSize: INPUT_SIZE, // 15 — same as inputField & placeholder
-    color: '#000',
-    paddingVertical: 6,
-  },
-
-  // ── Button ──
-  loginBtn: {
-    width: '85%',
-    backgroundColor: '#5E23DC',
-    padding: 14,
-    borderRadius: 12,
-    marginTop: 22,
-  },
-  loginBtnText: {
-    color: '#fff',
-    textAlign: 'center',
-    fontSize: 16,
-    fontFamily: 'SegoeUI-Bold',
-  },
-
-  // ── Helper text (error / terms / "or") ──
-  errorText: {color: 'red', fontSize: HELPER_SIZE, marginTop: 4}, // 11
-  terms: {fontSize: HELPER_SIZE, marginTop: 8, color: '#868686'}, // 11
-  link: {color: '#6a1bff', fontFamily: 'SegoeUI-Bold', fontSize: HELPER_SIZE},
-  or: {fontSize: HELPER_SIZE, marginTop: 8, color: '#868686'}, // 11
-
-  // ── Switch row ("New user? / Already have account?") ──
-  switchText: {fontSize: 12, color: '#868686', textAlign: 'center'},
-  switchLink: {color: '#5E23DC', fontFamily: 'SegoeUI-Bold'},
-
-  // ── Social ──
-  socialRow: {
-    flexDirection: 'row',
-    marginTop: 2,
-    width: '50%',
-    justifyContent: 'center',
-    gap: 20,
-  },
-  socialIconWrapper: {
-    borderWidth: 1,
-    borderColor: '#B8B8B8',
-    borderRadius: 12,
-    padding: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});

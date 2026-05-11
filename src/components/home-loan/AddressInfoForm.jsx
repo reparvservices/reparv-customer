@@ -701,7 +701,7 @@ const styles = StyleSheet.create({
   },
   radioCardTextActive: {
     color: '#7C3AED',
-    fontFamily: 'SegoeUI-Semibold',
+    fontFamily: 'SegoeUI-Bold',
   },
   radio: {
     width: 18,
@@ -756,7 +756,7 @@ const styles = StyleSheet.create({
   },
   iconCardLabelActive: {
     color: '#7C3AED',
-    fontFamily: 'SegoeUI-Semibold',
+    fontFamily: 'SegoeUI-Bold',
   },
 
   // ─── Checkbox ─────────────────────────────────────────────────────────────
@@ -974,7 +974,7 @@ const styles = StyleSheet.create({
   complianceLabel: {
     fontSize: 11,
     color: '#6B7280',
-    fontFamily: 'SegoeUI-Semibold',
+    fontFamily: 'SegoeUI-Bold',
     marginBottom: 8,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -1040,7 +1040,7 @@ const styles = StyleSheet.create({
   uploadText: {
     fontSize: 13,
     color: '#7C3AED',
-    fontFamily: 'SegoeUI-Semibold',
+    fontFamily: 'SegoeUI-Bold',
     ...Platform.select({
       android: {includeFontPadding: false, textAlignVertical: 'center'},
       default: {},

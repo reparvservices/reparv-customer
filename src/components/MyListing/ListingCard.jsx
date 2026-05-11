@@ -3,72 +3,66 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   Image,
   TouchableOpacity,
-  StatusBar,
 } from 'react-native';
-import {SafeAreaView} from 'react-native-safe-area-context';
 import {
-  Home,
   Eye,
   Mail,
-  Heart,
   MoreVertical,
-  Pencil,
-  Bell,
-  ArrowLeft,
   Building,
-  Phone,
   PhoneCallIcon,
 } from 'lucide-react-native';
-import {useFocusEffect, useNavigation} from '@react-navigation/native';
-import Svg, {Ellipse, Path} from 'react-native-svg';
-import {useSelector} from 'react-redux';
+import {useNavigation} from '@react-navigation/native';
+import Svg, {Path} from 'react-native-svg';
 import PropertyReviewModal from './PropertyReviewCard';
 import {getImageUri, parseFrontView} from '../../utils/imageHandle';
+import {devLog} from '../../utils/devLog';
+
 const PURPLE = '#6C3EF0';
-const LIGHT_PURPLE = '#EFE9FF';
-const BG = '#FAF9FF';
+
 export const ListingCard = ({propertyData}) => {
   const navigation = useNavigation();
   const [totalVisitors, setTotalVisitors] = useState(0);
   const [totalCalls, setTotalCalls] = useState(0);
-  const [totalShares, setTotalShares] = useState(0);
   const [totalWhatsapp, setTotalWhatsapp] = useState(0);
   const [propertyView, setPropertyView] = useState(false);
 
-  const fetchWishlist = async () => {
-    setLoading(true);
+  const fetchWishlist = useCallback(async () => {
+    const propertyId = propertyData?.propertyid;
+    if (!propertyId) {
+      return;
+    }
+
     try {
       const response = await fetch(
-        `https://aws-api.reparv.in/customerapp/enquiry/getvisits?propertyid=${propertyData?.propertyid}`,
+        `https://aws-api.reparv.in/customerapp/enquiry/getvisits?propertyid=${propertyId}`,
       );
 
       const data = await response.json();
 
+      let visitors = 0;
+      let calls = 0;
+      let whatsapp = 0;
+
       if (response.ok && data) {
-        visitors += Number(data.totalVisitors || 0);
-        calls += Number(data.calls || 0);
-        shares += Number(data.share || 0);
-        whatsapp += Number(data.whatsapp_enquiry || 0);
+        visitors = Number(data.totalVisitors || 0);
+        calls = Number(data.calls || 0);
+        whatsapp = Number(data.whatsapp_enquiry || 0);
       }
 
-      //  FINAL TOTALS
       setTotalVisitors(visitors);
       setTotalCalls(calls);
-      setTotalShares(shares);
       setTotalWhatsapp(whatsapp);
     } catch (err) {
-      console.log(`Visitor fetch failed for property ${item.propertyid}`, err);
+      devLog(`Visitor fetch failed for property ${propertyId}`, err);
     }
-  };
+  }, [propertyData?.propertyid]);
 
   useEffect(() => {
     fetchWishlist();
-  }, []);
+  }, [fetchWishlist]);
 
-  console.log(propertyData, 'ddd');
   return (
     <View style={styles.listingCard}>
       {/* Image */}

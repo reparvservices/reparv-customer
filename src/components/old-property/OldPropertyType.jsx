@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontFamily: 'SegoeUI-Bold',
     color: '#000',
-    fontFamily: 'Segoe UI',
+    fontFamily: 'SegoeUI-Regular',
     ...Platform.select({
       android: {includeFontPadding: false, textAlignVertical: 'center'},
       default: {},

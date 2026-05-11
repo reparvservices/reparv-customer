@@ -33,6 +33,7 @@ import {
 } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {useFocusEffect, useNavigation} from '@react-navigation/native';
+import VersionCheck from 'react-native-version-check';
 
 const MANAGE_DEVICE_ALLOWED_CONTACTS = new Set([
   '9322396236',
@@ -81,6 +82,20 @@ export default function ProfileScreen() {
   const deleteVerificationText = useMemo(() => {
     return 'DELETEMYACCOUNT';
   }, [user?.fullname]);
+
+  /** Native marketing version + build (matches Xcode / Play Console). */
+  const appVersionLabel = useMemo(() => {
+    try {
+      const version = VersionCheck.getCurrentVersion();
+      const build = VersionCheck.getCurrentBuildNumber();
+      if (version && build && String(build) !== String(version)) {
+        return `Version ${version} (${build})`;
+      }
+      return version ? `Version ${version}` : '';
+    } catch {
+      return '';
+    }
+  }, []);
 
   const fetchProfile = useCallback(async () => {
     try {
@@ -361,7 +376,9 @@ export default function ProfileScreen() {
           <Text style={styles.deleteText}>Delete Account</Text>
         </TouchableOpacity>
 
-        <Text style={styles.version}>Version 1.1.1</Text>
+        {appVersionLabel ? (
+          <Text style={styles.version}>{appVersionLabel}</Text>
+        ) : null}
       </ScrollView>
 
       <Modal
@@ -684,7 +701,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 16,
     color: '#9CA3AF',
-    marginVertical: 20,
+    marginTop: 14,
+    marginBottom: 28,
+    paddingHorizontal: 20,
     ...Platform.select({android: {includeFontPadding: false}, default: {}}),
   },
   modalOverlay: {
