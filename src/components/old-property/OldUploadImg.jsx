@@ -1,5 +1,12 @@
 import React, {useEffect, useState} from 'react';
-import {View, Text, StyleSheet, TouchableOpacity, Image} from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  Platform,
+} from 'react-native';
 import {launchImageLibrary} from 'react-native-image-picker';
 
 import UploadIcon from '../../assets/image/rent-oldnew-property/img-upload.png';
@@ -213,6 +220,10 @@ const styles = StyleSheet.create({
     fontFamily: 'SegoeUI-Bold',
     marginBottom: 12,
     color: '#000',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
   required: {color: '#E33629'},
 

@@ -17,6 +17,8 @@ import {
   Modal,
   Animated,
   Easing,
+  PermissionsAndroid,
+  Platform,
 } from 'react-native';
 import {Highlights} from '../components/PropertyDetails/Highlights';
 import {Overview} from '../components/PropertyDetails/Overview';
@@ -68,6 +70,7 @@ import PropertyVideoModal from '../components/PropertyDetails/VideoModel';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {getImageUri, parseFrontView} from '../utils/imageHandle';
 import PlotAvailabilityModal from './PlotAvailability';
+import Geolocation from '@react-native-community/geolocation';
 
 const {width} = Dimensions.get('window');
 const isTablet = width >= 768;
@@ -116,6 +119,19 @@ const safeParseImages = raw => {
 };
 
 const safeTrim = str => (str ? str.trim() : '');
+
+// ─── HAVERSINE DISTANCE ───────────────────────────────────────────────────────
+const haversineKm = (lat1, lon1, lat2, lon2) => {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+};
 
 // ─── SKELETON BOX ─────────────────────────────────────────────────────────────
 const SkeletonBox = ({width: w, height: h, style = {}, borderRadius = 8}) => {
@@ -386,6 +402,9 @@ const SimilerPropertyDetailsScreen = () => {
   const [zoomVisible, setZoomVisible] = useState(false);
   const [zoomIndex, setZoomIndex] = useState(0);
 
+  // ── User distance from property ───────────────────────────────────────────
+  const [userDistance, setUserDistance] = useState(null);
+
   const mainImageRef = useRef(null);
   const cardScrollRef = useRef(null);
 
@@ -468,6 +487,64 @@ const SimilerPropertyDetailsScreen = () => {
     };
     fetchPlotData();
   }, [propertyData?.propertyid]);
+
+  // ── Get user location & compute distance from property ───────────────────
+  useEffect(() => {
+    // Property not fetched yet — wait
+    if (!propertyData) return;
+
+    // Property loaded but coords are missing — mark as unavailable immediately
+    if (!propertyData.latitude || !propertyData.longitude) {
+      setUserDistance('unavailable');
+      return;
+    }
+
+    const fetchDistance = async () => {
+      try {
+        if (Platform.OS === 'android') {
+          const granted = await PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+            {
+              title: 'Location Permission',
+              message:
+                'Allow Reparv to access your location to show distance from this property.',
+              buttonNeutral: 'Ask Me Later',
+              buttonNegative: 'Cancel',
+              buttonPositive: 'OK',
+            },
+          );
+          if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+            console.log('Location permission denied');
+            return;
+          }
+        }
+
+        Geolocation.getCurrentPosition(
+          position => {
+            const {latitude, longitude} = position.coords;
+            const dist = haversineKm(
+              latitude,
+              longitude,
+              parseFloat(propertyData.latitude),
+              parseFloat(propertyData.longitude),
+            );
+            // Show metres if < 1 km, else km rounded to 1 decimal
+            setUserDistance(
+              dist < 1
+                ? `${Math.round(dist * 1000)} m`
+                : `${dist.toFixed(1)} km`,
+            );
+          },
+          err => console.log('Geolocation error:', err),
+          {enableHighAccuracy: false, timeout: 5000, maximumAge: 300000},
+        );
+      } catch (e) {
+        console.log('Location permission error:', e);
+      }
+    };
+
+    fetchDistance();
+  }, [propertyData?.latitude, propertyData?.longitude]);
 
   // ── Derived data ──────────────────────────────────────────────────────────
   const allHeroImages = ALL_CATEGORY_KEYS.flatMap(key =>
@@ -864,8 +941,6 @@ const SimilerPropertyDetailsScreen = () => {
                 <TouchableOpacity
                   key={key}
                   activeOpacity={0.85}
-                  // FIX: always reset to index 0 when switching category
-                  // so the hero scroll never references an out-of-range offset
                   onPress={() => {
                     setActiveCategory(key);
                     const globalIdx = allHeroImages.findIndex(
@@ -916,7 +991,6 @@ const SimilerPropertyDetailsScreen = () => {
               <Text style={cardStyles.propertyName} numberOfLines={2}>
                 {propertyData?.propertyName}
               </Text>
-              {/* FIX: null-check before rendering badge and calling trim() */}
               {propertyData?.propertyApprovedBy ? (
                 <View style={cardStyles.nmrdaBadge}>
                   <View style={cardStyles.nmrdaIconBox}>
@@ -956,14 +1030,12 @@ const SimilerPropertyDetailsScreen = () => {
                   propertyData?.bookedCount > 0 && (
                     <View style={cardStyles.pillDivider} />
                   )}
-                {/* {propertyData?.bookedCount > 0 && ( */}
                 <View style={cardStyles.bookedPill}>
                   <View style={cardStyles.redDot} />
                   <Text style={cardStyles.bookedText}>
                     {propertyData.bookedCount} Booked
                   </Text>
                 </View>
-                {/* )} */}
               </View>
             )}
 
@@ -977,8 +1049,9 @@ const SimilerPropertyDetailsScreen = () => {
               </Text>
             </View>
 
-            {/* 3 Feature Boxes */}
+            {/* ── 3 FEATURE BOXES ─────────────────────────────────────────── */}
             <View style={cardStyles.featureBoxRow}>
+              {/* Box 1 — Approved By */}
               <View style={cardStyles.featureBox}>
                 <View
                   style={[
@@ -987,12 +1060,13 @@ const SimilerPropertyDetailsScreen = () => {
                   ]}>
                   <ShieldCheck size={20} color="#6366F1" strokeWidth={2} />
                 </View>
-                {/* FIX: null-safe trim for featureBoxText */}
                 <Text style={cardStyles.featureBoxText}>
                   {safeTrim(propertyData?.propertyApprovedBy) || 'NMRDA'}
                   {'\n'}Approved
                 </Text>
               </View>
+
+              {/* Box 2 — Distance from User (live) */}
               <View style={cardStyles.featureBox}>
                 <View
                   style={[
@@ -1001,11 +1075,34 @@ const SimilerPropertyDetailsScreen = () => {
                   ]}>
                   <MapPin size={20} color="#C026D3" strokeWidth={2} />
                 </View>
-                <Text style={cardStyles.featureBoxText}>
-                  {propertyData?.distanceFromCityCenter || '—'} km{'\n'}from
-                  City
-                </Text>
+                {userDistance == null ? (
+                  // Still waiting for propertyData or geolocation
+                  <View style={cardStyles.distanceLoadingRow}>
+                    <ActivityIndicator size={12} color="#C026D3" />
+                    <Text style={cardStyles.featureBoxTextSmall}>
+                      {' '}
+                      Locating…
+                    </Text>
+                  </View>
+                ) : userDistance === 'unavailable' ? (
+                  // Property has no GPS coordinates
+                  <Text style={[cardStyles.featureBoxText, {color: '#9CA3AF'}]}>
+                    Distance{'\n'}
+                    <Text style={cardStyles.featureBoxTextSub}>
+                      Not Available
+                    </Text>
+                  </Text>
+                ) : (
+                  // Got a real distance
+                  <Text style={cardStyles.featureBoxText}>
+                    {userDistance}
+                    {'\n'}
+                    <Text style={cardStyles.featureBoxTextSub}>from You</Text>
+                  </Text>
+                )}
               </View>
+
+              {/* Box 3 — Assured Quality */}
               <View style={cardStyles.featureBox}>
                 <View
                   style={[
@@ -1395,32 +1492,6 @@ const styles = StyleSheet.create({
   counterText: {
     display: 'none',
   },
-  heroBadgeGradient: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 80,
-    justifyContent: 'flex-end',
-    paddingBottom: 10,
-    paddingHorizontal: 14,
-    zIndex: 5,
-  },
-  heroBadgeRow: {flexDirection: 'row', alignItems: 'center'},
-  heroBadgePill: {
-    backgroundColor: 'rgba(138,56,245,0.88)',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    alignSelf: 'flex-start',
-  },
-  heroBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.3,
-    textTransform: 'uppercase',
-  },
   tabsWrapper: {
     marginTop: 16,
     borderBottomWidth: 1,
@@ -1684,6 +1755,8 @@ const cardStyles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#EDE9FE',
     gap: 4,
+    minHeight: 90,
+    justifyContent: 'center',
   },
   featureIconCircle: {
     width: 40,
@@ -1698,6 +1771,22 @@ const cardStyles = StyleSheet.create({
     color: '#1E1B4B',
     textAlign: 'center',
     lineHeight: 18,
+  },
+  featureBoxTextSub: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#6B7280',
+  },
+  featureBoxTextSmall: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#C026D3',
+  },
+  distanceLoadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
   },
   priceCard: {
     borderRadius: 18,

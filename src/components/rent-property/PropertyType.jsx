@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   FlatList,
   Image,
+  Platform,
 } from 'react-native';
 
 import IndependentIcon from '../../assets/image/rent-oldnew-property/property-type/independent-house.png';
@@ -120,6 +121,10 @@ const styles = StyleSheet.create({
     fontFamily: 'SegoeUI-Bold',
     color: '#000',
     fontFamily: 'Segoe UI',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
   required: {
     color: '#E33629',

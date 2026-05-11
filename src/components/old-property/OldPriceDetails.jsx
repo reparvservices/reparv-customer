@@ -1,7 +1,14 @@
 import React from 'react';
-import {View, Text, StyleSheet, TextInput} from 'react-native';
+import {View, Text, StyleSheet, TextInput, Platform} from 'react-native';
 
-export default function OldPriceDetails( { sellingPrice,totalPrice,setTotalPrice, onChangeSelling, error,error2}) {
+export default function OldPriceDetails({
+  sellingPrice,
+  totalPrice,
+  setTotalPrice,
+  onChangeSelling,
+  error,
+  error2,
+}) {
   return (
     <View style={styles.wrapper}>
       {/* Header */}
@@ -12,7 +19,7 @@ export default function OldPriceDetails( { sellingPrice,totalPrice,setTotalPrice
 
       {/* Selling Price */}
       <Text style={styles.label}>
-     Property Total Price <Text style={styles.required}>*</Text>
+        Property Total Price <Text style={styles.required}>*</Text>
       </Text>
       <View style={styles.inputWrapper}>
         <Text style={styles.prefix}>₹</Text>
@@ -21,9 +28,8 @@ export default function OldPriceDetails( { sellingPrice,totalPrice,setTotalPrice
           placeholderTextColor="#9CA3AF"
           keyboardType="numeric"
           style={styles.input}
-            value={totalPrice}
+          value={totalPrice}
           onChangeText={setTotalPrice}
-        
         />
       </View>
       {error2 && <Text style={styles.error}>{error2}</Text>}
@@ -37,11 +43,11 @@ export default function OldPriceDetails( { sellingPrice,totalPrice,setTotalPrice
           placeholderTextColor="#868686"
           keyboardType="numeric"
           style={styles.input}
-            value={sellingPrice}
+          value={sellingPrice}
           onChangeText={onChangeSelling}
         />
       </View>
-         {error && <Text style={styles.error}>{error}</Text>}
+      {error && <Text style={styles.error}>{error}</Text>}
 
       <Text style={styles.helperText}>Price you're willing to negotiate</Text>
     </View>
@@ -62,17 +68,20 @@ const styles = StyleSheet.create({
 
   currencyIcon: {
     fontSize: 28,
-    fontFamily : "SegoeUI-Bold",
+    fontFamily: 'SegoeUI-Bold',
     color: '#8A38F5',
     marginRight: 8,
   },
 
   heading: {
     fontSize: 16,
-    fontWeight:'700',
-    fontFamily : "SegoeUI-Bold",
+    fontWeight: '700',
+    fontFamily: 'SegoeUI-Bold',
     color: '#000',
-    fontFamily: 'Segoe UI',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
 
   label: {

@@ -36,8 +36,6 @@ TextInput.defaultProps = TextInput.defaultProps || {};
 TextInput.defaultProps.style = {fontFamily: 'Inter-Regular'};
 
 // ── Helper: navigate to PropertyDetails from notification data ────────────────
-// Polls navigationRef.isReady() every 200ms until navigator is mounted,
-// then navigates — works correctly for quit state, background, and foreground.
 function handleNotificationNavigation(data) {
   if (!data) return;
 
@@ -50,7 +48,6 @@ function handleNotificationNavigation(data) {
           seoSlug: propertyid,
         });
       } else {
-        // Navigator not ready yet — retry after 200ms
         setTimeout(tryNavigate, 200);
       }
     };
@@ -64,7 +61,7 @@ const Root = () => {
   const [showUpdate, setShowUpdate] = useState(false);
   const [storeUrl, setStoreUrl] = useState('');
 
-  // 🔔 Request Notification Permission (UNCHANGED)
+  // 🔔 Request Notification Permission
   const requestNotificationPermission = async userId => {
     try {
       if (Platform.OS === 'android') {
@@ -102,13 +99,46 @@ const Root = () => {
     }
   };
 
-  // App init (UNCHANGED)
+  // 📍 Request Location Permission (check first, ask only if not granted)
+  const requestLocationPermission = async () => {
+    try {
+      if (Platform.OS === 'android') {
+        const alreadyGranted = await PermissionsAndroid.check(
+          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+        );
+
+        if (alreadyGranted) {
+          devLog('📍 Location permission already granted, skipping request.');
+          return;
+        }
+
+        const result = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+          {
+            title: 'Location Permission',
+            message:
+              'This app needs access to your location to show nearby properties.',
+            buttonPositive: 'Allow',
+            buttonNegative: 'Deny',
+          },
+        );
+
+        devLog('📍 Location permission result:', result);
+      }
+      // iOS: handled automatically via Info.plist — no manual check needed
+    } catch (error) {
+      devLog('Location permission error:', error);
+    }
+  };
+
+  // App init
   useEffect(() => {
     GoogleSignin.configure({
       webClientId:
         '509544297119-v6vsq7tcba8ukfn9969q930p8jk7iqst.apps.googleusercontent.com',
     });
     dispatch(loadUser());
+    requestLocationPermission(); // ← check & request location on app start
   }, [dispatch]);
 
   useEffect(() => {
@@ -137,7 +167,6 @@ const Root = () => {
   useEffect(() => {
     const unsubscribe = messaging().onMessage(async remoteMessage => {
       devLog('📩 Foreground Notification:', remoteMessage);
-      // Navigator is already ready in foreground — navigate directly
       handleNotificationNavigation(remoteMessage.data);
     });
     return unsubscribe;
@@ -147,14 +176,12 @@ const Root = () => {
   useEffect(() => {
     const unsubscribe = messaging().onNotificationOpenedApp(remoteMessage => {
       devLog('📲 Background notification tap:', remoteMessage);
-      // Navigator may need a moment — tryNavigate handles it
       handleNotificationNavigation(remoteMessage.data);
     });
     return unsubscribe;
   }, []);
 
   // 🔔 Quit state — app was fully closed, user taps notification to open
-  // No hardcoded setTimeout — tryNavigate polls until navigator is ready
   useEffect(() => {
     messaging()
       .getInitialNotification()
@@ -165,7 +192,7 @@ const Root = () => {
       });
   }, []);
 
-  // Version check (UNCHANGED)
+  // Version check
   useEffect(() => {
     const checkForUpdate = async () => {
       try {
@@ -185,7 +212,7 @@ const Root = () => {
     <>
       <AppNavigator />
 
-      {/* 🔒 Force Update Modal (UNCHANGED) */}
+      {/* 🔒 Force Update Modal */}
       <Modal visible={showUpdate} transparent animationType="fade">
         <View
           style={{

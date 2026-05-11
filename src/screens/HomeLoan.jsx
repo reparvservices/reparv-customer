@@ -9,14 +9,14 @@ import {
   Alert,
   Image,
   ToastAndroid,
+  Platform,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation, useRoute} from '@react-navigation/native';
+import {Briefcase, Building2} from 'lucide-react-native';
 
 import BackIcon from '../assets/image/new-property/back-icon.svg';
 import ArrowIcon from '../assets/image/onboarding/arrow.svg';
-import JobIcon from '../assets/image/home-loan/job.png';
-import BusinessIcon from '../assets/image/home-loan/business.png';
 import UploadIcon from '../assets/image/rent-oldnew-property/lock.png';
 
 import LoanStepIndicator from '../components/home-loan/LoanStepIndicator';
@@ -25,18 +25,17 @@ import AddressInformationForm from '../components/home-loan/AddressInfoForm';
 import UploadDocForm from '../components/home-loan/UploadDocForm';
 import {useSelector} from 'react-redux';
 
+// ─── Tab Bar ────────────────────────────────────────────────────────────────
 const LoanTabs = ({active, onChange}) => (
   <View style={styles.tabContainer}>
     <TouchableOpacity
       style={[styles.tab, active === 'job' && styles.activeTab]}
       onPress={() => onChange('job')}>
       <View style={styles.tabContent}>
-        <Image
-          source={JobIcon}
-          style={[
-            styles.tabIcon,
-            {tintColor: active === 'job' ? '#fff' : '#000'},
-          ]}
+        <Briefcase
+          size={18}
+          color={active === 'job' ? '#fff' : '#374151'}
+          strokeWidth={2}
         />
         <Text
           style={[styles.tabText, active === 'job' && styles.activeTabText]}>
@@ -49,12 +48,10 @@ const LoanTabs = ({active, onChange}) => (
       style={[styles.tab, active === 'business' && styles.activeTab]}
       onPress={() => onChange('business')}>
       <View style={styles.tabContent}>
-        <Image
-          source={BusinessIcon}
-          style={[
-            styles.tabIcon,
-            {tintColor: active === 'business' ? '#fff' : '#000'},
-          ]}
+        <Building2
+          size={18}
+          color={active === 'business' ? '#fff' : '#374151'}
+          strokeWidth={2}
         />
         <Text
           style={[
@@ -68,15 +65,20 @@ const LoanTabs = ({active, onChange}) => (
   </View>
 );
 
+// ═══════════════════════════════════════════════════════════════════════════
+// MAIN SCREEN
+// ═══════════════════════════════════════════════════════════════════════════
 export default function HomeLoan() {
   const navigation = useNavigation();
   const route = useRoute();
   const {propertyid} = route.params || {};
   const {user} = useSelector(state => state.auth);
+
   const [tab, setTab] = useState('job');
   const [step, setStep] = useState(1);
   const [errors, setErrors] = useState({});
 
+  // Step 1 — Personal Info
   const [personal, setPersonal] = useState({
     name: '',
     dob: '',
@@ -88,16 +90,33 @@ export default function HomeLoan() {
     panno: '',
   });
 
+  // Step 2 — Job Income
   const [incomeDetails, setIncomeDetails] = useState({
     employmentSector: 'Private',
     workExperience: {years: '', months: ''},
     salaryType: 'Account',
     salaryDetails: {grossPay: '', netPay: '', pfDeduction: ''},
-    otherIncomeType: 'Co-applicant',
+    otherIncomeType: 'Co-applicant Income',
     yearlyIncomeITR: '',
     monthlyAvgBalance: '',
     ongoingEMI: '',
   });
+
+  // Step 2 — Business Income
+  const [businessDetails, setBusinessDetails] = useState({
+    businessType: 'Proprietorship',
+    businessName: '',
+    businessVintage: '',
+    annualTurnover: '',
+    monthlyNetIncome: '',
+    existingLoanEMI: '',
+    gstRegistered: true,
+    itrFiled: true,
+    // uploaded docs keys: panCard, gstCert, itr, bankStatement
+    documents: {},
+  });
+
+  // Step 3 — Docs
   const [docs, setDocs] = useState({
     pan: '',
     panImages: [],
@@ -105,127 +124,100 @@ export default function HomeLoan() {
     aadhaarImages: [],
   });
 
+  // ─── Navigation ─────────────────────────────────────────────────────────
   const handleBack = () => {
     if (step > 1) setStep(prev => prev - 1);
     else navigation.goBack();
   };
+
   const handleContinue = () => {
     let isValid = false;
-
     if (step === 1) isValid = validateStep1();
     if (step === 2) isValid = validateStep2();
     if (step === 3) isValid = validateStep3();
-
-    if (!isValid) return; // ⛔ STOP here
-
+    if (!isValid) return;
     if (step < 3) {
       setErrors({});
       setStep(prev => prev + 1);
     } else {
-      submitFormData(); // ✅ only runs when ALL valid
+      submitFormData();
     }
   };
 
+  // ─── Validations ─────────────────────────────────────────────────────────
   const validateStep1 = () => {
-    const newErrors = {};
-
-    if (!personal.name?.trim()) newErrors.name = 'Full name is required';
-    if (!personal.dob) newErrors.dob = 'Date of birth is required';
-
-    if (!personal.phone) {
-      newErrors.phone = 'Mobile number is required';
-    } else if (personal.phone.length !== 10) {
-      newErrors.phone = 'Enter valid 10-digit number';
-    }
-
-    if (!personal.email?.trim()) {
-      newErrors.email = 'Email is required';
-    } else if (!/^\S+@\S+\.\S+$/.test(personal.email)) {
-      newErrors.email = 'Enter valid email';
-    }
-
-    if (!personal.panno) {
-      newErrors.panno = 'PAN number is required';
-    } else if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(personal.panno)) {
-      newErrors.panno = 'Invalid PAN format';
-    }
-
-    if (!personal.state) newErrors.state = 'State is required';
-    if (!personal.city) newErrors.city = 'City is required';
-
-    if (!personal.pincode) {
-      newErrors.pincode = 'Pincode is required';
-    } else if (personal.pincode.length !== 6) {
-      newErrors.pincode = 'Enter valid 6-digit pincode';
-    }
-
-    setErrors(newErrors);
-
-    // 🔴 if any error exists → stop next step
-    return Object.keys(newErrors).length === 0;
+    const e = {};
+    if (!personal.name?.trim()) e.name = 'Full name is required';
+    if (!personal.dob) e.dob = 'Date of birth is required';
+    if (!personal.phone) e.phone = 'Mobile number is required';
+    else if (personal.phone.length !== 10)
+      e.phone = 'Enter valid 10-digit number';
+    if (!personal.email?.trim()) e.email = 'Email is required';
+    else if (!/^\S+@\S+\.\S+$/.test(personal.email))
+      e.email = 'Enter valid email';
+    if (!personal.panno) e.panno = 'PAN number is required';
+    else if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(personal.panno))
+      e.panno = 'Invalid PAN format';
+    if (!personal.state) e.state = 'State is required';
+    if (!personal.city) e.city = 'City is required';
+    if (!personal.pincode) e.pincode = 'Pincode is required';
+    else if (personal.pincode.length !== 6)
+      e.pincode = 'Enter valid 6-digit pincode';
+    setErrors(e);
+    return Object.keys(e).length === 0;
   };
 
   const validateStep2 = () => {
     const e = {};
-
-    if (!incomeDetails.employmentSector)
-      e.employmentSector = 'Employment sector is required';
-
-    if (!incomeDetails.workExperience.years)
-      e.workExperienceYears = 'Years of experience required';
-
-    if (
-      incomeDetails.workExperience.months === '' ||
-      incomeDetails.workExperience.months === null
-    )
-      e.workExperienceMonths = 'Months of experience required';
-
-    if (!incomeDetails.salaryDetails.grossPay)
-      e.grossPay = 'Gross pay is required';
-
-    if (!incomeDetails.salaryDetails.netPay) e.netPay = 'Net pay is required';
-
-    if (!incomeDetails.yearlyIncomeITR)
-      e.yearlyIncomeITR = 'Yearly income is required';
-
-    if (!incomeDetails.monthlyAvgBalance)
-      e.monthlyAvgBalance = 'Monthly balance is required';
-
-    if (incomeDetails.ongoingEMI && isNaN(Number(incomeDetails.ongoingEMI)))
-      e.ongoingEMI = 'EMI must be numeric';
-
+    if (tab === 'job') {
+      if (!incomeDetails.employmentSector)
+        e.employmentSector = 'Employment sector is required';
+      if (!incomeDetails.workExperience.years)
+        e.workExperienceYears = 'Years of experience required';
+      if (incomeDetails.workExperience.months === '')
+        e.workExperienceMonths = 'Months required';
+      if (!incomeDetails.salaryDetails.grossPay)
+        e.grossPay = 'Gross pay is required';
+      if (!incomeDetails.salaryDetails.netPay) e.netPay = 'Net pay is required';
+      if (!incomeDetails.yearlyIncomeITR)
+        e.yearlyIncomeITR = 'Yearly income is required';
+      if (!incomeDetails.monthlyAvgBalance)
+        e.monthlyAvgBalance = 'Monthly balance is required';
+    } else {
+      // business validations
+      if (!businessDetails.businessType)
+        e.businessType = 'Business type is required';
+      if (!businessDetails.businessName?.trim())
+        e.businessName = 'Business name is required';
+      if (!businessDetails.businessVintage)
+        e.businessVintage = 'Business vintage is required';
+      if (!businessDetails.annualTurnover)
+        e.annualTurnover = 'Annual turnover is required';
+      if (!businessDetails.monthlyNetIncome)
+        e.monthlyNetIncome = 'Monthly net income is required';
+    }
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
   const validateStep3 = () => {
     const e = {};
-
-    // PAN image required
-    if (!docs.panImages || docs.panImages.length === 0) {
+    if (!docs.panImages || docs.panImages.length === 0)
       e.panno = 'PAN image is required';
-    }
-
-    // Aadhaar number
-    if (!docs.aadhaar) {
-      e.aadhaar = 'Aadhaar number is required';
-    } else if (docs.aadhaar.length !== 12) {
+    if (!docs.aadhaar) e.aadhaar = 'Aadhaar number is required';
+    else if (docs.aadhaar.length !== 12)
       e.aadhaar = 'Enter valid 12 digit Aadhaar number';
-    }
-
-    // Aadhaar images required (front + back)
-    if (!docs.aadhaarImages || docs.aadhaarImages.length < 2) {
+    if (!docs.aadhaarImages || docs.aadhaarImages.length < 2)
       e.aadhaarImage = 'Upload Front and Back Aadhaar images';
-    }
-
     setErrors(e);
     return Object.keys(e).length === 0;
   };
+
+  // ─── Reset ───────────────────────────────────────────────────────────────
   const resetForm = () => {
     setStep(1);
     setTab('job');
     setErrors({});
-
     setPersonal({
       name: '',
       dob: '',
@@ -236,32 +228,36 @@ export default function HomeLoan() {
       pincode: '',
       panno: '',
     });
-
     setIncomeDetails({
       employmentSector: 'Private',
       workExperience: {years: '', months: ''},
       salaryType: 'Account',
       salaryDetails: {grossPay: '', netPay: '', pfDeduction: ''},
-      otherIncomeType: 'Co-applicant',
+      otherIncomeType: 'Co-applicant Income',
       yearlyIncomeITR: '',
       monthlyAvgBalance: '',
       ongoingEMI: '',
     });
-
-    setDocs({
-      pan: '',
-      panImages: [],
-      aadhaar: '',
-      aadhaarImages: [],
+    setBusinessDetails({
+      businessType: 'Proprietorship',
+      businessName: '',
+      businessVintage: '',
+      annualTurnover: '',
+      monthlyNetIncome: '',
+      existingLoanEMI: '',
+      gstRegistered: true,
+      itrFiled: true,
+      documents: {},
     });
+    setDocs({pan: '', panImages: [], aadhaar: '', aadhaarImages: []});
   };
 
+  // ─── Submit ──────────────────────────────────────────────────────────────
   const submitFormData = async () => {
     ToastAndroid.show('Submitting your application...', ToastAndroid.LONG);
-
     const formData = new FormData();
 
-    // TEXT FIELDS
+    // Common fields
     formData.append('fullname', personal.name);
     formData.append('employmentType', tab);
     formData.append('dateOfBirth', personal.dob);
@@ -272,38 +268,60 @@ export default function HomeLoan() {
     formData.append('pincode', personal.pincode);
     formData.append('panNumber', personal.panno);
     formData.append('aadhaarNumber', docs.aadhaar);
-
-    formData.append('employmentSector', incomeDetails.employmentSector);
-    formData.append('workexperienceYear', incomeDetails.workExperience.years);
-    formData.append('workexperienceMonth', incomeDetails.workExperience.months);
-    formData.append('salaryType', incomeDetails.salaryType);
-    formData.append('grossPay', incomeDetails.salaryDetails.grossPay);
-    formData.append('netPay', incomeDetails.salaryDetails.netPay);
-    formData.append('pfDeduction', incomeDetails.salaryDetails.pfDeduction);
-    formData.append('otherIncome', incomeDetails.otherIncomeType);
-    formData.append('yearIncome', incomeDetails.yearlyIncomeITR);
-    formData.append('monthIncome', incomeDetails.monthlyAvgBalance);
-    formData.append('ongoingEmi', incomeDetails.ongoingEMI);
     formData.append('user_id', user?.id);
     formData.append('propertyid', propertyid);
 
-    // FILES (SINGLE)
-    formData.append('panImage', {
-      uri: docs.panImages[0].uri,
-      type: docs.panImages[0].type,
-      name: 'pan.jpg',
-    });
+    if (tab === 'job') {
+      formData.append('employmentSector', incomeDetails.employmentSector);
+      formData.append('workexperienceYear', incomeDetails.workExperience.years);
+      formData.append(
+        'workexperienceMonth',
+        incomeDetails.workExperience.months,
+      );
+      formData.append('salaryType', incomeDetails.salaryType);
+      formData.append('grossPay', incomeDetails.salaryDetails.grossPay);
+      formData.append('netPay', incomeDetails.salaryDetails.netPay);
+      formData.append('pfDeduction', incomeDetails.salaryDetails.pfDeduction);
+      formData.append('otherIncome', incomeDetails.otherIncomeType);
+      formData.append('yearIncome', incomeDetails.yearlyIncomeITR);
+      formData.append('monthIncome', incomeDetails.monthlyAvgBalance);
+      formData.append('ongoingEmi', incomeDetails.ongoingEMI);
+    } else {
+      formData.append('businessType', businessDetails.businessType);
+      formData.append('businessName', businessDetails.businessName);
+      formData.append('businessVintage', businessDetails.businessVintage);
+      formData.append('annualTurnover', businessDetails.annualTurnover);
+      formData.append('monthlyNetIncome', businessDetails.monthlyNetIncome);
+      formData.append('existingLoanEMI', businessDetails.existingLoanEMI || '');
+      formData.append(
+        'gstRegistered',
+        businessDetails.gstRegistered ? '1' : '0',
+      );
+      formData.append('itrFiled', businessDetails.itrFiled ? '1' : '0');
+    }
 
-    formData.append('aadhaarFrontImage', {
-      uri: docs.aadhaarImages[0].uri,
-      type: docs.aadhaarImages[0].type,
-      name: 'aadhaar-front.jpg',
-    });
-    formData.append('aadhaarBackImage', {
-      uri: docs.aadhaarImages[1].uri,
-      type: docs.aadhaarImages[1].type,
-      name: 'aadhaar-back.jpg',
-    });
+    // Document images
+    if (docs.panImages[0]) {
+      formData.append('panImage', {
+        uri: docs.panImages[0].uri,
+        type: docs.panImages[0].type,
+        name: 'pan.jpg',
+      });
+    }
+    if (docs.aadhaarImages[0]) {
+      formData.append('aadhaarFrontImage', {
+        uri: docs.aadhaarImages[0].uri,
+        type: docs.aadhaarImages[0].type,
+        name: 'aadhaar-front.jpg',
+      });
+    }
+    if (docs.aadhaarImages[1]) {
+      formData.append('aadhaarBackImage', {
+        uri: docs.aadhaarImages[1].uri,
+        type: docs.aadhaarImages[1].type,
+        name: 'aadhaar-back.jpg',
+      });
+    }
 
     try {
       const res = await fetch(
@@ -311,17 +329,13 @@ export default function HomeLoan() {
         {
           method: 'POST',
           body: formData,
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
+          headers: {'Content-Type': 'multipart/form-data'},
         },
       );
-
       const data = await res.json();
-
       if (res.ok) {
         Alert.alert('Success', 'Form submitted successfully');
-        resetForm(); // ✅ CLEAR EVERYTHING
+        resetForm();
         navigation.navigate('HomeLoanDashboard');
       } else {
         Alert.alert('Error', data.message || 'Submission failed');
@@ -330,6 +344,10 @@ export default function HomeLoan() {
       Alert.alert('Network Error', 'Unable to submit form');
     }
   };
+
+  // ─── Step 2 data depending on tab ────────────────────────────────────────
+  const step2Data = tab === 'job' ? incomeDetails : businessDetails;
+  const setStep2Data = tab === 'job' ? setIncomeDetails : setBusinessDetails;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -347,38 +365,33 @@ export default function HomeLoan() {
         <LoanStepIndicator step={step} />
         <LoanTabs active={tab} onChange={setTab} />
 
-        {(tab === 'job' || tab === 'business') && (
-          <>
-            {step === 1 && (
-              <PersonalInfoForm
-                data={personal}
-                setData={setPersonal}
-                errors={errors}
-              />
-            )}
-            {step === 2 && (
-              <AddressInformationForm
-                data={incomeDetails}
-                setData={setIncomeDetails}
-                errors={errors}
-              />
-            )}
-            {step === 3 && (
-              <UploadDocForm data={docs} setData={setDocs} errors={errors} />
-            )}
-          </>
+        {step === 1 && (
+          <PersonalInfoForm
+            data={personal}
+            setData={setPersonal}
+            errors={errors}
+          />
+        )}
+        {step === 2 && (
+          <AddressInformationForm
+            data={step2Data}
+            setData={setStep2Data}
+            errors={errors}
+            tab={tab}
+          />
+        )}
+        {step === 3 && (
+          <UploadDocForm data={docs} setData={setDocs} errors={errors} />
         )}
 
-        {(tab === 'job' || tab === 'business') && (
-          <TouchableOpacity style={styles.cta} onPress={handleContinue}>
-            <View style={styles.ctaContent}>
-              <Text style={styles.ctaText}>
-                {step < 3 ? 'Continue to next Step' : 'Submit Application'}
-              </Text>
-              <ArrowIcon width={20} height={20} />
-            </View>
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity style={styles.cta} onPress={handleContinue}>
+          <View style={styles.ctaContent}>
+            <Text style={styles.ctaText}>
+              {step < 3 ? 'Continue to next Step' : 'Submit Application'}
+            </Text>
+            <ArrowIcon width={20} height={20} />
+          </View>
+        </TouchableOpacity>
 
         <View style={styles.footerRow}>
           <Image source={UploadIcon} style={styles.footerIcon} />
@@ -405,24 +418,27 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'SegoeUI-Bold',
     color: '#000',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
   tabContainer: {
     flexDirection: 'row',
     margin: 16,
     backgroundColor: '#fff',
-    borderRadius: 6,
-    padding: 10,
+    borderRadius: 8,
+    padding: 6,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 1},
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  tab: {flex: 1, paddingVertical: 12, alignItems: 'center'},
-  activeTab: {backgroundColor: '#8A38F5', borderRadius: 6},
-  tabContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    color: '#000',
-  },
-  tabIcon: {width: 18, height: 18},
-  tabText: {fontSize: 16, fontFamily: 'SegoeUI-Bold', color: '#000'},
+  tab: {flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: 6},
+  activeTab: {backgroundColor: '#7C3AED'},
+  tabContent: {flexDirection: 'row', alignItems: 'center', gap: 8},
+  tabText: {fontSize: 15, fontFamily: 'SegoeUI-Bold', color: '#374151'},
   activeTabText: {color: '#fff'},
   cta: {
     height: 52,
@@ -433,11 +449,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   ctaContent: {flexDirection: 'row', alignItems: 'center', gap: 8},
-  ctaText: {
-    color: '#fff',
-    fontSize: 16,
-    fontFamily: 'SegoeUI-Bold',
-  },
+  ctaText: {color: '#fff', fontSize: 16, fontFamily: 'SegoeUI-Bold'},
   footerRow: {
     flexDirection: 'row',
     alignItems: 'center',

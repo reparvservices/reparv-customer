@@ -9,6 +9,7 @@ import {
   ToastAndroid,
   TextInput,
   Pressable,
+  Platform,
 } from 'react-native';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import {SafeAreaView} from 'react-native-safe-area-context';
@@ -405,7 +406,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     justifyContent: 'space-between',
   },
-  headerTitle: {fontSize: 16, fontFamily: 'SegoeUI-Bold', color: 'black'},
+  headerTitle: {
+    fontSize: 16,
+    fontFamily: 'SegoeUI-Bold',
+    color: 'black',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
+  },
   scrollContent: {paddingBottom: 32, gap: 16},
   section: {backgroundColor: '#fff', padding: 16},
   sectionHeader: {flexDirection: 'row', alignItems: 'center', gap: 6},
@@ -414,6 +423,10 @@ const styles = StyleSheet.create({
     fontFamily: 'SegoeUI-Bold',
     marginBottom: 8,
     color: '#383737',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
   required: {color: '#E33629'},
   pickerBox: {
@@ -459,6 +472,10 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontFamily: 'SegoeUI-Bold',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
   error: {color: '#E33629', fontSize: 12, marginBottom: 6},
   actionRow: {flexDirection: 'row', gap: 12, paddingHorizontal: 16},
@@ -479,6 +496,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#8E8E8E',
     marginTop: 12,
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
   customModalOverlay: {
     position: 'absolute',
@@ -521,6 +542,10 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontFamily: 'SegoeUI-Bold',
     color: '#111827',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
   closeButton: {
     padding: 4,
@@ -537,5 +562,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'SegoeUI-Regular',
     color: '#374151',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
 });

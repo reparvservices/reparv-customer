@@ -9,6 +9,7 @@ import {
   Platform,
   PixelRatio,
   Animated,
+  InteractionManager,
 } from 'react-native';
 import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import {useDispatch, useSelector} from 'react-redux';
@@ -41,69 +42,114 @@ const PLACEHOLDER_TEMPLATES = [
 ];
 
 // ── Typewriter hook ───────────────────────────────────────────────────────
+// FIX 1: mountedRef prevents setState after unmount (crash on Android)
+// FIX 2: Animated.loop for cursor blink instead of setInterval + setState
+//         → uses native driver, no JS thread jank on low-end devices
+// FIX 3: InteractionManager.runAfterInteractions delays start until
+//         navigation transition is fully done (animation no longer dropped)
+// FIX 4: Full timer cleanup on every cityLabel change
 function useTypewriterPlaceholder(city) {
   const [displayText, setDisplayText] = useState('');
-  const [showCursor, setShowCursor] = useState(true);
+  const cursorAnim = useRef(new Animated.Value(1)).current;
   const indexRef = useRef(0);
   const charIndexRef = useRef(0);
   const phaseRef = useRef('typing'); // 'typing' | 'pause' | 'erasing'
   const timerRef = useRef(null);
-  const cursorTimerRef = useRef(null);
+  const mountedRef = useRef(true);
+  const blinkRef = useRef(null);
 
   const cityLabel = city || 'your city';
 
+  // ── Cursor blink (native-driver Animated loop) ──────────────────────────
   useEffect(() => {
-    // Blink cursor
-    cursorTimerRef.current = setInterval(() => {
-      setShowCursor(v => !v);
-    }, 530);
-    return () => clearInterval(cursorTimerRef.current);
+    mountedRef.current = true;
+
+    blinkRef.current = Animated.loop(
+      Animated.sequence([
+        Animated.timing(cursorAnim, {
+          toValue: 0,
+          duration: 500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(cursorAnim, {
+          toValue: 1,
+          duration: 500,
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    blinkRef.current.start();
+
+    return () => {
+      mountedRef.current = false;
+      blinkRef.current?.stop();
+    };
   }, []);
 
+  // ── Typewriter logic ────────────────────────────────────────────────────
   useEffect(() => {
-    // Reset when city changes
+    // Hard-reset on city change
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
     charIndexRef.current = 0;
     phaseRef.current = 'typing';
     setDisplayText('');
 
-    const tick = () => {
-      const templates = PLACEHOLDER_TEMPLATES;
-      const fullText =
-        templates[indexRef.current % templates.length](cityLabel);
+    // Delay start until screen transition finishes (prevents dropped frames)
+    const interactionHandle = InteractionManager.runAfterInteractions(() => {
+      if (!mountedRef.current) return;
 
-      if (phaseRef.current === 'typing') {
-        charIndexRef.current += 1;
-        setDisplayText(fullText.slice(0, charIndexRef.current));
+      const tick = () => {
+        if (!mountedRef.current) return; // guard against unmount
 
-        if (charIndexRef.current >= fullText.length) {
-          phaseRef.current = 'pause';
-          timerRef.current = setTimeout(tick, 1800); // pause after full word
-          return;
+        const fullText =
+          PLACEHOLDER_TEMPLATES[
+            indexRef.current % PLACEHOLDER_TEMPLATES.length
+          ](cityLabel);
+
+        if (phaseRef.current === 'typing') {
+          charIndexRef.current += 1;
+          setDisplayText(fullText.slice(0, charIndexRef.current));
+
+          if (charIndexRef.current >= fullText.length) {
+            phaseRef.current = 'pause';
+            timerRef.current = setTimeout(tick, 1800); // hold full text
+            return;
+          }
+          timerRef.current = setTimeout(tick, 65); // typing speed
+        } else if (phaseRef.current === 'pause') {
+          phaseRef.current = 'erasing';
+          timerRef.current = setTimeout(tick, 40);
+        } else if (phaseRef.current === 'erasing') {
+          charIndexRef.current -= 1;
+          setDisplayText(fullText.slice(0, charIndexRef.current));
+
+          if (charIndexRef.current <= 0) {
+            indexRef.current += 1;
+            charIndexRef.current = 0;
+            phaseRef.current = 'typing';
+            timerRef.current = setTimeout(tick, 380); // pause before next phrase
+            return;
+          }
+          timerRef.current = setTimeout(tick, 32); // erase faster
         }
-        timerRef.current = setTimeout(tick, 60); // typing speed
-      } else if (phaseRef.current === 'pause') {
-        phaseRef.current = 'erasing';
-        timerRef.current = setTimeout(tick, 40);
-      } else if (phaseRef.current === 'erasing') {
-        charIndexRef.current -= 1;
-        setDisplayText(fullText.slice(0, charIndexRef.current));
+      };
 
-        if (charIndexRef.current <= 0) {
-          indexRef.current += 1;
-          charIndexRef.current = 0;
-          phaseRef.current = 'typing';
-          timerRef.current = setTimeout(tick, 300); // pause before next word
-          return;
-        }
-        timerRef.current = setTimeout(tick, 32); // erasing speed (faster)
+      timerRef.current = setTimeout(tick, 500); // initial start delay
+    });
+
+    return () => {
+      interactionHandle.cancel();
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
       }
     };
-
-    timerRef.current = setTimeout(tick, 400);
-    return () => clearTimeout(timerRef.current);
   }, [cityLabel]);
 
-  return {displayText, showCursor};
+  return {displayText, cursorAnim};
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -112,6 +158,27 @@ export default function HomeHeader() {
   const navigation = useNavigation();
   const {user} = useSelector(state => state.auth);
   const [userimage, setUserImage] = useState(null);
+
+  // Search bar subtle pulse when idle
+  const searchPulseAnim = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(searchPulseAnim, {
+          toValue: 1.012,
+          duration: 1800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(searchPulseAnim, {
+          toValue: 1,
+          duration: 1800,
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    pulse.start();
+    return () => pulse.stop();
+  }, []);
 
   const fetchProfile = useCallback(async () => {
     try {
@@ -154,7 +221,7 @@ export default function HomeHeader() {
   }, [navigation]);
 
   // ── Dynamic placeholder ─────────────────────────────────────────────────
-  const {displayText, showCursor} = useTypewriterPlaceholder(user?.city);
+  const {displayText, cursorAnim} = useTypewriterPlaceholder(user?.city);
 
   const styles = makeStyles();
 
@@ -192,21 +259,35 @@ export default function HomeHeader() {
       </View>
 
       {/* ── Search bar ── */}
-      <TouchableOpacity
-        style={styles.searchShell}
-        activeOpacity={0.9}
-        onPress={() => navigation.navigate('PropertyListScreen')}>
-        <Search size={rs(18)} color="#9CA3AF" />
+      <Animated.View style={{transform: [{scale: searchPulseAnim}]}}>
+        <TouchableOpacity
+          style={styles.searchShell}
+          activeOpacity={0.88}
+          onPress={() => navigation.navigate('PropertyListScreen')}>
+          {/* Search icon with purple tint */}
+          <View style={styles.searchIconWrap}>
+            <Search size={rs(16)} color="#8A38F5" strokeWidth={2.2} />
+          </View>
 
-        {/* Dynamic typewriter placeholder */}
-        <View style={styles.placeholderRow}>
-          <Text style={styles.searchPlaceholder} numberOfLines={1}>
-            {displayText || 'Search properties...'}
-          </Text>
-          {/* Blinking cursor */}
-          <Text style={[styles.cursor, {opacity: showCursor ? 1 : 0}]}>|</Text>
-        </View>
-      </TouchableOpacity>
+          {/* Divider */}
+          <View style={styles.searchDivider} />
+
+          {/* Typewriter placeholder */}
+          <View style={styles.placeholderRow}>
+            <Text
+              style={styles.searchPlaceholder}
+              numberOfLines={1}
+              ellipsizeMode="tail">
+              {displayText || 'Search properties…'}
+            </Text>
+
+            {/* Blinking cursor — uses native-driver Animated opacity */}
+            <Animated.Text style={[styles.cursor, {opacity: cursorAnim}]}>
+              |
+            </Animated.Text>
+          </View>
+        </TouchableOpacity>
+      </Animated.View>
     </View>
   );
 }
@@ -285,22 +366,49 @@ function makeStyles() {
       height: avatarSize,
       borderRadius: avatarSize / 2,
     },
+
+    // ── Search bar ─────────────────────────────────────────────────────────
     searchShell: {
       flexDirection: 'row',
       alignItems: 'center',
       backgroundColor: '#FFFFFF',
       borderRadius: rs(28),
-      paddingHorizontal: rs(16),
-      paddingVertical: Platform.OS === 'ios' ? 14 : 12,
-      borderWidth: 1,
-      borderColor: 'rgba(0,0,0,0.08)',
+      paddingLeft: rs(12),
+      paddingRight: rs(16),
+      paddingVertical: Platform.OS === 'ios' ? rs(13) : rs(11),
+      borderWidth: 1.5,
+      borderColor: 'rgba(138,56,245,0.18)',
       marginBottom: rs(4),
+      // Subtle shadow for depth
+      ...Platform.select({
+        ios: {
+          shadowColor: '#8A38F5',
+          shadowOffset: {width: 0, height: 2},
+          shadowOpacity: 0.08,
+          shadowRadius: 8,
+        },
+      }),
+    },
+    searchIconWrap: {
+      width: rs(32),
+      height: rs(32),
+      borderRadius: rs(16),
+      backgroundColor: 'rgba(138,56,245,0.08)',
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexShrink: 0,
+    },
+    searchDivider: {
+      width: 1,
+      height: rs(20),
+      backgroundColor: 'rgba(0,0,0,0.1)',
+      marginHorizontal: rs(10),
+      flexShrink: 0,
     },
     placeholderRow: {
       flex: 1,
       flexDirection: 'row',
       alignItems: 'center',
-      marginLeft: rs(10),
       minWidth: 0,
       overflow: 'hidden',
     },
@@ -308,12 +416,21 @@ function makeStyles() {
       fontSize: rf(14, 12, 16),
       color: '#9CA3AF',
       flexShrink: 1,
+      ...Platform.select({
+        android: {includeFontPadding: false},
+        default: {},
+      }),
     },
     cursor: {
-      fontSize: rf(15, 13, 17),
+      fontSize: rf(16, 14, 18),
       color: '#8A38F5',
       fontWeight: '300',
       marginLeft: 1,
+      // includeFontPadding false keeps cursor vertically aligned on Android
+      ...Platform.select({
+        android: {includeFontPadding: false, textAlignVertical: 'center'},
+        default: {},
+      }),
     },
   });
 }

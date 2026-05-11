@@ -9,6 +9,7 @@ import {
   ToastAndroid,
   TextInput,
   Pressable,
+  Platform,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import {SafeAreaView} from 'react-native-safe-area-context';
@@ -447,7 +448,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     justifyContent: 'space-between',
   },
-  headerTitle: {fontSize: 16, fontFamily: 'SegoeUI-Bold', color: 'black'},
+  headerTitle: {
+    fontSize: 16,
+    fontFamily: 'SegoeUI-Bold',
+    color: 'black',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
+  },
   scrollContent: {paddingBottom: 32, gap: 16},
 
   section: {backgroundColor: '#fff', padding: 16},
@@ -477,9 +486,28 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     marginBottom: 2,
     fontFamily: 'SegoeUI-Regular',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
-  pickerValue: {fontSize: 14, color: '#111827', fontFamily: 'SegoeUI-Bold'},
-  placeholderText: {color: '#9CA3AF', fontFamily: 'SegoeUI-Regular'},
+  pickerValue: {
+    fontSize: 14,
+    color: '#111827',
+    fontFamily: 'SegoeUI-Bold',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
+  },
+  placeholderText: {
+    color: '#9CA3AF',
+    fontFamily: 'SegoeUI-Regular',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
+  },
   disabledPicker: {backgroundColor: '#F3F4F6', borderColor: '#E5E7EB'},
 
   input: {
@@ -501,7 +529,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  primaryText: {color: '#fff', fontSize: 16, fontFamily: 'SegoeUI-Bold'},
+  primaryText: {
+    color: '#fff',
+    fontSize: 16,
+    fontFamily: 'SegoeUI-Bold',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
+  },
 
   error: {color: '#E33629', fontSize: 12, marginBottom: 6},
 
@@ -520,6 +556,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#8E8E8E',
     marginTop: 12,
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
 
   /* ── Custom Dropdown Modal ── */
@@ -564,6 +604,10 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontFamily: 'SegoeUI-Bold',
     color: '#111827',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
   closeButton: {padding: 4},
   customModalScroll: {paddingHorizontal: 20},
@@ -576,5 +620,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'SegoeUI-Regular',
     color: '#374151',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
 });

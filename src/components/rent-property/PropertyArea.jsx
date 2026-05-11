@@ -61,6 +61,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 12,
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
   icon: {
     width: 26,
@@ -70,8 +74,8 @@ const styles = StyleSheet.create({
   },
   heading: {
     fontSize: 16,
-    fontWeight:'700',
-    fontFamily : "SegoeUI-Bold",
+    fontWeight: '700',
+    fontFamily: 'SegoeUI-Bold',
     color: '#000',
     fontFamily: 'Segoe UI',
   },
@@ -131,16 +135,15 @@ const styles = StyleSheet.create({
   infoText: {
     color: '#fff',
     fontSize: 12,
-    fontFamily : "SegoeUI-Bold",
+    fontFamily: 'SegoeUI-Bold',
   },
   helperText: {
     fontSize: 12,
     color: '#868686',
   },
   error: {
-  color: '#E33629',
-  fontSize: 12,
-  marginVertical: 6,
-},
-
+    color: '#E33629',
+    fontSize: 12,
+    marginVertical: 6,
+  },
 });

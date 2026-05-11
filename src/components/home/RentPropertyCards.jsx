@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useMemo} from 'react';
 import {
   View,
   Text,
@@ -6,25 +6,31 @@ import {
   Image,
   FlatList,
   Dimensions,
-  ActivityIndicator,
   TouchableOpacity,
   Platform,
   ScrollView,
   Animated,
+  ActivityIndicator,
 } from 'react-native';
+import {useState, useEffect} from 'react';
 import LinearGradient from 'react-native-linear-gradient';
-import {Building2, Eye, HeartIcon, Map} from 'lucide-react-native';
+import {Building2, Eye, HeartIcon, Map, MapPin} from 'lucide-react-native';
 import {useNavigation} from '@react-navigation/native';
 import {useSelector} from 'react-redux';
 import Location from '../../assets/image/home/rented-properties-card/location.png';
 import {formatIndianAmount} from '../../utils/formatIndianAmount';
 import {fetchAllPropertiesCached} from '../../services/allPropertiesCache';
 import {getImageUri} from '../../utils/imageHandle';
+import {
+  formatDistance,
+  haversineKm,
+  useUserLocation,
+} from '../../hooks/userLocation';
 
 const {width} = Dimensions.get('window');
 
 /* ---------------------------------------
-   SKELETON CARD COMPONENT
+   SKELETON CARD
 --------------------------------------- */
 const RentSkeletonCard = () => {
   const shimmerAnim = React.useRef(new Animated.Value(0)).current;
@@ -87,26 +93,53 @@ export const checkSubscription = async partnerid => {
 };
 
 /* ---------------------------------------
-   EMPTY STATE COMPONENT
+   DISTANCE BADGE
+--------------------------------------- */
+const DistanceBadge = ({userCoords, locationLoading, item}) => {
+  const distanceLabel = useMemo(() => {
+    if (!userCoords || !item?.latitude || !item?.longitude) return null;
+    const km = haversineKm(
+      userCoords.latitude,
+      userCoords.longitude,
+      parseFloat(item.latitude),
+      parseFloat(item.longitude),
+    );
+    return formatDistance(km);
+  }, [userCoords, item?.latitude, item?.longitude]);
+
+  if (locationLoading) {
+    return (
+      <View style={styles.distancePill}>
+        <ActivityIndicator size={9} color="#8A38F5" />
+        <Text style={styles.distanceText}> …</Text>
+      </View>
+    );
+  }
+
+  if (!distanceLabel) return null;
+
+  return (
+    <View style={styles.distancePill}>
+      <MapPin size={10} color="#8A38F5" strokeWidth={2.5} />
+      <Text style={styles.distanceText}>{distanceLabel} away</Text>
+    </View>
+  );
+};
+
+/* ---------------------------------------
+   EMPTY STATE
 --------------------------------------- */
 const EmptyState = ({onPopularAreas, onExpandRadius}) => (
   <View style={styles.emptyWrapper}>
     <View style={styles.emptyCard}>
-      {/* Icon Circle */}
       <View style={styles.emptyIconCircle}>
         <Map size={32} color="#7C3AED" strokeWidth={1.8} />
       </View>
-
-      {/* Title */}
       <Text style={styles.emptyTitle}>No rental properties nearby</Text>
-
-      {/* Subtitle */}
       <Text style={styles.emptySubtitle}>
         Try expanding your search radius or check out these popular areas
         instead.
       </Text>
-
-      {/* Action Buttons */}
       <View style={styles.emptyActions}>
         <TouchableOpacity
           style={styles.btnOutline}
@@ -114,7 +147,6 @@ const EmptyState = ({onPopularAreas, onExpandRadius}) => (
           onPress={onPopularAreas}>
           <Text style={styles.btnOutlineText}>Popular Areas</Text>
         </TouchableOpacity>
-
         <TouchableOpacity
           style={styles.btnFilled}
           activeOpacity={0.85}
@@ -127,7 +159,7 @@ const EmptyState = ({onPopularAreas, onExpandRadius}) => (
 );
 
 /* ---------------------------------------
-   SECTION HEADER (reusable)
+   SECTION HEADER
 --------------------------------------- */
 const SectionHeader = () => (
   <View style={styles.sectionHeader}>
@@ -146,12 +178,11 @@ export default function RentPropertyCards() {
   const [likeCounts, setLikeCounts] = useState({});
   const navigation = useNavigation();
 
+  const {coords: userCoords, loading: locationLoading} = useUserLocation();
+
   const {user} = useSelector(state => state.auth);
   const selectedCity = (user?.city || '').trim().toLowerCase();
 
-  /* ---------------------------------------
-     CITY MATCH HELPER
-  --------------------------------------- */
   const isCityMatch = item => {
     if (!selectedCity) return true;
     const propertyCity = String(item?.city || '')
@@ -172,9 +203,6 @@ export default function RentPropertyCards() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCity]);
 
-  /* ---------------------------------------
-     FETCH VISITS
-  --------------------------------------- */
   const fetchVisits = async propertyid => {
     try {
       const res = await fetch(
@@ -187,14 +215,10 @@ export default function RentPropertyCards() {
     }
   };
 
-  /* ---------------------------------------
-     FETCH & FILTER PROPERTIES
-  --------------------------------------- */
   const fetchFlats = async () => {
     setLoading(true);
     try {
       const data = await fetchAllPropertiesCached();
-
       const filtered = data.filter(
         item =>
           item.status === 'Active' &&
@@ -202,7 +226,6 @@ export default function RentPropertyCards() {
           item.propertyCategory?.startsWith('Rental') &&
           isCityMatch(item),
       );
-
       const updated = await Promise.all(
         filtered.map(async item => {
           const assured = item.partnerid
@@ -212,7 +235,6 @@ export default function RentPropertyCards() {
           return {...item, reparvAssured: assured, totalVisitors};
         }),
       );
-
       setFlats(updated);
       fetchAllLikes(updated);
     } catch (error) {
@@ -222,9 +244,6 @@ export default function RentPropertyCards() {
     }
   };
 
-  /* ---------------------------------------
-     FETCH LIKES
-  --------------------------------------- */
   const fetchAllLikes = async properties => {
     try {
       const results = await Promise.all(
@@ -246,9 +265,7 @@ export default function RentPropertyCards() {
     }
   };
 
-  /* ---------------------------------------
-     CARD UI
-  --------------------------------------- */
+  /* ── CARD UI ── */
   const renderItem = ({item}) => {
     const imageUri = getImageUri(
       item.frontView ? JSON.parse(item.frontView)[0] : null,
@@ -267,7 +284,6 @@ export default function RentPropertyCards() {
           ) : (
             <View style={[styles.image, {backgroundColor: '#eee'}]} />
           )}
-
           {item?.reparvAssured && (
             <View style={styles.leftBadge}>
               <Text style={styles.badgeText}>REPARV Assured</Text>
@@ -282,12 +298,20 @@ export default function RentPropertyCards() {
 
         {/* CONTENT */}
         <View style={styles.bottom}>
+          {/* ── Location text — city center distance removed ── */}
           <View style={styles.propertyRow}>
             <Image source={Location} style={styles.icon} />
             <Text style={styles.propertyType} numberOfLines={1}>
-              {item.location} ({item.distanceFromCityCenter} KM)
+              {item.location || item?.city}
             </Text>
           </View>
+
+          {/* ── User GPS distance shown right below location ── */}
+          <DistanceBadge
+            userCoords={userCoords}
+            locationLoading={locationLoading}
+            item={item}
+          />
 
           <Text style={styles.cardTitle} numberOfLines={2}>
             {item.propertyName}
@@ -337,9 +361,7 @@ export default function RentPropertyCards() {
     );
   };
 
-  /* ---------------------------------------
-     RENDER STATES
-  --------------------------------------- */
+  /* ── RENDER STATES ── */
   if (loading) {
     return (
       <View>
@@ -361,12 +383,8 @@ export default function RentPropertyCards() {
       <View>
         <SectionHeader />
         <EmptyState
-          onPopularAreas={() => {
-            navigation.navigate('LocationPickerScreen');
-          }}
-          onExpandRadius={() => {
-            navigation.navigate('RentProperty');
-          }}
+          onPopularAreas={() => navigation.navigate('LocationPickerScreen')}
+          onExpandRadius={() => navigation.navigate('RentProperty')}
         />
       </View>
     );
@@ -408,11 +426,7 @@ const styles = StyleSheet.create({
   line: {width: '25%', height: 3, borderRadius: 1},
 
   // ── Skeleton ──
-  skeletonImage: {
-    width: '100%',
-    height: 130,
-    backgroundColor: '#E5E7EB',
-  },
+  skeletonImage: {width: '100%', height: 130, backgroundColor: '#E5E7EB'},
   skeletonLocation: {
     width: '70%',
     height: 14,
@@ -462,11 +476,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
 
-  // ── New Empty State ──
-  emptyWrapper: {
-    paddingHorizontal: 20,
-    marginBottom: 10,
-  },
+  // ── Empty State ──
+  emptyWrapper: {paddingHorizontal: 20, marginBottom: 10},
   emptyCard: {
     backgroundColor: '#F3F4F6',
     borderRadius: 20,
@@ -501,12 +512,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginBottom: 6,
   },
-  emptyActions: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 6,
-    width: '100%',
-  },
+  emptyActions: {flexDirection: 'row', gap: 12, marginTop: 6, width: '100%'},
   btnOutline: {
     flex: 1,
     height: 48,
@@ -519,11 +525,7 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     shadowOffset: {width: 0, height: 2},
   },
-  btnOutlineText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#1A1A2E',
-  },
+  btnOutlineText: {fontSize: 14, fontWeight: '700', color: '#1A1A2E'},
   btnFilled: {
     flex: 1,
     height: 48,
@@ -532,11 +534,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  btnFilledText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
+  btnFilledText: {fontSize: 14, fontWeight: '700', color: '#FFFFFF'},
 
   // ── Property Card ──
   card: {
@@ -567,15 +565,33 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   badgeText: {color: '#fff', fontSize: 10, fontWeight: '700'},
-  bottom: {padding: 10},
+  bottom: {padding: 10, gap: 4},
+
+  // Location row — just location name, no city-center KM
   propertyRow: {flexDirection: 'row', alignItems: 'center'},
   icon: {width: 16, height: 16, marginRight: 4},
   propertyType: {fontSize: 11, color: '#000000', flex: 1},
-  cardTitle: {fontSize: 12, fontWeight: '700', marginTop: 4, color: '#000'},
+
+  // ── Distance pill shown below location ──
+  distancePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    alignSelf: 'flex-start', // hug content width
+    backgroundColor: '#F3EEFF',
+    borderRadius: 20,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: '#DDD6FE',
+  },
+  distanceText: {fontSize: 10, fontWeight: '600', color: '#7C3AED'},
+
+  cardTitle: {fontSize: 12, fontWeight: '700', color: '#000'},
   featuresPriceRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 6,
+    marginTop: 2,
   },
   featureRow: {flexDirection: 'row', alignItems: 'center'},
   featureCircle: {
@@ -589,7 +605,7 @@ const styles = StyleSheet.create({
   },
   featureText: {fontSize: 11, color: '#000'},
   price: {fontSize: 12, fontWeight: '700'},
-  divider: {height: 1, backgroundColor: '#E3E3E3', marginVertical: 8},
+  divider: {height: 1, backgroundColor: '#E3E3E3', marginVertical: 4},
   ownerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

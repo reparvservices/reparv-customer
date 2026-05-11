@@ -1,5 +1,5 @@
 import React from 'react';
-import {View, Text, StyleSheet, TextInput} from 'react-native';
+import {View, Text, StyleSheet, TextInput, Platform} from 'react-native';
 
 export default function PriceDetails({sellingPrice, onChangeSelling, error}) {
   return (
@@ -58,7 +58,7 @@ const styles = StyleSheet.create({
 
   currencyIcon: {
     fontSize: 28,
-    fontFamily : "SegoeUI-Bold",
+    fontFamily: 'SegoeUI-Bold',
     color: '#8A38F5',
     marginRight: 8,
   },
@@ -68,6 +68,10 @@ const styles = StyleSheet.create({
     fontFamily: 'SegoeUI-Bold',
     color: '#000',
     fontFamily: 'Segoe UI',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
 
   label: {

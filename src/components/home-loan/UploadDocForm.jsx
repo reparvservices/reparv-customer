@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Image,
   Alert,
+  Platform,
 } from 'react-native';
 import {launchImageLibrary} from 'react-native-image-picker';
 
@@ -201,6 +202,10 @@ const styles = StyleSheet.create({
     color: '#7C3AED',
     fontFamily: 'SegoeUI-Bold',
     marginBottom: 6,
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
 
   uploadSub: {
@@ -208,6 +213,10 @@ const styles = StyleSheet.create({
     color: '#868686',
     marginBottom: 8,
     textAlign: 'center',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
 
   uploadInfo: {
@@ -222,11 +231,19 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingVertical: 10,
     paddingHorizontal: 16,
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
   uploadBtnText: {
     color: '#FFFFFF',
     fontSize: 14,
 
     fontFamily: 'SegoeUI-Bold',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
 });
