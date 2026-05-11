@@ -305,7 +305,15 @@ const styles = StyleSheet.create({
   uploadBtnDisabled: {
     backgroundColor: '#C4B5FD',
   },
-  uploadBtnText: {color: '#fff', fontSize: 12, fontFamily: 'SegoeUI-Bold'},
+  uploadBtnText: {
+    color: '#fff',
+    fontSize: 12,
+    fontFamily: 'SegoeUI-Bold',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
+  },
 
   error: {
     color: '#E33629',

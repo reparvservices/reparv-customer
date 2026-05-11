@@ -176,11 +176,19 @@ const styles = StyleSheet.create({
     color: '#868686',
     textAlign: 'left',
     alignSelf: 'flex-start',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
 
   labelActive: {
     color: '#fff',
     fontFamily: 'SegoeUI-Bold',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
   error: {
     color: '#E33629',
