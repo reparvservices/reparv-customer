@@ -10,6 +10,7 @@ import {
   Dimensions,
   Modal,
   Animated,
+  Platform,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {ArrowLeft, Heart, Trash2, X} from 'lucide-react-native';
@@ -543,7 +544,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
 
-  headerTitle: {fontSize: 18, fontWeight: '600', color: '#111'},
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#111',
+    fontFamily: 'SegoeUI-Bold',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
+  },
 
   tabsRow: {
     paddingHorizontal: 16,
@@ -572,9 +582,21 @@ const styles = StyleSheet.create({
     fontFamily: 'SegoeUI-Bold',
     color: '#374151',
     fontWeight: '600',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
 
-  activeTabText: {color: '#FFF', fontWeight: '700', fontFamily: 'SegoeUI-Bold'},
+  activeTabText: {
+    color: '#FFF',
+    fontWeight: '700',
+    fontFamily: 'SegoeUI-Bold',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
+  },
 
   countBadge: {
     backgroundColor: '#F3F4F6',
@@ -585,12 +607,24 @@ const styles = StyleSheet.create({
 
   activeCountBadge: {backgroundColor: '#FFF'},
 
-  countText: {fontSize: 12, color: '#060606', fontFamily: 'SegoeUI-Bold'},
+  countText: {
+    fontSize: 12,
+    color: '#060606',
+    fontFamily: 'SegoeUI-Bold',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
+  },
 
   activeCountText: {
     color: '#6D28D9',
     fontWeight: '600',
     fontFamily: 'SegoeUI-Bold',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
 
   sectionTitle: {
@@ -601,12 +635,21 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#1F2937',
     letterSpacing: 0.4,
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
 
   emptyText: {
     textAlign: 'center',
     marginTop: 60,
     color: '#6B7280',
+    fontFamily: 'SegoeUI-Regular',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
     fontSize: 15,
   },
 
@@ -638,6 +681,10 @@ const styles = StyleSheet.create({
     color: '#EF4444',
     fontWeight: '600',
     fontFamily: 'SegoeUI-Bold',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
 
   // ── Confirm Modal ──────────────────────────────
@@ -702,6 +749,10 @@ const styles = StyleSheet.create({
     fontFamily: 'SegoeUI-Bold',
     textAlign: 'center',
     marginBottom: 8,
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
 
   modalSubtitle: {
@@ -711,6 +762,10 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     fontFamily: 'SegoeUI-Regular',
     paddingHorizontal: 6,
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
 
   modalDivider: {
@@ -742,6 +797,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#374151',
     fontFamily: 'SegoeUI-Bold',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
 
   confirmBtn: {
@@ -765,5 +824,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FFF',
     fontFamily: 'SegoeUI-Bold',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
 });

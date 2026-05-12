@@ -164,6 +164,16 @@ const PropertyListScreen = () => {
       .trim()
       .toLowerCase();
 
+  // ─── Normalize property category for comparison ───
+  const normalizePropertyCategory = value => {
+    if (!value) return '';
+    // Convert "NewFlat" → "new flat", "RentalVilla" → "rental villa"
+    return value
+      .replace(/([a-z])([A-Z])/g, '$1 $2') // Add space before capitals
+      .toLowerCase()
+      .trim();
+  };
+
   const getPropertyAmenities = item => {
     const list = [];
     if (item.amenitiesFeature) list.push(...item.amenitiesFeature.split(' / '));
@@ -283,7 +293,7 @@ const PropertyListScreen = () => {
     [cities, flats],
   );
 
-  // ─── NLP Search Parser ───
+  // ─── ENHANCED NLP Search Parser ───
   const parseSearchQuery = useCallback(
     text => {
       if (!text) return {bhk: null, city: null, category: null, rawText: ''};
@@ -304,27 +314,96 @@ const PropertyListScreen = () => {
         ) ||
         null;
 
-      // 3. Extract property category keyword
+      // 3. Extract property category — HANDLES BOTH FORMATS
       const CATEGORY_KEYWORDS = {
-        flat: ['flat', 'apartment', 'flats', 'apartments'],
+        // ── Multi-word categories FIRST (higher priority) ──
+        'rental flat': [
+          'rental flat',
+          'rental flats',
+          'rent flat',
+          'rent flats',
+          'flat for rent',
+          'flats for rent',
+          'rental apartment',
+          'rental apartments',
+          'rentalflat',
+        ],
+        'rental villa': [
+          'rental villa',
+          'rental villas',
+          'rent villa',
+          'rent villas',
+          'villa for rent',
+          'rentalvilla',
+        ],
+        'rental plot': [
+          'rental plot',
+          'rental plots',
+          'rent plot',
+          'rent plots',
+          'plot for rent',
+          'rentalplot',
+        ],
+        'rental row house': [
+          'rental rowhouse',
+          'rental row house',
+          'rent rowhouse',
+          'rent row house',
+          'rentalrowhouse',
+        ],
+        'resale flat': [
+          'resale flat',
+          'resale flats',
+          'resale apartment',
+          'resale apartments',
+          'second hand flat',
+          'second hand flats',
+          'resaleflat',
+        ],
+        'resale villa': [
+          'resale villa',
+          'resale villas',
+          'second hand villa',
+          'resalevilla',
+        ],
+        'resale plot': [
+          'resale plot',
+          'resale plots',
+          'second hand plot',
+          'resaleplot',
+        ],
+        'new flat': [
+          'new flat',
+          'new flats',
+          'new project',
+          'new launch',
+          'under construction',
+          'new apartment',
+          'new apartments',
+          'newflat',
+        ],
+        'new villa': ['new villa', 'new villas', 'newvilla'],
+
+        // ── Single-word categories LAST (lower priority) ──
+        flat: ['flat', 'flats', 'apartment', 'apartments'],
         villa: ['villa', 'villas'],
-        rowhouse: ['rowhouse', 'row house', 'row-house'],
+        'row house': ['rowhouse', 'row house', 'row-house'],
         plot: ['plot', 'land', 'plots'],
         bungalow: ['bungalow', 'bungalows'],
-        'new flat': ['new flat', 'new project', 'new launch'],
-        'rental flat': ['rent', 'rental', 'pg', 'lease'],
-        resale: ['resale', 'ready'],
       };
 
       let parsedCategory = null;
+
+      // Iterate through categories in definition order (specific → generic)
       for (const [key, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
         if (keywords.some(kw => lower.includes(kw))) {
-          // Match against actual propertyCategory values in data
+          // Find match in propertyCategory - check both formats
           parsedCategory =
-            propertyCategory.find(c =>
-              c.toLowerCase().includes(key.toLowerCase()),
+            propertyCategory.find(
+              c => normalizePropertyCategory(c) === key.toLowerCase(),
             ) || null;
-          if (parsedCategory) break;
+
+          if (parsedCategory) break; // Stop at first match
         }
       }
 
@@ -337,7 +416,8 @@ const PropertyListScreen = () => {
     },
     [cities, propertyCategory],
   );
-  // ─── Filters ───
+
+  // ─── Enhanced Filters with COMPREHENSIVE SEARCH ───
   const applyFilters = useCallback(() => {
     // ── Parse natural language from searchText ──
     const {
@@ -355,13 +435,20 @@ const PropertyListScreen = () => {
       setSelectedTab(parsedCategory);
 
     const filtered = flats.filter(item => {
-      // ── Category tab ──
-      const matchTab = !effectiveTab || item.propertyCategory === effectiveTab;
+      // ── Category tab — NORMALIZE COMPARISON ──
+      const matchTab =
+        !effectiveTab ||
+        normalizePropertyCategory(item.propertyCategory) ===
+          normalizePropertyCategory(effectiveTab);
 
-      // ── Filter modal property type ──
+      // ── Filter modal property type — NORMALIZE COMPARISON ──
       const matchCategory =
         !filterpropertyCategory.length ||
-        filterpropertyCategory.includes(item.propertyCategory);
+        filterpropertyCategory.some(
+          fc =>
+            normalizePropertyCategory(fc) ===
+            normalizePropertyCategory(item.propertyCategory),
+        );
 
       // ── BHK — from filter modal OR parsed from search ──
       const activeBhkFilters = filterbhk.length
@@ -383,34 +470,87 @@ const PropertyListScreen = () => {
         ? Number(item.totalOfferPrice) / 100000
         : 0;
       const matchBudget =
-        !budget.length ||
-        (priceInLakh >= budget[0] && priceInLakh <= budget[1]);
+        !filterbudget.length ||
+        (priceInLakh >= filterbudget[0] && priceInLakh <= filterbudget[1]);
 
       // ── City — exact match on parsed/selected ──
       const matchCity =
         !effectiveCity ||
         normalizeCity(item.city) === normalizeCity(effectiveCity);
 
-      // ── Raw text fallback — only on non-parsed part of query ──
-      // Strip out parsed tokens so "2bhk in nagpur" doesn't kill results
-      const strippedQuery = searchText
-        .toLowerCase()
-        .replace(/\d+\s*(?:bhk|bedroom|bed)/g, '') // remove bhk
-        .replace(/\bin\s+\w+/g, '') // remove "in <city>"
-        .replace(/flat|apartment|villa|plot|rent|resale|rowhouse/g, '')
-        .trim();
+      // ── COMPREHENSIVE RAW TEXT SEARCH ──
+      let strippedQuery = searchText.toLowerCase();
+
+      // Remove BHK patterns
+      strippedQuery = strippedQuery.replace(/\d+\s*(?:bhk|bedroom|bed)/g, '');
+
+      // Remove "in <city>" patterns
+      strippedQuery = strippedQuery.replace(/\bin\s+[\w\s]+/g, '');
+
+      // Remove category keywords (all of them)
+      const allCategoryKeywords = [
+        'rental',
+        'rent',
+        'resale',
+        'new',
+        'flat',
+        'flats',
+        'apartment',
+        'apartments',
+        'villa',
+        'villas',
+        'plot',
+        'plots',
+        'rowhouse',
+        'row house',
+        'bungalow',
+        'bungalows',
+        'for rent',
+        'for sale',
+        'second hand',
+        'under construction',
+        'launch',
+        'project',
+        'land',
+      ];
+
+      allCategoryKeywords.forEach(keyword => {
+        const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
+        strippedQuery = strippedQuery.replace(regex, '');
+      });
+
+      strippedQuery = strippedQuery.replace(/\s+/g, ' ').trim();
+
+      // Search across ALL relevant fields
+      const searchableFields = [
+        item.city,
+        item.location,
+        item.projectBy,
+        item.propertyName,
+        item.address,
+        item.nearestLandmark,
+        item.seoSlug,
+        item.propertyDescription,
+        normalizePropertyCategory(item.propertyCategory), // Include normalized category
+        ...(Array.isArray(item.propertyType) ? item.propertyType : []),
+      ]
+        .filter(Boolean)
+        .map(f => String(f).toLowerCase());
 
       const matchSearch =
         !strippedQuery ||
-        [
-          item.city,
-          item.location,
-          item.projectBy,
-          item.propertyName,
-          item.address,
-        ]
-          .filter(Boolean)
-          .some(field => field.toLowerCase().includes(strippedQuery));
+        searchableFields.some(field => field.includes(strippedQuery));
+
+      // ── Amenities filter ──
+      const matchAmenities =
+        !amenities.length ||
+        amenities.every(selectedAmenity => {
+          const propertyAmenities = getPropertyAmenities(item);
+          const matchKeys = AMENITY_MATCH_MAP[selectedAmenity] || [];
+          return matchKeys.some(key =>
+            propertyAmenities.some(pa => pa.includes(key)),
+          );
+        });
 
       return (
         matchTab &&
@@ -418,7 +558,8 @@ const PropertyListScreen = () => {
         matchBhk &&
         matchBudget &&
         matchCity &&
-        matchSearch
+        matchSearch &&
+        matchAmenities
       );
     });
 
@@ -431,9 +572,12 @@ const PropertyListScreen = () => {
     selectedTab,
     filterpropertyCategory,
     filterbhk,
-    budget,
+    filterbudget,
+    amenities,
     parseSearchQuery,
+    getPropertyAmenities,
   ]);
+
   // ─── Suggestion select handler ───
   const handleSuggestionSelect = item => {
     if (item.city) setSelectedCity(item.city);
@@ -455,9 +599,6 @@ const PropertyListScreen = () => {
       item => !item.startsWith('Rental') && !item.startsWith('Resale'),
     );
   }, [ptype, propertyCategory]);
-  useEffect(() => {
-    if (flats.length > 0) applyFilters();
-  }, [flats, selectedTab, selectedCity, searchText]); // keep as-is, applyFilters is now memoized
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -469,7 +610,6 @@ const PropertyListScreen = () => {
 
       <View style={{flex: 1, position: 'relative'}}>
         <View style={styles.container}>
-          {/* ── Search Row ── */}
           {/* ── Search Row ── */}
           <View style={styles.searchRow}>
             {/* Back Button — round pill */}
@@ -534,6 +674,7 @@ const PropertyListScreen = () => {
               <ListFilter width={20} height={20} color="#fff" />
             </TouchableOpacity>
           </View>
+
           {/* ── Autocomplete Dropdown ── */}
           {showSuggestions && suggestions.length > 0 && (
             <View style={styles.suggestionsContainer}>
@@ -667,6 +808,7 @@ const PropertyListScreen = () => {
                 setAmenities([]);
                 setSelectedCity('');
                 setSelectedTab('');
+                setSearchText('');
                 fetchFlats();
                 setFilterVisible(false);
               }}
@@ -700,11 +842,12 @@ const PropertyListScreen = () => {
                     onPress={() => {
                       setFilterPropertyCategory([]);
                       setFilterBhk([]);
-                      setFilterBudget([0, 0]);
+                      setFilterBudget([0, 500]);
+                      setBudget([0, 500]);
                       setFilterRadius(5);
+                      setRadius(5);
                       setAmenities([]);
-                      fetchFlats();
-                      setFilterVisible(false);
+                      applyFilters();
                     }}>
                     <Text style={styles.resetText}>Reset All</Text>
                   </TouchableOpacity>
@@ -800,7 +943,10 @@ const PropertyListScreen = () => {
                     min={0}
                     max={500}
                     values={budget}
-                    onChange={setBudget}
+                    onChange={val => {
+                      setBudget(val);
+                      setFilterBudget(val);
+                    }}
                   />
 
                   <View style={styles.separator} />
@@ -818,7 +964,10 @@ const PropertyListScreen = () => {
                     max={20}
                     value={radius}
                     unit="km"
-                    onChange={setRadius}
+                    onChange={val => {
+                      setRadius(val);
+                      setFilterRadius(val);
+                    }}
                   />
 
                   <View style={styles.separator} />
@@ -925,6 +1074,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#111827',
     padding: 0,
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
 
   clearBtn: {
@@ -946,6 +1099,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flexShrink: 0,
   },
+
   // ── Autocomplete ──
   suggestionsContainer: {
     position: 'absolute',
@@ -1125,11 +1279,19 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: '#000',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
 
   resetText: {
     color: '#7A2EFF',
     fontWeight: '600',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
 
   sectionTitle: {
@@ -1138,6 +1300,10 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     marginTop: 18,
     color: '#000',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
 
   chipWrap: {
@@ -1159,11 +1325,19 @@ const styles = StyleSheet.create({
 
   chipText: {
     color: '#555',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
 
   chipTextActive: {
     color: '#fff',
     fontWeight: '600',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
 
   rangeRow: {
@@ -1177,6 +1351,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     width: '45%',
     color: '#000',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
 
   radiusRow: {
@@ -1213,6 +1391,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#444',
     flexWrap: 'wrap',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
 
   applyBtn: {
@@ -1226,6 +1408,10 @@ const styles = StyleSheet.create({
     color: '#FFF',
     textAlign: 'center',
     fontWeight: '700',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
 
   separator: {

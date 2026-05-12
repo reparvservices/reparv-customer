@@ -341,6 +341,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
+    color: '#000',
   },
   propertyCard: {
     flexDirection: 'row',
@@ -382,6 +383,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '400',
     marginBottom: 4,
+    color: '#000',
   },
   contactRow: {flexDirection: 'row', alignItems: 'center', marginBottom: 2},
   contactText: {fontSize: 12, color: '#000000', fontWeight: '700'},

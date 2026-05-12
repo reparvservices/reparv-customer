@@ -42,19 +42,25 @@ const Checkbox = ({selected, onPress, label}) => (
 );
 
 // ─── Radio Card ───────────────────────────────────────────────────────────────
-const RadioCard = ({selected, onPress, label}) => (
+// Only change: added optional `description` prop shown below the label
+const RadioCard = ({selected, onPress, label, description}) => (
   <TouchableOpacity
     style={[styles.radioCard, selected && styles.radioCardSelected]}
     onPress={onPress}>
     <Radio selected={selected} />
-    <Text
-      style={[
-        styles.radioCardText,
-        selected && styles.radioCardTextActive,
-        platformText,
-      ]}>
-      {label}
-    </Text>
+    <View>
+      <Text
+        style={[
+          styles.radioCardText,
+          selected && styles.radioCardTextActive,
+          platformText,
+        ]}>
+        {label}
+      </Text>
+      {description && (
+        <Text style={[styles.radioCardDesc, platformText]}>{description}</Text>
+      )}
+    </View>
   </TouchableOpacity>
 );
 
@@ -127,7 +133,7 @@ function JobForm({data, setData, errors}) {
       {/* Employment Sector */}
       <Text style={[styles.label, platformText]}>Employment Sector</Text>
       <View style={styles.radioRow}>
-        {['Private', 'Government', 'Proprietorship'].map(item => (
+        {['Private', 'Government'].map(item => (
           <RadioCard
             key={item}
             selected={data.employmentSector === item}
@@ -198,17 +204,20 @@ function JobForm({data, setData, errors}) {
       )}
 
       {/* Salary Type */}
+      {/* Only change here: added description prop to both cards */}
       <Text style={[styles.label, platformText]}>Salary Type</Text>
       <View style={styles.radioRow}>
         <RadioCard
           selected={data.salaryType === 'Account'}
           onPress={() => setData({...data, salaryType: 'Account'})}
           label="Bank Transfer"
+          description="Salary credited in bank"
         />
         <RadioCard
           selected={data.salaryType === 'Cash'}
           onPress={() => setData({...data, salaryType: 'Cash'})}
           label="Cash Salary"
+          description="Salary received in cash"
         />
       </View>
 
@@ -535,7 +544,6 @@ function BusinessForm({data, setData, errors}) {
         </View>
       </View>
 
-      {/* 5. Upload Documents */}
       {/* <Text style={[styles.sectionNumber, platformText]}>
         5. Upload Documents{' '}
         <Text style={[styles.optionalTag, platformText]}>(Any 2)</Text>
@@ -702,6 +710,16 @@ const styles = StyleSheet.create({
   radioCardTextActive: {
     color: '#7C3AED',
     fontFamily: 'SegoeUI-Bold',
+  },
+  // ← only new style added to the whole file
+  radioCardDesc: {
+    fontSize: 11,
+    color: '#9CA3AF',
+    marginTop: 2,
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
   radio: {
     width: 18,

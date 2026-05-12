@@ -435,11 +435,42 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  tab: {flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: 6},
+  tab: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderRadius: 6,
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
+  },
   activeTab: {backgroundColor: '#7C3AED'},
-  tabContent: {flexDirection: 'row', alignItems: 'center', gap: 8},
-  tabText: {fontSize: 15, fontFamily: 'SegoeUI-Bold', color: '#374151'},
-  activeTabText: {color: '#fff'},
+  tabContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
+  },
+  tabText: {
+    fontSize: 15,
+    fontFamily: 'SegoeUI-Bold',
+    color: '#374151',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
+  },
+  activeTabText: {
+    color: '#fff',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
+  },
   cta: {
     height: 52,
     backgroundColor: '#7C3AED',
@@ -447,16 +478,47 @@ const styles = StyleSheet.create({
     margin: 16,
     justifyContent: 'center',
     alignItems: 'center',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
-  ctaContent: {flexDirection: 'row', alignItems: 'center', gap: 8},
-  ctaText: {color: '#fff', fontSize: 16, fontFamily: 'SegoeUI-Bold'},
+  ctaContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
+  },
+  ctaText: {
+    color: '#fff',
+    fontSize: 16,
+    fontFamily: 'SegoeUI-Bold',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
+  },
   footerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     marginVertical: 16,
     gap: 6,
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
   footerIcon: {width: 16, height: 16, tintColor: '#868686'},
-  footerText: {fontSize: 12, color: '#868686'},
+  footerText: {
+    fontSize: 12,
+    color: '#868686',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
+  },
 });

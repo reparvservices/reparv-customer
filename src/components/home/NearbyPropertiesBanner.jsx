@@ -1,4 +1,4 @@
-import React, {useEffect, useRef, useMemo} from 'react';
+import React, {useEffect, useRef} from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,6 @@ import {
   Animated,
   Easing,
   Image,
-  Platform,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import {
@@ -19,8 +18,6 @@ import {
   CircleOff,
   Circle,
 } from 'lucide-react-native';
-
-import {useResponsiveMetrics} from '../../utils/responsive';
 
 const RippleRing = ({
   delay = 0,
@@ -115,10 +112,7 @@ const pin = StyleSheet.create({
   },
 });
 
-export default function NearbyPropertiesBanner({navigation}) {
-  const {width, ms, font} = useResponsiveMetrics();
-  /** Taller promo tile on all phones; scales slightly with screen width */
-  const cardMinHeight = Math.max(ms(300, 0.15), Math.round(width * 0.54));
+export default function NearbyPropertiesBanner({navigation, style}) {
   const shimmer = useRef(new Animated.Value(0)).current;
   const btnScale = useRef(new Animated.Value(1)).current;
 
@@ -154,207 +148,6 @@ export default function NearbyPropertiesBanner({navigation}) {
       useNativeDriver: true,
     }).start();
 
-  const b = useMemo(
-    () =>
-      StyleSheet.create({
-        card: {
-          /** Narrower side margins → card reads wider vs screen */
-          marginHorizontal: ms(10, 0.22),
-          marginVertical: ms(14, 0.2),
-          borderRadius: ms(32, 0.2),
-          alignSelf: 'stretch',
-          minHeight: cardMinHeight,
-          paddingTop: ms(24, 0.2),
-          paddingHorizontal: ms(22, 0.2),
-          paddingBottom: ms(56, 0.22),
-          overflow: 'hidden',
-          shadowColor: '#000',
-          shadowOffset: {width: 0, height: ms(10, 0.15)},
-          shadowOpacity: 0.1,
-          shadowRadius: ms(15, 0.15),
-          elevation: 10,
-        },
-
-        /** Keeps gap/spacing only between real rows — avoids flex `gap` interacting with absolute map layer */
-        content: {
-          position: 'relative',
-          zIndex: 2,
-          gap: ms(17, 0.15),
-        },
-
-        mapImage: {
-          position: 'absolute',
-          right: 0,
-          top: ms(52, 0.18),
-          /** Leave more room at bottom for the larger CTA */
-          bottom: ms(94, 0.22),
-          width: '72%',
-          zIndex: 0,
-          opacity: 0.5,
-        },
-
-        mapOverlay: {
-          position: 'absolute',
-          left: '30%',
-          top: ms(52, 0.18),
-          bottom: ms(94, 0.22),
-          width: '18%',
-          zIndex: 1,
-          backgroundColor: 'transparent',
-        },
-
-        topRow: {
-          flexDirection: 'row',
-          alignItems: 'flex-start',
-          height: ms(26, 0.12),
-        },
-        liveTag: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: ms(6, 0.1),
-          backgroundColor: 'rgba(255,255,255,0.2)',
-          borderWidth: 1,
-          borderColor: '#FFFFFF',
-          borderRadius: 999,
-          paddingHorizontal: ms(10, 0.12),
-          paddingVertical: ms(4, 0.08),
-          alignSelf: 'flex-start',
-        },
-        circleShadow: {
-          shadowColor: '#FFFFFF',
-          shadowOffset: {width: 1, height: 0},
-          shadowOpacity: 0.8,
-          shadowRadius: 8,
-          elevation: 8,
-        },
-        liveTagTxt: {
-          color: '#fff',
-          fontSize: font(12, 0.35),
-          fontWeight: '600',
-          letterSpacing: 0.3,
-          textTransform: 'uppercase',
-          lineHeight: font(16, 0.3),
-        },
-
-        headingBlock: {
-          paddingTop: ms(8, 0.15),
-          gap: ms(8, 0.15),
-          alignSelf: 'stretch',
-          width: '100%',
-          zIndex: 2,
-        },
-        heading: {
-          color: '#fff',
-          fontSize: font(24, 0.28),
-          fontWeight: '700',
-          lineHeight: font(30, 0.25),
-          width: '100%',
-        },
-        sub: {
-          color: 'rgba(255,255,255,0.8)',
-          fontSize: font(14, 0.28),
-          fontWeight: '400',
-          lineHeight: font(19, 0.28),
-          width: '100%',
-        },
-
-        statsRow: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: ms(12, 0.15),
-          paddingTop: ms(8, 0.12),
-          zIndex: 3,
-        },
-        stat: {flexDirection: 'row', alignItems: 'center', gap: ms(8, 0.12)},
-        statIconWrap: {
-          width: ms(32, 0.18),
-          height: ms(32, 0.18),
-          borderRadius: ms(16, 0.18),
-          backgroundColor: 'rgba(255,255,255,0.2)',
-          alignItems: 'center',
-          justifyContent: 'center',
-        },
-        statNum: {
-          color: '#fff',
-          fontSize: font(14, 0.28),
-          fontWeight: '700',
-          lineHeight: font(14, 0.25),
-        },
-        statLbl: {
-          color: 'rgba(255,255,255,0.7)',
-          fontSize: font(10, 0.35),
-          fontWeight: '400',
-          lineHeight: font(15, 0.3),
-          marginTop: 2,
-        },
-        statDivider: {
-          width: 1,
-          height: ms(32, 0.18),
-          backgroundColor: 'rgba(255,255,255,0.25)',
-        },
-
-        btnRow: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'flex-start',
-          paddingTop: ms(12, 0.12),
-          paddingBottom: ms(10, 0.12),
-          marginTop: ms(6, 0.1),
-          zIndex: 4,
-          flexShrink: 0,
-        },
-        viewBtn: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: ms(10, 0.12),
-          backgroundColor: '#fff',
-          borderRadius: 999,
-          minHeight: ms(48, 0.18),
-          minWidth: ms(232, 0.2),
-          maxWidth: '100%',
-          alignSelf: 'flex-start',
-          paddingVertical: ms(14, 0.15),
-          paddingLeft: ms(24, 0.15),
-          paddingRight: ms(14, 0.12),
-          overflow: 'hidden',
-          shadowColor: '#000',
-          shadowOffset: {width: 0, height: ms(4, 0.12)},
-          shadowOpacity: 0.12,
-          shadowRadius: ms(8, 0.12),
-          elevation: 5,
-        },
-        btnShimmer: {
-          position: 'absolute',
-          left: -ms(60, 0.15),
-          top: 0,
-          bottom: 0,
-          width: ms(60, 0.15),
-          backgroundColor: 'rgba(116,77,232,0.18)',
-        },
-        viewBtnTxt: {
-          color: '#744DE8',
-          fontSize: font(15, 0.28),
-          fontWeight: '600',
-          lineHeight: font(22, 0.28),
-          ...Platform.select({
-            android: {includeFontPadding: false, textAlignVertical: 'center'},
-            default: {},
-          }),
-        },
-        arrowCircle: {
-          width: ms(24, 0.15),
-          height: ms(24, 0.15),
-          borderRadius: ms(12, 0.15),
-          backgroundColor: '#744DE8',
-          alignItems: 'center',
-          justifyContent: 'center',
-        },
-      }),
-    [width, ms, font, cardMinHeight],
-  );
-
   return (
     <LinearGradient
       colors={['#8A6CF2', '#6136D8']}
@@ -362,92 +155,246 @@ export default function NearbyPropertiesBanner({navigation}) {
       end={{x: 1.0, y: 1.0}}
       angle={132.7}
       useAngle={true}
-      style={b.card}>
+      style={[b.card, style]}>
       <Image
         source={require('../../assets/image/home/map.png')}
         style={b.mapImage}
         resizeMode="contain"
-        pointerEvents="none"
       />
 
-      <View style={b.mapOverlay} pointerEvents="none" />
+      <View style={b.mapOverlay} />
 
-      <View style={b.content}>
-        <View style={b.topRow}>
-          <View style={b.liveTag}>
-            <View style={b.circleShadow}>
-              <Circle size={10} color="#fff" fill="#fff" />
-            </View>
-            <Text style={b.liveTagTxt}>LIVE NEAR YOU</Text>
+      <View style={b.topRow}>
+        <View style={b.liveTag}>
+          <View style={b.circleShadow}>
+            <Circle size={10} color="#fff" fill="#fff" />
+          </View>
+          <Text style={b.liveTagTxt}>LIVE NEAR YOU</Text>
+        </View>
+      </View>
+
+      <View style={b.headingBlock}>
+        <Text style={b.heading}>Discover Nearby Properties</Text>
+        <Text style={b.sub}>
+          Find plots, flats & homes{'\n'}within your radius
+        </Text>
+      </View>
+
+      <View style={b.statsRow}>
+        <View style={b.stat}>
+          <View style={b.statIconWrap}>
+            <TrendingUp size={14} color="#fff" strokeWidth={2} />
+          </View>
+          <View>
+            <Text style={b.statNum}>500+</Text>
+            <Text style={b.statLbl}>Active Listings</Text>
           </View>
         </View>
 
-        <View style={b.headingBlock}>
-          <Text style={b.heading}>Discover Nearby Properties</Text>
-          <Text style={b.sub}>
-            Find plots, flats & homes{'\n'}within your radius
-          </Text>
-        </View>
+        <View style={b.statDivider} />
 
-        <View style={b.statsRow}>
-          <View style={b.stat}>
-            <View style={b.statIconWrap}>
-              <TrendingUp size={14} color="#fff" strokeWidth={2} />
-            </View>
-            <View>
-              <Text style={b.statNum}>500+</Text>
-              <Text style={b.statLbl}>Active Listings</Text>
-            </View>
+        <View style={b.stat}>
+          <View style={b.statIconWrap}>
+            <Building2 size={14} color="#fff" strokeWidth={2} />
           </View>
-
-          <View style={b.statDivider} />
-
-          <View style={b.stat}>
-            <View style={b.statIconWrap}>
-              <Building2 size={14} color="#fff" strokeWidth={2} />
-            </View>
-            <View>
-              <Text style={b.statNum}>20+</Text>
-              <Text style={b.statLbl}>Major Cities</Text>
-            </View>
+          <View>
+            <Text style={b.statNum}>20+</Text>
+            <Text style={b.statLbl}>Major Cities</Text>
           </View>
         </View>
+      </View>
 
-        <View style={b.btnRow}>
-          <Animated.View style={{transform: [{scale: btnScale}]}}>
-            <TouchableOpacity
-              style={b.viewBtn}
-              activeOpacity={1}
-              onPress={() => navigation?.navigate('PropertyMap')}
-              onPressIn={onPressIn}
-              onPressOut={onPressOut}>
-              <Animated.View
-                style={[
-                  b.btnShimmer,
-                  {
-                    opacity: shimmer.interpolate({
-                      inputRange: [0, 0.5, 1],
-                      outputRange: [0, 0.45, 0],
-                    }),
-                    transform: [
-                      {
-                        translateX: shimmer.interpolate({
-                          inputRange: [0, 1],
-                          outputRange: [-width * 0.36, width * 0.4],
-                        }),
-                      },
-                    ],
-                  },
-                ]}
-              />
-              <Text style={b.viewBtnTxt}>View on Map</Text>
-              <View style={b.arrowCircle}>
-                <ArrowRight size={15} color="#fff" strokeWidth={2.5} />
-              </View>
-            </TouchableOpacity>
-          </Animated.View>
-        </View>
+      <View style={b.btnRow}>
+        <Animated.View style={{transform: [{scale: btnScale}]}}>
+          <TouchableOpacity
+            style={b.viewBtn}
+            activeOpacity={1}
+            onPress={() => navigation?.navigate('PropertyMap')}
+            onPressIn={onPressIn}
+            onPressOut={onPressOut}>
+            <Animated.View
+              style={[
+                b.btnShimmer,
+                {
+                  opacity: shimmer.interpolate({
+                    inputRange: [0, 0.5, 1],
+                    outputRange: [0, 0.45, 0],
+                  }),
+                  transform: [
+                    {
+                      translateX: shimmer.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [-120, 130],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            />
+            <Text style={b.viewBtnTxt}>View on Map</Text>
+            <View style={b.arrowCircle}>
+              <ArrowRight size={13} color="#fff" strokeWidth={2.5} />
+            </View>
+          </TouchableOpacity>
+        </Animated.View>
       </View>
     </LinearGradient>
   );
 }
+
+const b = StyleSheet.create({
+  card: {
+    marginHorizontal: 16,
+    marginVertical: 12,
+    borderRadius: 32,
+    width: 343,
+    padding: 20,
+    gap: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 10},
+    shadowOpacity: 0.1,
+    shadowRadius: 15,
+    elevation: 10,
+    alignSelf: 'center',
+  },
+
+  mapImage: {
+    position: 'absolute',
+    right: 0,
+    top: 70,
+    width: '72%',
+    height: '100%',
+    opacity: 0.5,
+  },
+
+  mapOverlay: {
+    position: 'absolute',
+    left: '30%',
+    top: 0,
+    bottom: 0,
+    width: '18%',
+    backgroundColor: 'transparent',
+  },
+
+  topRow: {flexDirection: 'row', alignItems: 'flex-start', height: 26},
+  liveTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    alignSelf: 'flex-start',
+  },
+  circleShadow: {
+    shadowColor: '#FFFFFF',
+    shadowOffset: {width: 1, height: 0},
+    shadowOpacity: 0.8,
+    shadowRadius: 8,
+    elevation: 8, // Android
+  },
+  liveTagTxt: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
+    lineHeight: 16,
+  },
+
+  headingBlock: {paddingTop: 8, gap: 8, width: 227, zIndex: 2},
+  heading: {
+    color: '#fff',
+    fontSize: 24,
+    fontWeight: '700',
+    lineHeight: 30,
+    width: 227,
+  },
+  sub: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 14,
+    fontWeight: '400',
+    lineHeight: 19,
+    width: 194,
+  },
+
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingTop: 8,
+    zIndex: 3,
+  },
+  stat: {flexDirection: 'row', alignItems: 'center', gap: 8},
+  statIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statNum: {color: '#fff', fontSize: 14, fontWeight: '700', lineHeight: 14},
+  statLbl: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 10,
+    fontWeight: '400',
+    lineHeight: 15,
+    marginTop: 2,
+  },
+  statDivider: {
+    width: 1,
+    height: 32,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+  },
+
+  btnRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 8,
+    zIndex: 4,
+  },
+  viewBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#fff',
+    borderRadius: 999,
+    paddingVertical: 10,
+    paddingLeft: 20,
+    paddingRight: 10,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  btnShimmer: {
+    position: 'absolute',
+    left: -60,
+    top: 0,
+    bottom: 0,
+    width: 60,
+    backgroundColor: 'rgba(116,77,232,0.18)',
+  },
+  viewBtnTxt: {
+    color: '#744DE8',
+    fontSize: 14,
+    fontWeight: '600',
+    lineHeight: 20,
+  },
+  arrowCircle: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#744DE8',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});
