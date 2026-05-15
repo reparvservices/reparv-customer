@@ -9,6 +9,7 @@ import {
   ScrollView,
   ImageBackground,
   StatusBar,
+  Platform,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 
@@ -189,6 +190,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
 
     fontFamily: 'SegoeUI-Bold',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
     color: '#000',
   },
   wrapper: {
@@ -223,6 +228,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 16,
     fontFamily: 'SegoeUI-Bold',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
     color: '#3F2D62',
     flex: 1,
   },
@@ -289,11 +298,19 @@ const styles = StyleSheet.create({
   pgTagText: {
     fontSize: 16,
     fontFamily: 'SegoeUI-Bold',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
     color: '#3F2D62',
   },
   bottomTitle: {
     fontSize: 24,
     fontFamily: 'SegoeUI-Bold',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
     color: '#FFFFFF',
   },
   bottomSub: {
@@ -313,6 +330,10 @@ const styles = StyleSheet.create({
   bottomBtnText: {
     color: '#FFF',
     fontFamily: 'SegoeUI-Bold',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
     fontSize: 13,
     marginRight: 6,
   },

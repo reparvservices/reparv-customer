@@ -10,6 +10,7 @@ import {
   Dimensions,
   ActivityIndicator,
   ToastAndroid,
+  Platform,
 } from 'react-native';
 import {useDispatch, useSelector} from 'react-redux';
 import BackIcon from '../../assets/image/login/arrow.svg';
@@ -222,21 +223,52 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     alignSelf: 'flex-start',
   },
-  backText: {fontSize: 16, fontFamily: 'SegoeUI-Bold', marginLeft: 8},
+  backText: {
+    fontSize: 16,
+    fontFamily: 'SegoeUI-Bold',
+    marginLeft: 8,
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
+  },
   titleCenter: {
     fontSize: 24,
     fontFamily: 'SegoeUI-Bold',
     marginTop: 8,
     color: '#000',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
   subtitleRow: {flexDirection: 'row', justifyContent: 'center', marginTop: 6},
-  subtitleText: {fontSize: 12, color: '#868686', marginRight: 6},
-  edit: {color: '#5E23DC', fontFamily: 'SegoeUI-Bold'},
+  subtitleText: {
+    fontSize: 12,
+    color: '#868686',
+    marginRight: 6,
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
+  },
+  edit: {
+    color: '#5E23DC',
+    fontFamily: 'SegoeUI-Bold',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
+  },
   label: {
     fontSize: 14,
     fontFamily: 'SegoeUI-Bold',
     marginTop: 18,
     textAlign: 'center',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
   otpRow: {
     flexDirection: 'row',
@@ -252,9 +284,29 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 20,
     color: '#000',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
-  resend: {fontSize: 12, color: '#868686', textAlign: 'right'},
-  resendActive: {color: '#5E23DC', fontFamily: 'SegoeUI-Bold'},
+  resend: {
+    fontSize: 12,
+    color: '#868686',
+    textAlign: 'right',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
+  },
+  resendActive: {
+    color: '#5E23DC',
+    fontFamily: 'SegoeUI-Bold',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
+    default: {},
+  },
   verifyBtn: {
     backgroundColor: '#5E23DC',
     paddingVertical: 15,
@@ -266,6 +318,10 @@ const styles = StyleSheet.create({
     fontFamily: 'SegoeUI-Bold',
     textAlign: 'center',
     fontSize: 16,
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
   error: {color: 'red', fontSize: 10, textAlign: 'center', marginBottom: 5},
 });

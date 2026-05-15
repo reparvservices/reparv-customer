@@ -59,6 +59,10 @@ const styles = StyleSheet.create({
   currencyIcon: {
     fontSize: 28,
     fontFamily: 'SegoeUI-Bold',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
     color: '#8A38F5',
     marginRight: 8,
   },

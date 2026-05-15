@@ -466,6 +466,10 @@ const styles = StyleSheet.create({
     fontFamily: 'SegoeUI-Bold',
     marginBottom: 8,
     color: '#383737',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
   required: {color: '#E33629'},
 
@@ -518,6 +522,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     marginBottom: 8,
     color: '#000',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
   row: {flexDirection: 'row', gap: 12},
 
@@ -549,7 +557,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  btnText: {color: '#fff', fontSize: 16, fontFamily: 'SegoeUI-Bold'},
+  btnText: {
+    color: '#fff',
+    fontSize: 16,
+    fontFamily: 'SegoeUI-Bold',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
+  },
 
   footerText: {
     textAlign: 'center',
@@ -590,6 +606,10 @@ const styles = StyleSheet.create({
     shadowOffset: {width: 0, height: -2},
     shadowOpacity: 0.25,
     shadowRadius: 8,
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
   customModalHeader: {
     flexDirection: 'row',

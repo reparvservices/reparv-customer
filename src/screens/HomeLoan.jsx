@@ -10,6 +10,7 @@ import {
   Image,
   ToastAndroid,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation, useRoute} from '@react-navigation/native';
@@ -77,6 +78,7 @@ export default function HomeLoan() {
   const [tab, setTab] = useState('job');
   const [step, setStep] = useState(1);
   const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Step 1 — Personal Info
   const [personal, setPersonal] = useState({
@@ -112,7 +114,6 @@ export default function HomeLoan() {
     existingLoanEMI: '',
     gstRegistered: true,
     itrFiled: true,
-    // uploaded docs keys: panCard, gstCert, itr, bankStatement
     documents: {},
   });
 
@@ -184,7 +185,6 @@ export default function HomeLoan() {
       if (!incomeDetails.monthlyAvgBalance)
         e.monthlyAvgBalance = 'Monthly balance is required';
     } else {
-      // business validations
       if (!businessDetails.businessType)
         e.businessType = 'Business type is required';
       if (!businessDetails.businessName?.trim())
@@ -218,6 +218,7 @@ export default function HomeLoan() {
     setStep(1);
     setTab('job');
     setErrors({});
+    setIsSubmitting(false);
     setPersonal({
       name: '',
       dob: '',
@@ -254,6 +255,9 @@ export default function HomeLoan() {
 
   // ─── Submit ──────────────────────────────────────────────────────────────
   const submitFormData = async () => {
+    if (isSubmitting) return; // Guard: prevent double submit
+    setIsSubmitting(true); // Lock the button
+
     ToastAndroid.show('Submitting your application...', ToastAndroid.LONG);
     const formData = new FormData();
 
@@ -342,6 +346,8 @@ export default function HomeLoan() {
       }
     } catch (err) {
       Alert.alert('Network Error', 'Unable to submit form');
+    } finally {
+      setIsSubmitting(false); // Always unlock, even on error
     }
   };
 
@@ -384,12 +390,25 @@ export default function HomeLoan() {
           <UploadDocForm data={docs} setData={setDocs} errors={errors} />
         )}
 
-        <TouchableOpacity style={styles.cta} onPress={handleContinue}>
+        {/* ─── CTA Button ─────────────────────────────────────────────── */}
+        <TouchableOpacity
+          style={[styles.cta, isSubmitting && styles.ctaDisabled]}
+          onPress={handleContinue}
+          disabled={isSubmitting}>
           <View style={styles.ctaContent}>
-            <Text style={styles.ctaText}>
-              {step < 3 ? 'Continue to next Step' : 'Submit Application'}
-            </Text>
-            <ArrowIcon width={20} height={20} />
+            {isSubmitting && step === 3 ? (
+              <>
+                <ActivityIndicator size="small" color="#fff" />
+                <Text style={styles.ctaText}>Submitting...</Text>
+              </>
+            ) : (
+              <>
+                <Text style={styles.ctaText}>
+                  {step < 3 ? 'Continue to next Step' : 'Submit Application'}
+                </Text>
+                <ArrowIcon width={20} height={20} />
+              </>
+            )}
           </View>
         </TouchableOpacity>
 
@@ -482,6 +501,10 @@ const styles = StyleSheet.create({
       android: {includeFontPadding: false, textAlignVertical: 'center'},
       default: {},
     }),
+  },
+  ctaDisabled: {
+    backgroundColor: '#A78BFA', // lighter purple when submitting
+    opacity: 0.8,
   },
   ctaContent: {
     flexDirection: 'row',

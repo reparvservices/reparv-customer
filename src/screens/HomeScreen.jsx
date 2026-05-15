@@ -27,6 +27,7 @@ import {getImageUri} from '../utils/imageHandle';
 import NearbyPropertiesBanner from '../components/home/NearbyPropertiesBanner';
 import TrendingProperties from '../components/home/TrendingProperties';
 import MapExplorerBanner from '../components/home/MapExplorerBanner';
+import FutureLuxuryCard from '../components/home/FutureLuxuryCard';
 
 /* ─────────────────────────────────────────────────────
    MAIN HOME SCREEN
@@ -60,13 +61,16 @@ export default function HomeScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}>
           <HomeHeader />
+
           <NearbyPropertiesBanner navigation={navigation} />
+
           <ActionCards />
           <TrendingProperties />
+          <View style={{padding: 13}}>
+            <FutureLuxuryCard />
+          </View>
           <HomeLoan />
-
           <RentProperty />
-
           <NewLaunchShowcase />
           <MapExplorerBanner navigation={navigation} />
           <View style={{height: 32}} />

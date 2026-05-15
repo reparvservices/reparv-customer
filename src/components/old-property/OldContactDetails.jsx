@@ -110,6 +110,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     fontFamily: 'SegoeUI-Bold',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
     color: '#000',
     fontFamily: 'SegoeUI-Regular',
   },
@@ -188,6 +192,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#868686',
     fontFamily: 'SegoeUI-Bold',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
   error: {
     color: '#E33629',

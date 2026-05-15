@@ -149,6 +149,10 @@ const styles = StyleSheet.create({
   heading: {
     fontSize: 16,
     fontFamily: 'SegoeUI-Bold',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
     marginBottom: 12,
     color: '#000',
   },

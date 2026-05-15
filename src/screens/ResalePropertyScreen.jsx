@@ -8,6 +8,7 @@ import {
   Image,
   ScrollView,
   StatusBar,
+  Platform,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 
@@ -123,6 +124,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
 
     fontFamily: 'SegoeUI-Bold',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
     color: '#000',
   },
   wrapper: {
@@ -151,6 +156,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 16,
     fontFamily: 'SegoeUI-Bold',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
     color: '#3F2D62',
     flex: 1,
   },

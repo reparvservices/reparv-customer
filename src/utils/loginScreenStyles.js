@@ -1,4 +1,4 @@
-import {StyleSheet} from 'react-native';
+import {Platform, StyleSheet} from 'react-native';
 
 /**
  * Login / signup UI scaled from a 375pt-wide layout so typography and modal height
@@ -20,7 +20,15 @@ export function createLoginStyles(width, height) {
   return StyleSheet.create({
     container: {flex: 1, backgroundColor: '#321376'},
     topContainer: {height: '40%', width: '100%'},
-    slide: {width, height: '100%', position: 'relative'},
+    slide: {
+      width,
+      height: '100%',
+      position: 'relative',
+      ...Platform.select({
+        android: {includeFontPadding: false, textAlignVertical: 'center'},
+        default: {},
+      }),
+    },
     overlayText: {
       position: 'absolute',
       width,
@@ -28,12 +36,20 @@ export function createLoginStyles(width, height) {
       alignItems: 'flex-start',
       transform: [{translateY: overlayTranslateY}],
       paddingLeft: ms(28, 0.2),
+      ...Platform.select({
+        android: {includeFontPadding: false, textAlignVertical: 'center'},
+        default: {},
+      }),
     },
     title: {
       color: '#fff',
       fontSize: ms(24, 0.28),
       fontFamily: 'SegoeUI-Bold',
       width: '80%',
+      ...Platform.select({
+        android: {includeFontPadding: false, textAlignVertical: 'center'},
+        default: {},
+      }),
     },
     smallText: {
       color: '#fff',
@@ -41,6 +57,10 @@ export function createLoginStyles(width, height) {
       fontFamily: 'SegoeUI-Bold',
       marginTop: ms(6, 0.1),
       width: '90%',
+      ...Platform.select({
+        android: {includeFontPadding: false, textAlignVertical: 'center'},
+        default: {},
+      }),
     },
     dotsContainer: {
       marginTop: ms(20, 0.15),
@@ -77,12 +97,20 @@ export function createLoginStyles(width, height) {
       textAlign: 'center',
       color: '#5E23DC',
       width: '70%',
+      ...Platform.select({
+        android: {includeFontPadding: false, textAlignVertical: 'center'},
+        default: {},
+      }),
     },
     loginText: {
       fontSize: ms(14, 0.25),
       fontFamily: 'SegoeUI-Bold',
       textAlign: 'center',
       textAlignVertical: 'center',
+      ...Platform.select({
+        android: {includeFontPadding: false, textAlignVertical: 'center'},
+        default: {},
+      }),
     },
 
     dividerRow: {
@@ -98,6 +126,10 @@ export function createLoginStyles(width, height) {
       fontSize: LABEL_SIZE,
       marginBottom: ms(5, 0.05),
       fontWeight: '500',
+      ...Platform.select({
+        android: {includeFontPadding: false, textAlignVertical: 'center'},
+        default: {},
+      }),
     },
 
     inputWrapper: {width: '85%', marginBottom: ms(8, 0.1)},
@@ -107,6 +139,10 @@ export function createLoginStyles(width, height) {
       fontSize: INPUT_SIZE,
       color: '#000',
       paddingVertical: ms(7, 0.1),
+      ...Platform.select({
+        android: {includeFontPadding: false, textAlignVertical: 'center'},
+        default: {},
+      }),
     },
     inputError: {borderColor: 'red'},
 
@@ -117,6 +153,10 @@ export function createLoginStyles(width, height) {
       borderBottomWidth: 2,
       borderColor: '#5E23DC',
       paddingVertical: ms(4, 0.05),
+      ...Platform.select({
+        android: {includeFontPadding: false, textAlignVertical: 'center'},
+        default: {},
+      }),
     },
     phoneRowFocused: {borderColor: '#321376'},
     phoneRowError: {borderColor: 'red'},
@@ -131,6 +171,10 @@ export function createLoginStyles(width, height) {
       fontSize: INPUT_SIZE,
       color: '#000',
       fontWeight: '500',
+      ...Platform.select({
+        android: {includeFontPadding: false, textAlignVertical: 'center'},
+        default: {},
+      }),
     },
 
     input: {
@@ -138,6 +182,10 @@ export function createLoginStyles(width, height) {
       fontSize: INPUT_SIZE,
       color: '#000',
       paddingVertical: ms(6, 0.05),
+      ...Platform.select({
+        android: {includeFontPadding: false, textAlignVertical: 'center'},
+        default: {},
+      }),
     },
 
     loginBtn: {
@@ -152,23 +200,66 @@ export function createLoginStyles(width, height) {
       textAlign: 'center',
       fontSize: ms(16, 0.25),
       fontFamily: 'SegoeUI-Bold',
+      ...Platform.select({
+        android: {includeFontPadding: false, textAlignVertical: 'center'},
+        default: {},
+      }),
     },
 
-    errorText: {color: 'red', fontSize: HELPER_SIZE, marginTop: ms(4, 0.05)},
-    terms: {fontSize: HELPER_SIZE, marginTop: ms(8, 0.1), color: '#868686'},
+    errorText: {
+      color: 'red',
+      fontSize: HELPER_SIZE,
+      marginTop: ms(4, 0.05),
+      ...Platform.select({
+        android: {includeFontPadding: false, textAlignVertical: 'center'},
+        default: {},
+      }),
+    },
+    terms: {
+      fontSize: HELPER_SIZE,
+      marginTop: ms(8, 0.1),
+      color: '#868686',
+      ...Platform.select({
+        android: {includeFontPadding: false, textAlignVertical: 'center'},
+        default: {},
+      }),
+    },
     link: {
       color: '#6a1bff',
       fontFamily: 'SegoeUI-Bold',
       fontSize: HELPER_SIZE,
+      ...Platform.select({
+        android: {includeFontPadding: false, textAlignVertical: 'center'},
+        default: {},
+      }),
     },
-    or: {fontSize: HELPER_SIZE, marginTop: ms(8, 0.1), color: '#868686'},
+    or: {
+      fontSize: HELPER_SIZE,
+      marginTop: ms(8, 0.1),
+      color: '#868686',
+      ...Platform.select({
+        android: {includeFontPadding: false, textAlignVertical: 'center'},
+        default: {},
+      }),
+    },
 
     switchText: {
       fontSize: ms(12, 0.2),
       color: '#868686',
       textAlign: 'center',
+      ...Platform.select({
+        android: {includeFontPadding: false, textAlignVertical: 'center'},
+        default: {},
+      }),
     },
-    switchLink: {color: '#5E23DC', fontFamily: 'SegoeUI-Bold'},
+    switchLink: {
+      color: '#5E23DC',
+      fontFamily: 'SegoeUI-Bold',
+      ...Platform.select({
+        android: {includeFontPadding: false, textAlignVertical: 'center'},
+        default: {},
+      }),
+    },
 
     socialRow: {
       flexDirection: 'row',

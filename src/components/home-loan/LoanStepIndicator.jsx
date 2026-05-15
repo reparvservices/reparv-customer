@@ -1,5 +1,5 @@
 import React from 'react';
-import {View, Text, StyleSheet} from 'react-native';
+import {View, Text, StyleSheet, Platform} from 'react-native';
 
 export default function LoanStepIndicator({step}) {
   const Step = ({number, label, active}) => (
@@ -75,6 +75,10 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontFamily: 'SegoeUI-Bold',
     color: '#fff',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
 
   label: {
@@ -86,6 +90,10 @@ const styles = StyleSheet.create({
   activeLabel: {
     color: '#8A38F5',
     fontFamily: 'SegoeUI-Bold',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
 
   lineBg: {

@@ -35,6 +35,7 @@ import LocationPickerScreen from '../components/home/LocationPickerScreen';
 import NoPropertyFound from '../screens/NoPropertyFound';
 import SimilerPropertyDetailsScreen from '../screens/SimilerPropertyDetailsScreen';
 import CityPropertyMapScreen from '../screens/Citypropertymapscreen';
+import ComingSoonScreen from '../components/home/ComingSoonScreen';
 
 //import {setUser} from '../redux/slices/authSlice'; // adjust path as needed
 
@@ -132,10 +133,8 @@ function AppStack() {
         component={LocationPickerScreen}
         options={{headerShown: false, animation: 'slide_from_bottom'}}
       />
-      <Stack.Screen
-        name="NoPropertyFound"
-        component={NoPropertyFound}
-      />
+      <Stack.Screen name="NoPropertyFound" component={NoPropertyFound} />
+      <Stack.Screen name="ComingSoonScreen" component={ComingSoonScreen} />
     </Stack.Navigator>
   );
 }

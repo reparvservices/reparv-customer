@@ -759,6 +759,13 @@ const PropertyListScreen = () => {
                     fontWeight: '700',
                     fontSize: 16,
                     fontFamily: 'SegoeUI-Bold',
+                    ...Platform.select({
+                      android: {
+                        includeFontPadding: false,
+                        textAlignVertical: 'center',
+                      },
+                      default: {},
+                    }),
                     color: 'black',
                   }}>
                   {filteredFlats.length} Properties Found

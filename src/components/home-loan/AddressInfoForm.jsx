@@ -710,6 +710,10 @@ const styles = StyleSheet.create({
   radioCardTextActive: {
     color: '#7C3AED',
     fontFamily: 'SegoeUI-Bold',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
   // ← only new style added to the whole file
   radioCardDesc: {
@@ -775,6 +779,10 @@ const styles = StyleSheet.create({
   iconCardLabelActive: {
     color: '#7C3AED',
     fontFamily: 'SegoeUI-Bold',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
 
   // ─── Checkbox ─────────────────────────────────────────────────────────────

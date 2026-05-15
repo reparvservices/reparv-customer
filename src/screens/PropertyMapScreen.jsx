@@ -68,6 +68,8 @@ const RADIUS_PRESETS = [
   {label: '10km', value: 10},
   {label: '25km', value: 25},
   {label: '30km', value: 30},
+  {label: '40km-60km', value: 60},
+  {label: '70km-100km', value: 100},
 ];
 
 Geolocation.setRNConfiguration({

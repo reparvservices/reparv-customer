@@ -6,6 +6,7 @@ import {
   TextInput,
   TouchableOpacity,
   Image,
+  Platform,
 } from 'react-native';
 
 import AreaIcon from '../../assets/image/rent-oldnew-property/property-area.png';
@@ -76,8 +77,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     fontFamily: 'SegoeUI-Bold',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
     color: '#000',
-    fontFamily: 'SegoeUI-Regular',
+    fontFamily: 'Segoe UI',
   },
   required: {
     color: '#E33629',
@@ -112,7 +117,7 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     color: '#000',
     marginRight: 6,
-    fontFamily: 'SegoeUI-Regular',
+    fontFamily: 'Segoe UI',
   },
   arrow: {
     fontSize: 18,
@@ -136,6 +141,10 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 12,
     fontFamily: 'SegoeUI-Bold',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
   helperText: {
     fontSize: 12,

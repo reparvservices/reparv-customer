@@ -12,6 +12,7 @@ import {
   Image,
   ActivityIndicator,
   StatusBar,
+  Platform,
 } from 'react-native';
 import PropertyCard from '../components/property/PropertyCard';
 import CustomSlider from '../components/utilsComponents/CustomSlider';
@@ -346,6 +347,13 @@ const HighlightedPropertyListScreen = () => {
                   fontWeight: '700',
                   fontSize: 16,
                   fontFamily: 'SegoeUI-Bold',
+                  ...Platform.select({
+                    android: {
+                      includeFontPadding: false,
+                      textAlignVertical: 'center',
+                    },
+                    default: {},
+                  }),
                   color: 'black',
                 }}>
                 {filteredFlats.length} Properties Found
@@ -638,6 +646,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#000',
     fontFamily: 'SegoeUI-Bold',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
 
   placeholder: {

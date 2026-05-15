@@ -151,6 +151,10 @@ const styles = StyleSheet.create({
     fontFamily: 'SegoeUI-Bold',
     color: '#111827',
     marginBottom: 14,
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
   loaderBox: {
     paddingVertical: 32,
@@ -200,6 +204,10 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 12,
     fontFamily: 'SegoeUI-Bold',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
   footer: {
     flexDirection: 'row',
@@ -216,6 +224,10 @@ const styles = StyleSheet.create({
     fontFamily: 'SegoeUI-Bold',
     color: '#111827',
     marginBottom: 4,
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
   projectSub: {
     fontSize: 13,

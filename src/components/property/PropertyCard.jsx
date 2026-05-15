@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   Dimensions,
   ToastAndroid,
+  Platform,
 } from 'react-native';
 import Svg, {Circle, ClipPath, Defs, G, Path, Rect} from 'react-native-svg';
 import {useSelector} from 'react-redux';
@@ -185,6 +186,13 @@ function PropertyCard({item, iswishList}) {
                 fontFamily: 'SegoeUI-Bold',
                 fontWeight: '700',
                 fontSize: 12,
+                ...Platform.select({
+                  android: {
+                    includeFontPadding: false,
+                    textAlignVertical: 'center',
+                  },
+                  default: {},
+                }),
 
                 letterSpacing: 0,
                 color: '#8A38F5',
@@ -315,12 +323,20 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#4B5563',
     fontFamily: 'SegoeUI-Bold',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
 
   priceOld: {
     fontSize: 13,
     color: '#868686',
     fontFamily: 'SegoeUI-Bold',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
     textDecorationLine: 'line-through',
   },
 

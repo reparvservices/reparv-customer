@@ -1,23 +1,39 @@
-import React, {useCallback, useState, useEffect, useRef, useMemo} from 'react';
+import React, {useCallback, useState, useEffect, useRef} from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  useWindowDimensions,
+  Dimensions,
   Image,
   TouchableOpacity,
   Platform,
   PixelRatio,
   Animated,
   InteractionManager,
+  PermissionsAndroid, //  ADDED
 } from 'react-native';
 import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import {useDispatch, useSelector} from 'react-redux';
 import {MapPin, ChevronDown, Search} from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Geolocation from '@react-native-community/geolocation'; //  ADDED
 import {getImageUri} from '../../utils/imageHandle';
+import {setUserLocation} from '../../features/auth/authSlice';
 
 const heroBanner = require('../../assets/image/home/Hero-Banner.png');
+
+// ── Responsive helpers ──────────────────────────────────────────────────────
+const {width} = Dimensions.get('window');
+const BASE_WIDTH = 390;
+const scale = width / BASE_WIDTH;
+const rs = size => Math.round(PixelRatio.roundToNearestPixel(size * scale));
+const rf = (size, min = size * 0.8, max = size * 1.2) =>
+  Math.min(max, Math.max(min, rs(size)));
+
+//  Safe dev logger — no crash in production
+const devLog = (...args) => {
+  if (__DEV__) console.log(...args);
+};
 
 const API_HOST = 'https://aws-api.reparv.in';
 
@@ -34,28 +50,20 @@ const PLACEHOLDER_TEMPLATES = [
 ];
 
 // ── Typewriter hook ───────────────────────────────────────────────────────
-// FIX 1: mountedRef prevents setState after unmount (crash on Android)
-// FIX 2: Animated.loop for cursor blink instead of setInterval + setState
-//         → uses native driver, no JS thread jank on low-end devices
-// FIX 3: InteractionManager.runAfterInteractions delays start until
-//         navigation transition is fully done (animation no longer dropped)
-// FIX 4: Full timer cleanup on every cityLabel change
 function useTypewriterPlaceholder(city) {
   const [displayText, setDisplayText] = useState('');
   const cursorAnim = useRef(new Animated.Value(1)).current;
   const indexRef = useRef(0);
   const charIndexRef = useRef(0);
-  const phaseRef = useRef('typing'); // 'typing' | 'pause' | 'erasing'
+  const phaseRef = useRef('typing');
   const timerRef = useRef(null);
   const mountedRef = useRef(true);
   const blinkRef = useRef(null);
 
   const cityLabel = city || 'your city';
 
-  // ── Cursor blink (native-driver Animated loop) ──────────────────────────
   useEffect(() => {
     mountedRef.current = true;
-
     blinkRef.current = Animated.loop(
       Animated.sequence([
         Animated.timing(cursorAnim, {
@@ -71,16 +79,13 @@ function useTypewriterPlaceholder(city) {
       ]),
     );
     blinkRef.current.start();
-
     return () => {
       mountedRef.current = false;
       blinkRef.current?.stop();
     };
   }, []);
 
-  // ── Typewriter logic ────────────────────────────────────────────────────
   useEffect(() => {
-    // Hard-reset on city change
     if (timerRef.current) {
       clearTimeout(timerRef.current);
       timerRef.current = null;
@@ -89,12 +94,11 @@ function useTypewriterPlaceholder(city) {
     phaseRef.current = 'typing';
     setDisplayText('');
 
-    // Delay start until screen transition finishes (prevents dropped frames)
     const interactionHandle = InteractionManager.runAfterInteractions(() => {
       if (!mountedRef.current) return;
 
       const tick = () => {
-        if (!mountedRef.current) return; // guard against unmount
+        if (!mountedRef.current) return;
 
         const fullText =
           PLACEHOLDER_TEMPLATES[
@@ -104,32 +108,30 @@ function useTypewriterPlaceholder(city) {
         if (phaseRef.current === 'typing') {
           charIndexRef.current += 1;
           setDisplayText(fullText.slice(0, charIndexRef.current));
-
           if (charIndexRef.current >= fullText.length) {
             phaseRef.current = 'pause';
-            timerRef.current = setTimeout(tick, 1800); // hold full text
+            timerRef.current = setTimeout(tick, 1800);
             return;
           }
-          timerRef.current = setTimeout(tick, 65); // typing speed
+          timerRef.current = setTimeout(tick, 65);
         } else if (phaseRef.current === 'pause') {
           phaseRef.current = 'erasing';
           timerRef.current = setTimeout(tick, 40);
         } else if (phaseRef.current === 'erasing') {
           charIndexRef.current -= 1;
           setDisplayText(fullText.slice(0, charIndexRef.current));
-
           if (charIndexRef.current <= 0) {
             indexRef.current += 1;
             charIndexRef.current = 0;
             phaseRef.current = 'typing';
-            timerRef.current = setTimeout(tick, 380); // pause before next phrase
+            timerRef.current = setTimeout(tick, 380);
             return;
           }
-          timerRef.current = setTimeout(tick, 32); // erase faster
+          timerRef.current = setTimeout(tick, 32);
         }
       };
 
-      timerRef.current = setTimeout(tick, 500); // initial start delay
+      timerRef.current = setTimeout(tick, 500);
     });
 
     return () => {
@@ -150,8 +152,8 @@ export default function HomeHeader() {
   const navigation = useNavigation();
   const {user} = useSelector(state => state.auth);
   const [userimage, setUserImage] = useState(null);
+  const dispatch = useDispatch();
 
-  // Search bar subtle pulse when idle
   const searchPulseAnim = useRef(new Animated.Value(1)).current;
   useEffect(() => {
     const pulse = Animated.loop(
@@ -172,6 +174,106 @@ export default function HomeHeader() {
     return () => pulse.stop();
   }, []);
 
+  // ── Request location permission ─────────────────────────────────────────
+  const requestLocationPermission = async () => {
+    try {
+      if (Platform.OS === 'android') {
+        const alreadyGranted = await PermissionsAndroid.check(
+          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+        );
+        if (alreadyGranted) {
+          devLog('📍 Location permission already granted.');
+          return true;
+        }
+        const result = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+          {
+            title: 'Location Permission',
+            message:
+              'This app needs access to your location to show nearby properties.',
+            buttonPositive: 'Allow',
+            buttonNegative: 'Deny',
+          },
+        );
+        return result === PermissionsAndroid.RESULTS.GRANTED;
+      }
+      return true; // iOS — handled via Info.plist
+    } catch (error) {
+      devLog('Location permission error:', error);
+      return false;
+    }
+  };
+
+  // ── Fetch city + state from GPS coords ─────────────────────────────────
+  const getUserCityAndState = useCallback(async () => {
+    try {
+      //  Skip if location already set in Redux — avoid re-asking every focus
+      // if (user?.city && user?.state) {
+      //   devLog('📍 Location already in Redux, skipping GPS fetch.');
+      //   return;
+      // }
+
+      const hasPermission = await requestLocationPermission();
+      if (!hasPermission) {
+        devLog('📍 Location permission denied.');
+        return;
+      }
+
+      Geolocation.getCurrentPosition(
+        async position => {
+          const {latitude, longitude} = position.coords;
+          devLog('📍 Current position:', latitude, longitude);
+
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1`,
+            {headers: {'User-Agent': 'Reparv-App'}},
+          );
+          const data = await response.json();
+          devLog('🗺️ Geocoding response:', data);
+
+          const city =
+            data?.address?.city ||
+            data?.address?.town ||
+            data?.address?.village ||
+            data?.address?.suburb ||
+            '';
+          const state = data?.address?.state || '';
+
+          if (city && state) {
+            devLog('📍 Resolved location:', {city, state});
+
+            // Persist to AsyncStorage
+            try {
+              const raw = await AsyncStorage.getItem('Reparvuser');
+              if (raw) {
+                await AsyncStorage.setItem(
+                  'Reparvuser',
+                  JSON.stringify({...JSON.parse(raw), city, state}),
+                );
+              }
+            } catch (storageError) {
+              devLog('AsyncStorage error:', storageError);
+            }
+
+            //  Update Redux so UI re-renders immediately
+            dispatch(setUserLocation({city, state}));
+          }
+        },
+        error => {
+          devLog('📍 Geolocation error:', error);
+        },
+        {
+          enableHighAccuracy: false,
+          timeout: 15000,
+          maximumAge: 10000,
+        },
+      );
+    } catch (error) {
+      devLog('getUserCityAndState error:', error);
+    }
+  }, [dispatch, user?.city, user?.state]);
+
+  // ── Fetch user profile image ────────────────────────────────────────────
   const fetchProfile = useCallback(async () => {
     try {
       const userData = await AsyncStorage.getItem('Reparvuser');
@@ -186,21 +288,24 @@ export default function HomeHeader() {
         setUserImage(data.data.userimage);
       }
     } catch (err) {
-      console.log('Profile fetch error:', err);
+      devLog('Profile fetch error:', err);
     }
   }, []);
 
+  //  Both profile AND location are fetched when screen comes into focus
   useFocusEffect(
     useCallback(() => {
       let isActive = true;
       const load = async () => {
-        if (isActive) await fetchProfile();
+        if (!isActive) return;
+        await fetchProfile();
+        await getUserCityAndState(); //  NOW ACTUALLY CALLED
       };
       load();
       return () => {
         isActive = false;
       };
-    }, [fetchProfile]),
+    }, [fetchProfile, getUserCityAndState]),
   );
 
   const locationLine =
@@ -212,19 +317,8 @@ export default function HomeHeader() {
     navigation.navigate('LocationPickerScreen');
   }, [navigation]);
 
-  // ── Dynamic placeholder ─────────────────────────────────────────────────
   const {displayText, cursorAnim} = useTypewriterPlaceholder(user?.city);
-
-  const {width: screenW} = useWindowDimensions();
-  const {styles, rs} = useMemo(() => {
-    const BASE_WIDTH = 390;
-    const scale = screenW / BASE_WIDTH;
-    const rsFn = size =>
-      Math.round(PixelRatio.roundToNearestPixel(size * scale));
-    const rfFn = (size, min = size * 0.8, max = size * 1.2) =>
-      Math.min(max, Math.max(min, rsFn(size)));
-    return {styles: buildHomeStyles(rsFn, rfFn), rs: rsFn};
-  }, [screenW]);
+  const styles = makeStyles();
 
   return (
     <View style={styles.topBlock}>
@@ -265,15 +359,10 @@ export default function HomeHeader() {
           style={styles.searchShell}
           activeOpacity={0.88}
           onPress={() => navigation.navigate('PropertyListScreen')}>
-          {/* Search icon with purple tint */}
           <View style={styles.searchIconWrap}>
             <Search size={rs(16)} color="#8A38F5" strokeWidth={2.2} />
           </View>
-
-          {/* Divider */}
           <View style={styles.searchDivider} />
-
-          {/* Typewriter placeholder */}
           <View style={styles.placeholderRow}>
             <Text
               style={styles.searchPlaceholder}
@@ -281,8 +370,6 @@ export default function HomeHeader() {
               ellipsizeMode="tail">
               {displayText || 'Search properties…'}
             </Text>
-
-            {/* Blinking cursor — uses native-driver Animated opacity */}
             <Animated.Text style={[styles.cursor, {opacity: cursorAnim}]}>
               |
             </Animated.Text>
@@ -294,7 +381,7 @@ export default function HomeHeader() {
 }
 
 // ── Styles ────────────────────────────────────────────────────────────────────
-function buildHomeStyles(rs, rf) {
+function makeStyles() {
   const avatarSize = Math.min(60, Math.max(44, rs(52)));
   const pinSize = Math.min(50, Math.max(38, rs(44)));
 
@@ -367,11 +454,7 @@ function buildHomeStyles(rs, rf) {
       height: avatarSize,
       borderRadius: avatarSize / 2,
     },
-
-    // ── Search bar ─────────────────────────────────────────────────────────
     searchShell: {
-      alignSelf: 'stretch',
-      width: '100%',
       flexDirection: 'row',
       alignItems: 'center',
       backgroundColor: '#FFFFFF',
@@ -382,7 +465,6 @@ function buildHomeStyles(rs, rf) {
       borderWidth: 1.5,
       borderColor: 'rgba(138,56,245,0.18)',
       marginBottom: rs(4),
-      // Subtle shadow for depth
       ...Platform.select({
         ios: {
           shadowColor: '#8A38F5',
@@ -429,7 +511,6 @@ function buildHomeStyles(rs, rf) {
       color: '#8A38F5',
       fontWeight: '300',
       marginLeft: 1,
-      // includeFontPadding false keeps cursor vertically aligned on Android
       ...Platform.select({
         android: {includeFontPadding: false, textAlignVertical: 'center'},
         default: {},

@@ -143,6 +143,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'SegoeUI-Bold',
     // fontWeight: '700'
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
   bottomContainer: {
     position: 'absolute',
@@ -156,6 +160,10 @@ const styles = StyleSheet.create({
     fontFamily: 'SegoeUI-Bold',
     width: '80%',
     marginBottom: 20,
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
   dotsContainer: {flexDirection: 'row', alignSelf: 'center', marginBottom: 25},
   dot: {
@@ -177,5 +185,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
-  nextText: {color: '#fff', fontSize: 16, fontFamily: 'SegoeUI-Bold'},
+  nextText: {
+    color: '#fff',
+    fontSize: 16,
+    fontFamily: 'SegoeUI-Bold',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
+  },
 });

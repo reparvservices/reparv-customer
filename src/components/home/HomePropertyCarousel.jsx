@@ -234,11 +234,19 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontFamily: 'SegoeUI-Bold',
     color: '#111827',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
   seeAll: {
     fontSize: 15,
     fontFamily: 'SegoeUI-Bold',
     color: '#6E56CF',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
   listPad: {
     paddingLeft: 20,
@@ -294,6 +302,10 @@ const styles = StyleSheet.create({
   tagText: {
     fontSize: 12,
     fontFamily: 'SegoeUI-Bold',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
   tagTextBuy: {
     color: '#111827',
@@ -327,12 +339,20 @@ const styles = StyleSheet.create({
     fontFamily: 'SegoeUI-Bold',
     color: '#111827',
     marginBottom: 4,
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
   name: {
     fontSize: 16,
     fontFamily: 'SegoeUI-Bold',
     color: '#111827',
     marginBottom: 6,
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
   locRow: {
     flexDirection: 'row',
@@ -346,6 +366,10 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     color: '#868686',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
   specs: {
     flexDirection: 'row',

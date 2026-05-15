@@ -446,10 +446,32 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     marginBottom: 2,
     fontFamily: 'SegoeUI-Regular',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
-  pickerValue: {fontSize: 14, color: '#111827', fontFamily: 'SegoeUI-Bold'},
-  placeholderText: {color: '#9CA3AF', fontFamily: 'SegoeUI-Regular'},
-  disabledPicker: {backgroundColor: '#F3F4F6', borderColor: '#E5E7EB'},
+  pickerValue: {
+    fontSize: 14,
+    color: '#111827',
+    fontFamily: 'SegoeUI-Bold',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
+  },
+  placeholderText: {
+    color: '#9CA3AF',
+    fontFamily: 'SegoeUI-Regular',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
+  },
+  disabledPicker: {
+    backgroundColor: '#F3F4F6',
+    borderColor: '#E5E7EB',
+  },
   input: {
     height: 48,
     borderWidth: 1,
@@ -458,6 +480,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     marginBottom: 8,
     color: '#000',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
   row: {flexDirection: 'row', gap: 12},
   primaryButton: {
@@ -490,6 +516,10 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontFamily: 'SegoeUI-Bold',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
   footerText: {
     textAlign: 'center',

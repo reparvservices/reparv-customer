@@ -6,6 +6,7 @@ import {
   TextInput,
   Image,
   TouchableOpacity,
+  Platform,
 } from 'react-native';
 import ProfileIcon from '../../assets/image/bottom-navigator/profile.png';
 import {Dropdown} from 'react-native-element-dropdown';
@@ -272,6 +273,10 @@ const styles = StyleSheet.create({
   heading: {
     fontSize: 16,
     fontFamily: 'SegoeUI-Bold',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
     marginBottom: 12,
   },
   label: {

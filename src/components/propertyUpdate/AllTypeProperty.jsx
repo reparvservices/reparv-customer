@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   FlatList,
   Image,
+  Platform,
 } from 'react-native';
 
 import IndependentIcon from '../../assets/image/rent-oldnew-property/property-type/independent-house.png';
@@ -42,7 +43,7 @@ const PROPERTY_TYPES = [
   //   label: 'Independent',
   //   icon: CommercialPlotIcon,
   // },
- {
+  {
     id: 'IndependentHouse',
     label: 'Independent House/Villa',
     icon: IndependentIcon,
@@ -145,6 +146,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     fontFamily: 'SegoeUI-Bold',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
     color: '#000',
     fontFamily: 'SegoeUI-Regular',
   },
@@ -197,6 +202,10 @@ const styles = StyleSheet.create({
   labelActive: {
     color: '#fff',
     fontFamily: 'SegoeUI-Bold',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
   error: {
     color: '#E33629',

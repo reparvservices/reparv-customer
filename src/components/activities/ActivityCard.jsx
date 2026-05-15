@@ -1,6 +1,13 @@
 import {useNavigation} from '@react-navigation/native';
 import React from 'react';
-import {View, Text, StyleSheet, Image, TouchableOpacity} from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Image,
+  TouchableOpacity,
+  Platform,
+} from 'react-native';
 import Svg, {Circle, Path} from 'react-native-svg';
 
 const STATUS_CONFIG = {
@@ -220,6 +227,10 @@ const styles = StyleSheet.create({
     color: '#374151',
     fontWeight: '500',
     fontFamily: 'SegoeUI-Bold',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
 
   viewBtn: {
