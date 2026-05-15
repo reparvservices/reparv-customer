@@ -17,7 +17,7 @@ import {
   KeyboardAvoidingView,
   ToastAndroid,
 } from 'react-native';
-import {SafeAreaView} from 'react-native-safe-area-context';
+import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 import MultiSlider from '@ptomasroos/react-native-multi-slider';
 import {
   ArrowLeft,
@@ -41,13 +41,12 @@ import {ModalBox} from '../components/calculator/ValueModel';
 
 const {width} = Dimensions.get('window');
 
-// Slider length inside a card that has margin:16 + padding:16 on each side
-// card margin 16 each side = 32, card padding 16 each side = 32 → total 64
-const CARD_SLIDER_LENGTH = width - 64;
+const HORIZONTAL_PADDING = 16;
+const CARD_INNER_PADDING = 16;
 
-// Slider length inside newTabContainer (paddingHorizontal:16) + card (padding:16)
-// container padding 16 each side = 32, card padding 16 each side = 32 → total 64
-const NEW_TAB_SLIDER_LENGTH = width - 64;
+// Screen padding + card padding on each side
+const CARD_SLIDER_LENGTH =
+  width - HORIZONTAL_PADDING * 2 - CARD_INNER_PADDING * 2;
 
 // ─── Sample avatars ───────────────────────────────────────────────
 const SAMPLE_AVATARS = [
@@ -67,7 +66,11 @@ const TABS = {
   AREA: 'area',
 };
 
+const TAB_BAR_CLEARANCE = 88;
+
 export default function CalculatorScreen() {
+  const insets = useSafeAreaInsets();
+  const scrollBottomPadding = TAB_BAR_CLEARANCE + insets.bottom;
   const [activeTab, setActiveTab] = useState(TABS.EMI);
 
   /* ─────────────── EMI State ─────────────── */
@@ -212,7 +215,7 @@ export default function CalculatorScreen() {
   }));
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar backgroundColor="#FAF8FF" barStyle="dark-content" />
 
       {/* ── Header ── */}
@@ -228,9 +231,10 @@ export default function CalculatorScreen() {
         style={{flex: 1}}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
-          contentContainerStyle={{paddingBottom: 40}}
+          contentContainerStyle={{paddingBottom: scrollBottomPadding}}
           keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}>
+          showsVerticalScrollIndicator={false}
+          bounces>
           <Text style={styles.subTitle}>
             Make smarter property decisions instantly
           </Text>
@@ -268,7 +272,7 @@ export default function CalculatorScreen() {
 
           {/* ════════════════ EMI TAB ════════════════ */}
           {activeTab === TABS.EMI && (
-            <>
+            <View style={styles.tabContent}>
               <View style={styles.card}>
                 <Field
                   label="Loan Amount"
@@ -325,19 +329,23 @@ export default function CalculatorScreen() {
                 <RangeRow left="1%" right="20%" />
               </View>
 
-              <LinearGradient
-                colors={['#8A38F5', '#5E23DC']}
-                style={styles.emiCard}>
-                <Image source={EmiLeftSide} style={styles.leftImage} />
-                <Image source={EmiRightSide} style={styles.rightImage} />
-                <Text style={styles.emiLabel}>Monthly EMI</Text>
-                <Text style={styles.emiValue}>
-                  ₹{emi.toLocaleString('en-IN')}
-                </Text>
-                <Text style={styles.emiSub}>
-                  For {tenure} years loan tenure
-                </Text>
-              </LinearGradient>
+              <View style={styles.emiCardWrap}>
+                <LinearGradient
+                  colors={['#8A38F5', '#5E23DC']}
+                  style={styles.emiCard}>
+                  <Image source={EmiLeftSide} style={styles.leftImage} />
+                  <Image source={EmiRightSide} style={styles.rightImage} />
+                  <View style={styles.emiTextBlock}>
+                    <Text style={styles.emiLabel}>Monthly EMI</Text>
+                    <Text style={styles.emiValue}>
+                      ₹{emi.toLocaleString('en-IN')}
+                    </Text>
+                    <Text style={styles.emiSub}>
+                      For {tenure} years loan tenure
+                    </Text>
+                  </View>
+                </LinearGradient>
+              </View>
 
               <View style={styles.breakdown}>
                 <Text style={styles.breakdownTitle}>Payment Breakdown</Text>
@@ -360,7 +368,7 @@ export default function CalculatorScreen() {
 
               <Text style={styles.sectionTitle}>Principal vs Interest</Text>
               <PieChart principal={loan} interest={totalInterest} />
-            </>
+            </View>
           )}
 
           {/* ════════════════ RENT SPLIT TAB ════════════════ */}
@@ -559,7 +567,7 @@ export default function CalculatorScreen() {
                 />
                 <MultiSlider
                   values={[propValue]}
-                  sliderLength={NEW_TAB_SLIDER_LENGTH}
+                  sliderLength={CARD_SLIDER_LENGTH}
                   onValuesChange={v => setPropValue(v[0])}
                   min={500000}
                   max={100000000}
@@ -619,19 +627,23 @@ export default function CalculatorScreen() {
               </View>
 
               {/* Result gradient card */}
-              <LinearGradient
-                colors={['#8A38F5', '#5E23DC']}
-                style={styles.emiCard}>
-                <Image source={EmiLeftSide} style={styles.leftImage} />
-                <Image source={EmiRightSide} style={styles.rightImage} />
-                <Text style={styles.emiLabel}>Total Brokerage (incl. GST)</Text>
-                <Text style={styles.emiValue}>
-                  ₹{totalBrokerage.toLocaleString('en-IN')}
-                </Text>
-                <Text style={styles.emiSub}>
-                  At {brokerageRateNum}% + 18% GST
-                </Text>
-              </LinearGradient>
+              <View style={styles.emiCardWrap}>
+                <LinearGradient
+                  colors={['#8A38F5', '#5E23DC']}
+                  style={styles.emiCard}>
+                  <Image source={EmiLeftSide} style={styles.leftImage} />
+                  <Image source={EmiRightSide} style={styles.rightImage} />
+                  <View style={styles.emiTextBlock}>
+                    <Text style={styles.emiLabel}>Total Brokerage (incl. GST)</Text>
+                    <Text style={styles.emiValue}>
+                      ₹{totalBrokerage.toLocaleString('en-IN')}
+                    </Text>
+                    <Text style={styles.emiSub}>
+                      At {brokerageRateNum}% + 18% GST
+                    </Text>
+                  </View>
+                </LinearGradient>
+              </View>
 
               <View style={styles.breakdown}>
                 <Text style={styles.breakdownTitle}>Cost Breakdown</Text>
@@ -767,7 +779,7 @@ export default function CalculatorScreen() {
                 />
                 <MultiSlider
                   values={[sipYears]}
-                  sliderLength={NEW_TAB_SLIDER_LENGTH}
+                  sliderLength={CARD_SLIDER_LENGTH}
                   onValuesChange={v => setSipYears(v[0])}
                   min={1}
                   max={20}
@@ -785,7 +797,7 @@ export default function CalculatorScreen() {
                 />
                 <MultiSlider
                   values={[sipReturn]}
-                  sliderLength={NEW_TAB_SLIDER_LENGTH}
+                  sliderLength={CARD_SLIDER_LENGTH}
                   onValuesChange={v => setSipReturn(v[0])}
                   min={6}
                   max={20}
@@ -797,19 +809,24 @@ export default function CalculatorScreen() {
                 <RangeRow left="6%" right="20%" />
               </View>
 
-              <LinearGradient
-                colors={['#8A38F5', '#5E23DC']}
-                style={styles.emiCard}>
-                <Image source={EmiLeftSide} style={styles.leftImage} />
-                <Image source={EmiRightSide} style={styles.rightImage} />
-                <Text style={styles.emiLabel}>Monthly SIP Needed</Text>
-                <Text style={styles.emiValue}>
-                  ₹{sipMonthly.toLocaleString('en-IN')}
-                </Text>
-                <Text style={styles.emiSub}>
-                  To reach ₹{formatIndianAmount(sipTargetNum)} in {sipYears} yrs
-                </Text>
-              </LinearGradient>
+              <View style={styles.emiCardWrap}>
+                <LinearGradient
+                  colors={['#8A38F5', '#5E23DC']}
+                  style={styles.emiCard}>
+                  <Image source={EmiLeftSide} style={styles.leftImage} />
+                  <Image source={EmiRightSide} style={styles.rightImage} />
+                  <View style={styles.emiTextBlock}>
+                    <Text style={styles.emiLabel}>Monthly SIP Needed</Text>
+                    <Text style={styles.emiValue}>
+                      ₹{sipMonthly.toLocaleString('en-IN')}
+                    </Text>
+                    <Text style={styles.emiSub}>
+                      To reach ₹{formatIndianAmount(sipTargetNum)} in {sipYears}{' '}
+                      yrs
+                    </Text>
+                  </View>
+                </LinearGradient>
+              </View>
 
               <View style={styles.breakdown}>
                 <Text style={styles.breakdownTitle}>Investment Summary</Text>
@@ -933,7 +950,7 @@ const PieChart = ({principal = 0, interest = 0}) => {
   const principalPercent = Math.round((principal / total) * 100);
   const interestPercent = 100 - principalPercent;
 
-  const size = width * 0.6;
+  const size = Math.min(width * 0.52, 240);
   const radius = size / 2;
   const cx = radius;
   const cy = radius;
@@ -954,7 +971,7 @@ const PieChart = ({principal = 0, interest = 0}) => {
   const interestAngle = (interestPercent / 100) * 360;
 
   return (
-    <View style={{alignItems: 'center', marginVertical: 20}}>
+    <View style={styles.pieChartWrap}>
       <Svg width={size} height={size}>
         <G>
           <Path
@@ -1037,13 +1054,34 @@ const styles = StyleSheet.create({
   activeTab: {backgroundColor: '#7C3AED', borderColor: '#7C3AED'},
   tabText: {fontSize: 13, color: '#6B7280'},
 
+  tabContent: {
+    paddingHorizontal: HORIZONTAL_PADDING,
+    paddingTop: 4,
+    paddingBottom: 8,
+  },
+  newTabContainer: {
+    paddingHorizontal: HORIZONTAL_PADDING,
+    paddingTop: 8,
+    paddingBottom: 8,
+  },
+
   card: {
     width: '100%',
     backgroundColor: '#FFF',
-    borderRadius: 20,
-
-    padding: 16,
+    borderRadius: 16,
+    padding: CARD_INNER_PADDING,
     gap: 16,
+    borderWidth: 1,
+    borderColor: '#EDE9FE',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: {width: 0, height: 2},
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
+      },
+      android: {elevation: 2},
+    }),
   },
   fieldHeader: {flexDirection: 'row', justifyContent: 'space-between'},
   fieldLabel: {
@@ -1073,59 +1111,132 @@ const styles = StyleSheet.create({
     borderColor: '#FFF',
   },
 
-  emiCard: {
-    marginHorizontal: 16,
-    borderRadius: 12,
-    paddingVertical: 26,
-    alignItems: 'center',
+  emiCardWrap: {
+    width: '100%',
+    marginTop: 12,
+    borderRadius: 16,
     overflow: 'hidden',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#5E23DC',
+        shadowOffset: {width: 0, height: 4},
+        shadowOpacity: 0.22,
+        shadowRadius: 10,
+      },
+      android: {elevation: 4},
+    }),
+  },
+  emiCard: {
+    width: '100%',
+    minHeight: 152,
+    paddingVertical: 28,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  emiTextBlock: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1,
+    paddingVertical: 4,
+    gap: 6,
   },
   leftImage: {
     position: 'absolute',
-    left: -20,
-    bottom: -20,
-    width: 110,
-    height: 110,
+    left: -16,
+    bottom: -16,
+    width: 96,
+    height: 96,
+    opacity: 0.9,
   },
   rightImage: {
     position: 'absolute',
-    right: -20,
-    top: -20,
-    width: 110,
-    height: 110,
+    right: -16,
+    top: -16,
+    width: 96,
+    height: 96,
+    opacity: 0.9,
   },
-  emiLabel: {color: '#EDE9FE'},
-  emiValue: {fontSize: 32, fontWeight: '800', color: '#FFF'},
-  emiSub: {color: '#EDE9FE'},
+  emiLabel: {
+    color: '#EDE9FE',
+    fontSize: 14,
+    fontWeight: '600',
+    letterSpacing: 0.3,
+  },
+  emiValue: {
+    fontSize: 34,
+    fontWeight: '800',
+    color: '#FFF',
+    lineHeight: Platform.OS === 'ios' ? 42 : 40,
+    marginTop: 4,
+    marginBottom: 2,
+  },
+  emiSub: {
+    color: 'rgba(237,233,254,0.92)',
+    fontSize: 13,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
 
   breakdown: {
+    width: '100%',
     backgroundColor: '#FFF',
-    margin: 16,
+    marginTop: 12,
     borderRadius: 16,
-    padding: 16,
+    paddingHorizontal: CARD_INNER_PADDING,
+    paddingTop: 14,
+    paddingBottom: 14,
+    borderWidth: 1,
+    borderColor: '#EDE9FE',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: {width: 0, height: 2},
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
+      },
+      android: {elevation: 2},
+    }),
   },
   breakdownTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
-    marginBottom: 10,
+    marginBottom: 8,
     color: '#000',
   },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginVertical: 6,
+    alignItems: 'center',
+    paddingVertical: 5,
   },
-  rowLabel: {color: '#374151'},
-  rowValue: {fontWeight: '600', color: '#000'},
-  divider: {height: 1, backgroundColor: '#E5E7EB', marginVertical: 10},
+  rowLabel: {color: '#374151', fontSize: 14, flex: 1, paddingRight: 8},
+  rowValue: {fontWeight: '600', color: '#000', fontSize: 14, textAlign: 'right'},
+  divider: {height: 1, backgroundColor: '#E5E7EB', marginVertical: 6},
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    marginLeft: 16,
+    marginTop: 16,
+    marginBottom: 4,
     color: '#000',
   },
+  pieChartWrap: {
+    width: '100%',
+    alignItems: 'center',
+    marginTop: 4,
+    marginBottom: 8,
+    paddingBottom: 4,
+  },
 
-  legendRow: {flexDirection: 'row', gap: 24, marginTop: 16},
+  legendRow: {
+    flexDirection: 'row',
+    gap: 24,
+    marginTop: 12,
+    marginBottom: 4,
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+  },
   legendItem: {flexDirection: 'row', alignItems: 'center', gap: 8},
   legendDot: {width: 12, height: 12, borderRadius: 6},
   legendText: {fontSize: 14, fontWeight: '600', color: '#374151'},
@@ -1332,9 +1443,6 @@ const styles = StyleSheet.create({
   whatsappBtn: {backgroundColor: '#25D366'},
   filledBtnTxt: {fontWeight: '700', color: '#fff', fontSize: 14},
 
-  /* New tabs shared */
-  newTabContainer: {paddingHorizontal: 16, paddingTop: 8},
-
   segmentRow: {
     flexDirection: 'row',
     gap: 8,
@@ -1445,10 +1553,12 @@ const styles = StyleSheet.create({
   activeUnitBadgeTxt: {color: '#fff', fontSize: 10, fontWeight: '700'},
 
   infoBox: {
+    width: '100%',
     backgroundColor: '#F3E8FF',
     borderRadius: 16,
     padding: 16,
-    marginBottom: 16,
+    marginTop: 12,
+    marginBottom: 8,
     borderWidth: 1,
     borderColor: '#DDD6FE',
   },

@@ -17,6 +17,7 @@ import {WebView} from 'react-native-webview';
 import Slider from '@react-native-community/slider';
 import {getImageUri} from '../utils/imageHandle';
 import {
+  ArrowLeft,
   Filter,
   ChevronDown,
   Search,
@@ -1418,6 +1419,15 @@ export default function CityPropertyMapScreen({navigation}) {
     <SafeAreaView style={s.container}>
       {/* ── Top Bar ── */}
       <View style={s.topBar}>
+        <TouchableOpacity
+          style={s.backBtn}
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel="Go back">
+          <ArrowLeft size={22} color={C.text} strokeWidth={2} />
+        </TouchableOpacity>
+
         {/* City picker */}
         <TouchableOpacity
           style={s.cityPickerBtn}
@@ -1665,6 +1675,16 @@ const s = StyleSheet.create({
     shadowRadius: 6,
     elevation: 4,
     zIndex: 10,
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: C.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: C.border,
   },
   cityPickerBtn: {
     flex: 1,

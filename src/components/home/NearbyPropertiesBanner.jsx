@@ -7,6 +7,8 @@ import {
   Animated,
   Easing,
   Image,
+  Dimensions,
+  Platform,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import {
@@ -88,6 +90,9 @@ const MapPinBubble = ({price, topPct, leftPct}) => (
   </View>
 );
 
+const {width: SCREEN_WIDTH} = Dimensions.get('window');
+const CARD_WIDTH = SCREEN_WIDTH * 0.9;
+
 const pin = StyleSheet.create({
   bubble: {
     backgroundColor: 'rgba(8,8,20,0.85)',
@@ -149,132 +154,129 @@ export default function NearbyPropertiesBanner({navigation, style}) {
     }).start();
 
   return (
-    <LinearGradient
-      colors={['#8A6CF2', '#6136D8']}
-      start={{x: 0.0, y: 0.0}}
-      end={{x: 1.0, y: 1.0}}
-      angle={132.7}
-      useAngle={true}
-      style={[b.card, style]}>
+    <View style={[b.cardShell, style]}>
+      <LinearGradient
+        colors={['#8A6CF2', '#6136D8']}
+        start={{x: 0, y: 0}}
+        end={{x: 1, y: 1}}
+        style={StyleSheet.absoluteFillObject}
+      />
+
       <Image
         source={require('../../assets/image/home/map.png')}
         style={b.mapImage}
         resizeMode="contain"
       />
 
-      <View style={b.mapOverlay} />
-
-      <View style={b.topRow}>
-        <View style={b.liveTag}>
-          <View style={b.circleShadow}>
-            <Circle size={10} color="#fff" fill="#fff" />
-          </View>
-          <Text style={b.liveTagTxt}>LIVE NEAR YOU</Text>
-        </View>
-      </View>
-
-      <View style={b.headingBlock}>
-        <Text style={b.heading}>Discover Nearby Properties</Text>
-        <Text style={b.sub}>
-          Find plots, flats & homes{'\n'}within your radius
-        </Text>
-      </View>
-
-      <View style={b.statsRow}>
-        <View style={b.stat}>
-          <View style={b.statIconWrap}>
-            <TrendingUp size={14} color="#fff" strokeWidth={2} />
-          </View>
-          <View>
-            <Text style={b.statNum}>500+</Text>
-            <Text style={b.statLbl}>Active Listings</Text>
-          </View>
-        </View>
-
-        <View style={b.statDivider} />
-
-        <View style={b.stat}>
-          <View style={b.statIconWrap}>
-            <Building2 size={14} color="#fff" strokeWidth={2} />
-          </View>
-          <View>
-            <Text style={b.statNum}>20+</Text>
-            <Text style={b.statLbl}>Major Cities</Text>
-          </View>
-        </View>
-      </View>
-
-      <View style={b.btnRow}>
-        <Animated.View style={{transform: [{scale: btnScale}]}}>
-          <TouchableOpacity
-            style={b.viewBtn}
-            activeOpacity={1}
-            onPress={() => navigation?.navigate('PropertyMap')}
-            onPressIn={onPressIn}
-            onPressOut={onPressOut}>
-            <Animated.View
-              style={[
-                b.btnShimmer,
-                {
-                  opacity: shimmer.interpolate({
-                    inputRange: [0, 0.5, 1],
-                    outputRange: [0, 0.45, 0],
-                  }),
-                  transform: [
-                    {
-                      translateX: shimmer.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [-120, 130],
-                      }),
-                    },
-                  ],
-                },
-              ]}
-            />
-            <Text style={b.viewBtnTxt}>View on Map</Text>
-            <View style={b.arrowCircle}>
-              <ArrowRight size={13} color="#fff" strokeWidth={2.5} />
+      <View style={b.cardBody}>
+        <View style={b.topRow}>
+          <View style={b.liveTag}>
+            <View style={b.circleShadow}>
+              <Circle size={10} color="#fff" fill="#fff" />
             </View>
-          </TouchableOpacity>
-        </Animated.View>
+            <Text style={b.liveTagTxt}>LIVE NEAR YOU</Text>
+          </View>
+        </View>
+
+        <View style={b.headingBlock}>
+          <Text style={b.heading}>Discover Nearby Properties</Text>
+          <Text style={b.sub}>
+            Find plots, flats & homes{'\n'}within your radius
+          </Text>
+        </View>
+
+        <View style={b.statsRow}>
+          <View style={b.stat}>
+            <View style={b.statIconWrap}>
+              <TrendingUp size={14} color="#fff" strokeWidth={2} />
+            </View>
+            <View>
+              <Text style={b.statNum}>500+</Text>
+              <Text style={b.statLbl}>Active Listings</Text>
+            </View>
+          </View>
+
+          <View style={b.statDivider} />
+
+          <View style={b.stat}>
+            <View style={b.statIconWrap}>
+              <Building2 size={14} color="#fff" strokeWidth={2} />
+            </View>
+            <View>
+              <Text style={b.statNum}>20+</Text>
+              <Text style={b.statLbl}>Major Cities</Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={b.btnRow}>
+          <Animated.View style={{transform: [{scale: btnScale}]}}>
+            <TouchableOpacity
+              style={b.viewBtn}
+              activeOpacity={0.92}
+              onPress={() => navigation?.navigate('PropertyMap')}
+              onPressIn={onPressIn}
+              onPressOut={onPressOut}>
+              <Animated.View
+                style={[
+                  b.btnShimmer,
+                  {
+                    opacity: shimmer.interpolate({
+                      inputRange: [0, 0.5, 1],
+                      outputRange: [0, 0.45, 0],
+                    }),
+                    transform: [
+                      {
+                        translateX: shimmer.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [-120, 130],
+                        }),
+                      },
+                    ],
+                  },
+                ]}
+              />
+              <Text style={b.viewBtnTxt}>View on Map</Text>
+              <View style={b.arrowCircle}>
+                <ArrowRight size={13} color="#fff" strokeWidth={2.5} />
+              </View>
+            </TouchableOpacity>
+          </Animated.View>
+        </View>
       </View>
-    </LinearGradient>
+    </View>
   );
 }
 
 const b = StyleSheet.create({
-  card: {
-    marginHorizontal: 16,
-    marginVertical: 12,
-    borderRadius: 32,
-    width: 343,
-    padding: 20,
-    gap: 16,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 10},
-    shadowOpacity: 0.1,
-    shadowRadius: 15,
-    elevation: 10,
+  cardShell: {
+    width: CARD_WIDTH,
     alignSelf: 'center',
+    marginVertical: 12,
+    borderRadius: 28,
+    overflow: 'hidden',
+    backgroundColor: '#6136D8',
+    shadowColor: '#5E23DC',
+    shadowOffset: {width: 0, height: 8},
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  cardBody: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 24,
+    zIndex: 2,
   },
 
   mapImage: {
     position: 'absolute',
-    right: 0,
-    top: 70,
-    width: '72%',
-    height: '100%',
-    opacity: 0.5,
-  },
-
-  mapOverlay: {
-    position: 'absolute',
-    left: '30%',
-    top: 0,
-    bottom: 0,
-    width: '18%',
-    backgroundColor: 'transparent',
+    right: -12,
+    top: 48,
+    width: CARD_WIDTH * 0.52,
+    height: CARD_WIDTH * 0.5,
+    opacity: 0.45,
+    zIndex: 1,
   },
 
   topRow: {flexDirection: 'row', alignItems: 'flex-start', height: 26},
@@ -306,27 +308,31 @@ const b = StyleSheet.create({
     lineHeight: 16,
   },
 
-  headingBlock: {paddingTop: 8, gap: 8, width: 227, zIndex: 2},
+  headingBlock: {
+    paddingTop: 10,
+    marginBottom: 14,
+    maxWidth: '72%',
+    zIndex: 2,
+  },
   heading: {
     color: '#fff',
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '700',
-    lineHeight: 30,
-    width: 227,
+    lineHeight: Platform.OS === 'ios' ? 28 : 26,
+    marginBottom: 6,
   },
   sub: {
-    color: 'rgba(255,255,255,0.8)',
+    color: 'rgba(255,255,255,0.85)',
     fontSize: 14,
     fontWeight: '400',
-    lineHeight: 19,
-    width: 194,
+    lineHeight: 20,
   },
 
   statsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    paddingTop: 8,
+    marginBottom: 18,
     zIndex: 3,
   },
   stat: {flexDirection: 'row', alignItems: 'center', gap: 8},
@@ -355,25 +361,25 @@ const b = StyleSheet.create({
   btnRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 8,
-    zIndex: 4,
+    zIndex: 5,
+    paddingTop: 2,
   },
   viewBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 8,
     backgroundColor: '#fff',
     borderRadius: 999,
-    paddingVertical: 10,
+    height: 46,
     paddingLeft: 20,
     paddingRight: 10,
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 4,
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 5,
   },
   btnShimmer: {
     position: 'absolute',
