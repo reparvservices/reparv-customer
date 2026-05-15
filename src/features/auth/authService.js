@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {Alert} from 'react-native';
 
-const API_URL = 'http://172.20.10.7:3000';
+const API_URL = 'https://aws-api.reparv.in';
 
 /**
  * STEP 1: Send OTP (Login / Signup)
