@@ -1,4 +1,5 @@
 import React, {use, useState} from 'react';
+import {API_BASE_URL} from '../../config/api';
 import {
   View,
   Text,
@@ -32,7 +33,7 @@ const ContactUs = ({visible, onClose}) => {
 
     try {
       const response = await fetch(
-        'https://aws-api.reparv.in/project-partner/profile/contact',
+        `${API_BASE_URL}/project-partner/profile/contact`,
         {
           method: 'POST',
           headers: {

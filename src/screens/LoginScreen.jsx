@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   ToastAndroid,
   ScrollView,
+  Platform,
 } from 'react-native';
 
 import Bg1 from '../assets/image/login/login1.svg';
@@ -29,7 +30,6 @@ import {useDispatch, useSelector} from 'react-redux';
 import {
   facebookLoginSlice,
   sendOtp,
-  verifyOtp,
   googleLogin,
 } from '../features/auth/authSlice';
 import {GoogleSignin} from '@react-native-google-signin/google-signin';
@@ -191,8 +191,12 @@ function LoginModal({
               </Text>
             </TouchableOpacity>
 
-            <Text style={styles.or}>Or login with</Text>
-            <SocialButtons styles={styles} />
+            {Platform.OS === 'android' && (
+              <>
+                <Text style={styles.or}>Or login with</Text>
+                <SocialButtons styles={styles} />
+              </>
+            )}
           </ScrollView>
         </View>
       </View>
@@ -392,8 +396,12 @@ function SignUpModal({
               </Text>
             </TouchableOpacity>
 
-            <Text style={styles.or}>Or sign up with</Text>
-            <SocialButtons styles={styles} />
+            {Platform.OS === 'android' && (
+              <>
+                <Text style={styles.or}>Or sign up with</Text>
+                <SocialButtons styles={styles} />
+              </>
+            )}
           </ScrollView>
         </View>
       </View>
@@ -461,9 +469,6 @@ export default function LoginScreen() {
   const [activeModal, setActiveModal] = useState('login');
   const [otpPhone, setOtpPhone] = useState('');
   const [bottomVisible, setBottomVisible] = useState(true);
-
-  const dispatch = useDispatch();
-  const navigation = useNavigation();
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -559,15 +564,9 @@ export default function LoginScreen() {
         onClose={() => setActiveModal('login')}
         phone={otpPhone}
         onEdit={() => setActiveModal('login')}
-        onVerify={async otp => {
-          try {
-            await dispatch(verifyOtp({contact: otpPhone, otp})).unwrap();
-            setBottomVisible(false);
-            setActiveModal('login');
-            navigation.replace('MainTabs');
-          } catch (err) {
-            ToastAndroid.show(err || 'Invalid OTP', ToastAndroid.SHORT);
-          }
+        onVerify={() => {
+          setBottomVisible(false);
+          setActiveModal('login');
         }}
       />
     </SafeAreaView>

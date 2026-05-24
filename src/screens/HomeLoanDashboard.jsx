@@ -1,4 +1,5 @@
 import React, {useEffect, useState} from 'react';
+import {API_BASE_URL} from '../config/api';
 import {
   View,
   Text,
@@ -63,7 +64,7 @@ export default function HomeLoanDashboard() {
   const fetchLoanCounts = async () => {
     try {
       const res = await fetch(
-        `https://aws-api.reparv.in/customerapp/loans/counts/${user?.id}`,
+        `${API_BASE_URL}/customerapp/loans/counts/${user?.id}`,
       );
       const data = await res.json();
 
@@ -82,7 +83,7 @@ export default function HomeLoanDashboard() {
       setLoading(true);
 
       const response = await fetch(
-        `https://aws-api.reparv.in/customerapp/loans/loan-applications/${user?.id}`,
+        `${API_BASE_URL}/customerapp/loans/loan-applications/${user?.id}`,
       );
 
       const result = await response.json();
@@ -104,7 +105,7 @@ export default function HomeLoanDashboard() {
 
           try {
             const propertyRes = await fetch(
-              `https://aws-api.reparv.in/customerapp/property/${loan?.propertyid}`,
+              `${API_BASE_URL}/customerapp/property/${loan?.propertyid}`,
             );
 
             const propertyJson = await propertyRes.json();

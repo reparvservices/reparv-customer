@@ -1,6 +1,7 @@
 import {useNavigation} from '@react-navigation/native';
 import {Building2, Eye, Heart, HeartIcon, MapPin} from 'lucide-react-native';
 import React, {useState, useEffect} from 'react';
+import {API_BASE_URL} from '../../config/api';
 import {
   View,
   Text,
@@ -32,7 +33,7 @@ function PropertyCard({item, iswishList}) {
       if (item.projectpartnerid) {
         try {
           const res = await fetch(
-            `https://aws-api.reparv.in/projectpartner/subscription/user/${item?.projectpartnerid}`,
+            `${API_BASE_URL}/projectpartner/subscription/user/${item?.projectpartnerid}`,
           );
           const data = await res.json();
           if (data.active) {
@@ -60,7 +61,7 @@ function PropertyCard({item, iswishList}) {
     setIsLiked(prev => !prev);
     try {
       const response = await fetch(
-        `https://aws-api.reparv.in/customerapp/property/add-wishlist`,
+        `${API_BASE_URL}/customerapp/property/add-wishlist`,
         {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
@@ -87,7 +88,7 @@ function PropertyCard({item, iswishList}) {
   const fetchVisits = async propertyid => {
     try {
       const res = await fetch(
-        `https://aws-api.reparv.in/customerapp/enquiry/getvisits?propertyid=${propertyid}`,
+        `${API_BASE_URL}/customerapp/enquiry/getvisits?propertyid=${propertyid}`,
       );
       const data = await res.json();
       setVisitorCount(data?.totalVisitors || 0);
@@ -99,7 +100,7 @@ function PropertyCard({item, iswishList}) {
   const fetchLikeCount = async () => {
     try {
       const res = await fetch(
-        `https://aws-api.reparv.in/customerapp/property/likes/count/${item.propertyid}`,
+        `${API_BASE_URL}/customerapp/property/likes/count/${item.propertyid}`,
       );
       const data = await res.json();
       console.log(data, 'ddddsss');

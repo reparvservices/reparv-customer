@@ -41,6 +41,10 @@ export const verifyOtp = createAsyncThunk(
     try {
       const res = await verifyOtpAPI(data);
 
+      if (!res?.token || !res?.user) {
+        return thunkAPI.rejectWithValue('Invalid login response');
+      }
+
       await AsyncStorage.setItem('Reparvtoken', res.token);
       await AsyncStorage.setItem('Reparvuser', JSON.stringify(res.user));
 
@@ -250,6 +254,7 @@ const authSlice = createSlice({
       .addCase(loadUser.fulfilled, (state, action) => {
         state.isLoading = false;
         state.user = action.payload.user;
+        state.token = action.payload.token;
         state.isAuthenticated = true;
       })
       .addCase(loadUser.rejected, state => {

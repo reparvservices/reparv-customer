@@ -1,4 +1,5 @@
 import React, {use, useState} from 'react';
+import {API_BASE_URL} from '../../config/api';
 import {
   View,
   Text,
@@ -35,7 +36,7 @@ const RaiseSupportTicketModal = ({visible, onClose}) => {
 
     try {
       const response = await fetch(
-        'https://aws-api.reparv.in/customerapp/ticket/add',
+        `${API_BASE_URL}/customerapp/ticket/add`,
         {
           method: 'POST',
           headers: {

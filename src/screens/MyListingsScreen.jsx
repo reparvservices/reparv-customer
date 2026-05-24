@@ -1,4 +1,5 @@
 import React, {useCallback, useMemo, useState} from 'react';
+import {API_BASE_URL} from '../config/api';
 import {
   View,
   Text,
@@ -68,7 +69,7 @@ export default function MyListingsScreen() {
     setLoading(true);
     try {
       const res = await fetch(
-        `https://aws-api.reparv.in/customerapp/property/get-wishlist/${auth?.user?.id}`,
+        `${API_BASE_URL}/customerapp/property/get-wishlist/${auth?.user?.id}`,
       );
       const json = await res.json();
 
@@ -90,7 +91,7 @@ export default function MyListingsScreen() {
       setLoading(true);
 
       const res = await fetch(
-        `https://aws-api.reparv.in/customerapp/property/myproperty/${auth.user.id}`,
+        `${API_BASE_URL}/customerapp/property/myproperty/${auth.user.id}`,
       );
 
       const data = await res.json();
@@ -119,7 +120,7 @@ export default function MyListingsScreen() {
         properties.map(async item => {
           try {
             const response = await fetch(
-              `https://aws-api.reparv.in/customerapp/enquiry/getvisits?propertyid=${item.propertyid}`,
+              `${API_BASE_URL}/customerapp/enquiry/getvisits?propertyid=${item.propertyid}`,
             );
 
             const data = await response.json();
@@ -153,7 +154,7 @@ export default function MyListingsScreen() {
       if (!auth?.user?.id) return;
 
       const res = await fetch(
-        `https://aws-api.reparv.in/customerapp/enquiry/getvisitors/${auth.user.id}`,
+        `${API_BASE_URL}/customerapp/enquiry/getvisitors/${auth.user.id}`,
       );
 
       const data = await res.json();

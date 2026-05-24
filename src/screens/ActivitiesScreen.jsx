@@ -1,4 +1,5 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react';
+import {API_BASE_URL} from '../config/api';
 import {
   View,
   Text,
@@ -25,7 +26,7 @@ import ActivityCard from '../components/activities/ActivityCard';
 
 const {width} = Dimensions.get('window');
 
-const BASE_URL = 'https://aws-api.reparv.in/customerapp';
+const BASE_URL = `${API_BASE_URL}/customerapp`;
 
 const TABS = [
   {key: 'wishlist', label: 'Wishlist', icon: WishlistIcon, type: 'fill'},
@@ -361,12 +362,12 @@ export default function ActivitiesScreen() {
       if (!frontView) return null;
       if (Array.isArray(frontView)) {
         return frontView.length
-          ? `https://aws-api.reparv.in${frontView[0]}`
+          ? `${API_BASE_URL}${frontView[0]}`
           : null;
       }
       const images = JSON.parse(frontView);
       if (Array.isArray(images) && images.length > 0) {
-        return `https://aws-api.reparv.in${images[0]}`;
+        return `${API_BASE_URL}${images[0]}`;
       }
       return null;
     } catch {

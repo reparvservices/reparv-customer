@@ -1,4 +1,5 @@
 import React, {useEffect, useState} from 'react';
+import {API_BASE_URL} from '../config/api';
 import {
   View,
   Text,
@@ -116,7 +117,7 @@ export default function RentOldNewPropertyScreen({route}) {
 
   const fetchStates = async () => {
     try {
-      const res = await fetch('https://aws-api.reparv.in/admin/states');
+      const res = await fetch(`${API_BASE_URL}/admin/states`);
       const data = await res.json();
       setStates(data || []);
     } catch (err) {
@@ -127,7 +128,7 @@ export default function RentOldNewPropertyScreen({route}) {
   const fetchCities = async selectedState => {
     try {
       const res = await fetch(
-        `https://aws-api.reparv.in/admin/cities/${selectedState}`,
+        `${API_BASE_URL}/admin/cities/${selectedState}`,
       );
       const data = await res.json();
       setCities(data || []);
@@ -199,8 +200,8 @@ export default function RentOldNewPropertyScreen({route}) {
 
       const isEdit = mode === 'edit';
       const url = isEdit
-        ? `https://aws-api.reparv.in/customerapp/property/update/${propertyData.propertyid}`
-        : 'https://aws-api.reparv.in/customerapp/property/post';
+        ? `${API_BASE_URL}/customerapp/property/update/${propertyData.propertyid}`
+        : `${API_BASE_URL}/customerapp/property/post`;
 
       const res = await fetch(url, {
         method: isEdit ? 'PUT' : 'POST',

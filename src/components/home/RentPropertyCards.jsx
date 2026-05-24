@@ -1,4 +1,5 @@
 import React, {useMemo} from 'react';
+import {API_BASE_URL} from '../../config/api';
 import {
   View,
   Text,
@@ -83,7 +84,7 @@ const RentSkeletonCard = () => {
 export const checkSubscription = async partnerid => {
   try {
     const res = await fetch(
-      `https://aws-api.reparv.in/projectpartner/subscription/user/${partnerid}`,
+      `${API_BASE_URL}/projectpartner/subscription/user/${partnerid}`,
     );
     const data = await res.json();
     return data?.success && data?.active;
@@ -206,7 +207,7 @@ export default function RentPropertyCards() {
   const fetchVisits = async propertyid => {
     try {
       const res = await fetch(
-        `https://aws-api.reparv.in/customerapp/enquiry/getvisits?propertyid=${propertyid}`,
+        `${API_BASE_URL}/customerapp/enquiry/getvisits?propertyid=${propertyid}`,
       );
       const data = await res.json();
       return data?.totalVisitors || 0;
@@ -249,7 +250,7 @@ export default function RentPropertyCards() {
       const results = await Promise.all(
         properties.map(async item => {
           const res = await fetch(
-            `https://aws-api.reparv.in/customerapp/property/likes/${item.propertyid}`,
+            `${API_BASE_URL}/customerapp/property/likes/${item.propertyid}`,
           );
           const data = await res.json();
           return {propertyId: item.propertyid, likeCount: data?.likeCount || 0};

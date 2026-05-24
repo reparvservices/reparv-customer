@@ -1,4 +1,5 @@
 import React, {useEffect, useState} from 'react';
+import {API_BASE_URL} from '../../config/api';
 import {
   View,
   Text,
@@ -32,7 +33,7 @@ export default function PersonalInfoForm({data, setData, errors}) {
   /* ================= Fetch States ================= */
   const fetchStates = async () => {
     try {
-      const response = await fetch('https://aws-api.reparv.in/admin/states', {
+      const response = await fetch(`${API_BASE_URL}/admin/states`, {
         method: 'GET',
         credentials: 'include',
         headers: {'Content-Type': 'application/json'},
@@ -52,7 +53,7 @@ export default function PersonalInfoForm({data, setData, errors}) {
     setLoadingCities(true);
     try {
       const response = await fetch(
-        `https://aws-api.reparv.in/admin/cities/${stateName}`,
+        `${API_BASE_URL}/admin/cities/${stateName}`,
         {
           method: 'GET',
           credentials: 'include',

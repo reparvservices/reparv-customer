@@ -1,4 +1,5 @@
 import React, {useEffect, useState, useCallback} from 'react';
+import {API_BASE_URL} from './src/config/api';
 import {
   Text,
   TextInput,
@@ -32,7 +33,19 @@ import {devLog} from './src/utils/devLog';
 import {AppErrorBoundary} from './src/components/AppErrorBoundary';
 import {Fonts} from './src/theme/fonts';
 
-Settings.initializeSDK();
+if (Platform.OS === 'android') {
+  Settings.initializeSDK();
+}
+
+function configureSocialLogin() {
+  if (Platform.OS !== 'android') {
+    return;
+  }
+  GoogleSignin.configure({
+    webClientId:
+      '509544297119-v6vsq7tcba8ukfn9969q930p8jk7iqst.apps.googleusercontent.com',
+  });
+}
 
 /* Global default: must match a linked font (see ios/reparv/Info.plist UIAppFonts). */
 Text.defaultProps = Text.defaultProps || {};
@@ -93,7 +106,7 @@ const Root = () => {
         }
 
         await fetch(
-          'https://aws-api.reparv.in/customerapp/notifications/save-fcm-token',
+          `${API_BASE_URL}/customerapp/notifications/save-fcm-token`,
           {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
@@ -215,10 +228,7 @@ const Root = () => {
 
   // App init
   useEffect(() => {
-    GoogleSignin.configure({
-      webClientId:
-        '509544297119-v6vsq7tcba8ukfn9969q930p8jk7iqst.apps.googleusercontent.com',
-    });
+    configureSocialLogin();
     dispatch(loadUser());
     getUserCityAndState(); // ← Fetch city/state on app start
   }, [dispatch, getUserCityAndState]);

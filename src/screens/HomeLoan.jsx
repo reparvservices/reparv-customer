@@ -1,4 +1,5 @@
 import React, {useState} from 'react';
+import {API_BASE_URL} from '../config/api';
 import {
   View,
   Text,
@@ -329,7 +330,7 @@ export default function HomeLoan() {
 
     try {
       const res = await fetch(
-        'https://aws-api.reparv.in/customerapp/loans/emiform',
+        `${API_BASE_URL}/customerapp/loans/emiform`,
         {
           method: 'POST',
           body: formData,

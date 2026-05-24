@@ -1,4 +1,5 @@
 import React, {useEffect, useRef, useState, useCallback, useMemo} from 'react';
+import {API_BASE_URL} from '../config/api';
 import {
   View,
   Text,
@@ -37,7 +38,7 @@ import {
 import {SafeAreaView} from 'react-native-safe-area-context';
 
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
-const API_URL = 'https://aws-api.reparv.in/frontend/all-properties';
+const API_URL = `${API_BASE_URL}/frontend/all-properties`;
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
 const C = {

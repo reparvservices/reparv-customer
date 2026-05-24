@@ -1,4 +1,5 @@
 import React, {useState, useRef, useEffect} from 'react';
+import {API_BASE_URL} from '../../config/api';
 import {
   View,
   Text,
@@ -46,7 +47,7 @@ const PURPLE_LIGHT = '#EEE8FD';
 const PURPLE_MID = '#7C4AF5';
 
 /* ─── API ─── */
-const API_BASE_URL = 'https://aws-api.reparv.in/customerapp/user/notify/';
+const NOTIFY_URL = `${API_BASE_URL}/customerapp/user/notify/`;
 
 /* ─── Features ─── */
 const FEATURES = [
@@ -427,7 +428,7 @@ const ComingSoonScreen = () => {
 
     setLoading(true);
     try {
-      const response = await fetch(API_BASE_URL, {
+      const response = await fetch(NOTIFY_URL, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({

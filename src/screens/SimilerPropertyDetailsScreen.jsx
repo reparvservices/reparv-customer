@@ -1,4 +1,5 @@
 import React, {useEffect, useRef, useState} from 'react';
+import {API_BASE_URL} from '../config/api';
 import {
   View,
   Text,
@@ -75,7 +76,7 @@ import Geolocation from '@react-native-community/geolocation';
 const {width} = Dimensions.get('window');
 const isTablet = width >= 768;
 const TABS = ['Highlights', 'Overview', 'Amenities', 'About', 'Location'];
-const BASE_URL = 'https://aws-api.reparv.in/customerapp';
+const BASE_URL = `${API_BASE_URL}/customerapp`;
 
 const AVAILABILITY_CATEGORIES = [
   'NewPlot',
@@ -420,7 +421,7 @@ const SimilerPropertyDetailsScreen = () => {
       try {
         setLoading(true);
         const response = await fetch(
-          `https://aws-api.reparv.in/frontend/propertyinfo/${seoSlug}`,
+          `${API_BASE_URL}/frontend/propertyinfo/${seoSlug}`,
         );
         const data = await response.json();
         setPropertyData(data);
@@ -454,7 +455,7 @@ const SimilerPropertyDetailsScreen = () => {
   // ── Track visit ───────────────────────────────────────────────────────────
   useEffect(() => {
     if (!propertyData?.propertyid) return;
-    fetch('https://aws-api.reparv.in/customerapp/enquiry/addvisits', {
+    fetch(`${API_BASE_URL}/customerapp/enquiry/addvisits`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({propertyid: propertyData.propertyid}),
@@ -476,8 +477,8 @@ const SimilerPropertyDetailsScreen = () => {
       try {
         const isNewFlat = propertyData?.propertyCategory === 'NewFlat';
         const url = isNewFlat
-          ? `https://aws-api.reparv.in/frontend/properties/additionalinfo/flat/get/all/${propertyData.propertyid}`
-          : `https://aws-api.reparv.in/frontend/properties/additionalinfo/plot/get/all/${propertyData.propertyid}`;
+          ? `${API_BASE_URL}/frontend/properties/additionalinfo/flat/get/all/${propertyData.propertyid}`
+          : `${API_BASE_URL}/frontend/properties/additionalinfo/plot/get/all/${propertyData.propertyid}`;
         const response = await fetch(url);
         const json = await response.json();
         setPlotData(json);

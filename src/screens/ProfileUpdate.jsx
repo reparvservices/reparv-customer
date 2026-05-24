@@ -1,4 +1,5 @@
 import React, {useState, useEffect} from 'react';
+import {API_BASE_URL} from '../config/api';
 import {
   View,
   Text,
@@ -65,7 +66,7 @@ export default function UpdateProfileScreen({navigation, route}) {
   const fetchStates = async () => {
     setLoadingStates(true);
     try {
-      const res = await fetch('https://aws-api.reparv.in/admin/states');
+      const res = await fetch(`${API_BASE_URL}/admin/states`);
       const data = await res.json();
       setStates(data || []);
     } catch (err) {
@@ -79,7 +80,7 @@ export default function UpdateProfileScreen({navigation, route}) {
     setLoadingCities(true);
     try {
       const res = await fetch(
-        `https://aws-api.reparv.in/admin/cities/${stateName}`,
+        `${API_BASE_URL}/admin/cities/${stateName}`,
       );
       const data = await res.json();
       setCities(data || []);
@@ -180,7 +181,7 @@ export default function UpdateProfileScreen({navigation, route}) {
       }
 
       const response = await fetch(
-        'https://aws-api.reparv.in/customerapp/user/update',
+        `${API_BASE_URL}/customerapp/user/update`,
         {
           method: 'PUT',
           body: formData,

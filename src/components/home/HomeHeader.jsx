@@ -1,4 +1,5 @@
 import React, {useCallback, useState, useEffect, useRef} from 'react';
+import {API_BASE_URL} from '../../config/api';
 import {
   View,
   Text,
@@ -35,7 +36,7 @@ const devLog = (...args) => {
   if (__DEV__) console.log(...args);
 };
 
-const API_HOST = 'https://aws-api.reparv.in';
+const API_HOST = API_BASE_URL;
 
 // ── Placeholder templates (city injected at runtime) ──────────────────────
 const PLACEHOLDER_TEMPLATES = [

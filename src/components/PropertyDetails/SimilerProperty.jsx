@@ -1,4 +1,5 @@
 import React, {useEffect, useState, useRef} from 'react';
+import {API_BASE_URL} from '../../config/api';
 import {
   View,
   Text,
@@ -120,7 +121,7 @@ export default function SimilerProperty({
   const fetchVisits = async propertyid => {
     try {
       const res = await fetch(
-        `https://aws-api.reparv.in/customerapp/enquiry/getvisits?propertyid=${propertyid}`,
+        `${API_BASE_URL}/customerapp/enquiry/getvisits?propertyid=${propertyid}`,
       );
       const data = await res.json();
       return data?.totalVisitors || 0;
@@ -172,7 +173,7 @@ export default function SimilerProperty({
       const results = await Promise.all(
         properties.map(async item => {
           const res = await fetch(
-            `https://aws-api.reparv.in/customerapp/property/likes/${item.propertyid}`,
+            `${API_BASE_URL}/customerapp/property/likes/${item.propertyid}`,
           );
           const data = await res.json();
           return {propertyId: item.propertyid, likeCount: data?.likeCount || 0};

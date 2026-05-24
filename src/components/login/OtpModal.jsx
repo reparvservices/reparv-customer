@@ -122,8 +122,7 @@ export default function OtpModal({visible, onClose, phone, onEdit, onVerify}) {
           contact: phone,
           fullname: 'User',
         }),
-      ),
-        unwrap();
+      ).unwrap();
       ToastAndroid.show('OTP Sent Again', ToastAndroid.SHORT);
       setResendTimer(30);
       setOtp(Array(6).fill(''));

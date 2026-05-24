@@ -1,5 +1,6 @@
 import {useNavigation, useRoute} from '@react-navigation/native';
 import React, {useEffect, useState} from 'react';
+import {API_BASE_URL} from '../config/api';
 import {
   View,
   Text,
@@ -42,7 +43,7 @@ export default function PropertyBookDetails() {
     const fetchPropertyData = async () => {
       try {
         const response = await fetch(
-          `https://aws-api.reparv.in/frontend/propertyinfo/${booking?.seoSlug}`,
+          `${API_BASE_URL}/frontend/propertyinfo/${booking?.seoSlug}`,
         );
 
         const data = await response.json();
@@ -60,7 +61,7 @@ export default function PropertyBookDetails() {
   const getCustomer = async () => {
     try {
       fetch(
-        `https://aws-api.reparv.in/customerapp/enquiry/payment/get/${booking?.enquirerid}`,
+        `${API_BASE_URL}/customerapp/enquiry/payment/get/${booking?.enquirerid}`,
         {
           method: 'GET',
           credentials: 'include',

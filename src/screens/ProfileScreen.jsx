@@ -1,4 +1,5 @@
 import React, {useCallback, useMemo, useState} from 'react';
+import {API_BASE_URL} from '../config/api';
 import {
   View,
   Text,
@@ -113,7 +114,7 @@ export default function ProfileScreen() {
       }
 
       const res = await fetch(
-        `https://aws-api.reparv.in/customerapp/user/profile?id=${parsedUser.id}`,
+        `${API_BASE_URL}/customerapp/user/profile?id=${parsedUser.id}`,
       );
       const data = await res.json();
       if (res.ok) setUser(data?.data);
@@ -127,7 +128,7 @@ export default function ProfileScreen() {
     try {
       if (!auth?.user?.id) return;
       const res = await fetch(
-        `https://aws-api.reparv.in/customerapp/property/myproperty/${auth.user.id}`,
+        `${API_BASE_URL}/customerapp/property/myproperty/${auth.user.id}`,
       );
       const data = await res.json();
       setProperty(Array.isArray(data) ? data.length : 0);
@@ -137,7 +138,7 @@ export default function ProfileScreen() {
   const fetchWishlist = useCallback(async () => {
     try {
       const res = await fetch(
-        `https://aws-api.reparv.in/customerapp/property/get-wishlist/${auth?.user?.id}`,
+        `${API_BASE_URL}/customerapp/property/get-wishlist/${auth?.user?.id}`,
       );
       const json = await res.json();
       setSaved(json?.data?.length);
@@ -148,7 +149,7 @@ export default function ProfileScreen() {
     try {
       if (!auth?.user?.id) return;
       const res = await fetch(
-        `https://aws-api.reparv.in/customerapp/enquiry/getvisitors/${auth.user.id}`,
+        `${API_BASE_URL}/customerapp/enquiry/getvisitors/${auth.user.id}`,
       );
       const data = await res.json();
       setEnquiryCount(Array.isArray(data) ? data.length : 0);
@@ -177,7 +178,7 @@ export default function ProfileScreen() {
       setDeleting(true);
 
       const res = await fetch(
-        'http://172.20.10.7:3000/customerapp/user/delete-account',
+        `${API_BASE_URL}/customerapp/user/delete-account`,
         {
           method: 'DELETE',
           headers: {'Content-Type': 'application/json'},
@@ -292,7 +293,7 @@ export default function ProfileScreen() {
                 state: user?.state,
                 city: user?.city,
                 userimage: user?.userimage
-                  ? `https://aws-api.reparv.in/${user.userimage}`
+                  ? `${API_BASE_URL}/${user.userimage}`
                   : null,
               })
             }>

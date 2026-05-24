@@ -1,4 +1,5 @@
 import React, {useCallback, useEffect, useState} from 'react';
+import {API_BASE_URL} from '../../config/api';
 import {
   View,
   Text,
@@ -36,7 +37,7 @@ export const ListingCard = ({propertyData}) => {
 
     try {
       const response = await fetch(
-        `https://aws-api.reparv.in/customerapp/enquiry/getvisits?propertyid=${propertyId}`,
+        `${API_BASE_URL}/customerapp/enquiry/getvisits?propertyid=${propertyId}`,
       );
 
       const data = await response.json();

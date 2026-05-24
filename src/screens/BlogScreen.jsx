@@ -1,4 +1,5 @@
 import React, {useEffect, useMemo, useState} from 'react';
+import {API_BASE_URL} from '../config/api';
 import {
   View,
   Text,
@@ -25,8 +26,8 @@ import {useNavigation} from '@react-navigation/native';
 
 const {width} = Dimensions.get('window');
 
-const API_URL = 'https://aws-api.reparv.in/frontend/blog';
-const IMAGE_BASE = 'https://aws-api.reparv.in';
+const API_URL = `${API_BASE_URL}/frontend/blog`;
+const IMAGE_BASE = API_BASE_URL;
 
 const BlogScreen = () => {
   const [blogs, setBlogs] = useState([]);

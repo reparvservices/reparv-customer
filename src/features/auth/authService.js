@@ -1,7 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {Alert} from 'react-native';
+import {API_BASE_URL} from '../../config/api';
 
-const API_URL = 'https://aws-api.reparv.in';
+const API_URL = API_BASE_URL;
 
 /**
  * STEP 1: Send OTP (Login / Signup)
@@ -32,7 +33,7 @@ export const verifyOtpAPI = async data => {
   const json = await res.json();
   console.log(json);
 
-  if (!res.ok) {
+  if (!res.ok || !json?.success || !json?.token) {
     throw new Error(json?.message || 'OTP verification failed');
   }
 

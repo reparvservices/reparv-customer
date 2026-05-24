@@ -1,4 +1,5 @@
 import React, {useEffect, useState} from 'react';
+import {API_BASE_URL} from '../config/api';
 import {
   View,
   Text,
@@ -94,7 +95,7 @@ export default function OldPropertyScreen({route}) {
 
   const fetchStates = async () => {
     try {
-      const res = await fetch('https://aws-api.reparv.in/admin/states');
+      const res = await fetch(`${API_BASE_URL}/admin/states`);
       const data = await res.json();
       setStates(data || []);
     } catch (err) {
@@ -105,7 +106,7 @@ export default function OldPropertyScreen({route}) {
   const fetchCities = async selectedState => {
     try {
       const res = await fetch(
-        `https://aws-api.reparv.in/admin/cities/${selectedState}`,
+        `${API_BASE_URL}/admin/cities/${selectedState}`,
       );
       const data = await res.json();
       setCities(data || []);
@@ -172,7 +173,7 @@ export default function OldPropertyScreen({route}) {
       };
 
       const res = await fetch(
-        'https://aws-api.reparv.in/customerapp/property/post',
+        `${API_BASE_URL}/customerapp/property/post`,
         {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},

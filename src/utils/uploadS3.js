@@ -1,6 +1,7 @@
 import {Platform} from 'react-native';
+import {API_BASE_URL} from '../config/api';
 
-const API_URL = 'https://aws-api.reparv.in/api/s3/signed-url/get';
+const API_URL = `${API_BASE_URL}/api/s3/signed-url/get`;
 
 export const uploadToS3 = async (image, folder = 'uploads') => {
   try {

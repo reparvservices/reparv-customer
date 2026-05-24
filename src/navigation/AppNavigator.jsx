@@ -3,6 +3,7 @@ import {NavigationContainer} from '@react-navigation/native';
 import {createStackNavigator} from '@react-navigation/stack';
 import {useSelector, useDispatch} from 'react-redux';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {API_BASE_URL} from '../config/api';
 
 import SplashScreen from '../screens/SplashScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
@@ -164,7 +165,7 @@ export default function AppNavigator() {
     async userId => {
       try {
         const res = await fetch(
-          `https://aws-api.reparv.in/customerapp/user/profile?id=${userId}`,
+          `${API_BASE_URL}/customerapp/user/profile?id=${userId}`,
         );
         const data = await res.json();
 

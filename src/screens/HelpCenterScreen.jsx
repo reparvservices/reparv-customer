@@ -1,4 +1,5 @@
 import React, {useCallback, useEffect, useState} from 'react';
+import {API_BASE_URL} from '../config/api';
 import {
   View,
   Text,
@@ -65,7 +66,7 @@ export default function HelpCenterScreen() {
   const fetchTickets = async () => {
     try {
       const res = await fetch(
-        `https://aws-api.reparv.in/customerapp/ticket/get/${user?.contact}`,
+        `${API_BASE_URL}/customerapp/ticket/get/${user?.contact}`,
       );
       const data = await res.json();
       setTickets(data || []);
@@ -79,7 +80,7 @@ export default function HelpCenterScreen() {
       setFaqLoading(true);
 
       const res = await fetch(
-        'https://aws-api.reparv.in/admin/faqs/active/Reparv Contact Us Page',
+        `${API_BASE_URL}/admin/faqs/active/Reparv Contact Us Page`,
       );
 
       const data = await res.json();

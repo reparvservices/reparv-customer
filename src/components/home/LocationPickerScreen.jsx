@@ -3,6 +3,7 @@
  * Simple State → City location picker
  * Robust 3-step GPS fallback  ·  Android permission handling
  */
+import {API_BASE_URL} from '../../config/api';
 
 import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {
@@ -61,7 +62,7 @@ const P = {
   red: '#EF4444',
 };
 
-const API = 'https://aws-api.reparv.in';
+const API = API_BASE_URL;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Android permission helper

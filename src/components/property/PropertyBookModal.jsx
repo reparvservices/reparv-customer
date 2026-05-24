@@ -1,4 +1,5 @@
 import React, {useState} from 'react';
+import {API_BASE_URL} from '../../config/api';
 import {
   Modal,
   View,
@@ -32,7 +33,7 @@ const PropertyUploadModal = ({
   const [isOtpSent, setIsOtpSent] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const API_URL = 'https://aws-api.reparv.in';
+  const API_URL = API_BASE_URL;
 
   // ✅ Check if number changed
   const isSameNumber = form.phone === user?.contact;

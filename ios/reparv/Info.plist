@@ -2,6 +2,18 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Location access helps users discover nearby properties and location-based services.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Location access is used to improve nearby property and service discovery.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>This app saves images to the user&apos;s photo library when requested.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>This app uses the camera to capture property images and profile photos.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>This app uses the photo library to allow users to upload property images and profile photos.</string>
+	<key>LSApplicationCategoryType</key>
+	<string></string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
@@ -31,8 +43,6 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Location access is used to improve nearby property and service discovery.</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>SegoeUI-Bold.ttf</string>

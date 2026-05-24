@@ -1,4 +1,5 @@
 import React from 'react';
+import {API_BASE_URL} from '../../config/api';
 import {
   View,
   Text,
@@ -166,7 +167,7 @@ function TrendingProperties() {
 
   React.useEffect(() => {
     setLoading(true);
-    fetch('https://aws-api.reparv.in/frontend/all-properties')
+    fetch(`${API_BASE_URL}/frontend/all-properties`)
       .then(r => r.json())
       .then(data => {
         const filtered = data

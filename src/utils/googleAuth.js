@@ -1,3 +1,4 @@
+import {API_BASE_URL} from '../config/api';
 import {
   GoogleSignin,
   statusCodes,
@@ -23,7 +24,7 @@ import {Alert} from 'react-native';
 
 //     //  Send idToken to backend
 //     const res = await fetch(
-//       'https://aws-api.reparv.in/customerapp/user/google-login',
+//       `${API_BASE_URL}/customerapp/user/google-login`,
 //       {
 //         method: 'POST',
 //         headers: {'Content-Type': 'application/json'},

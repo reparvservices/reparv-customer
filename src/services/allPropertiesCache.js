@@ -1,4 +1,5 @@
-const ALL_PROPERTIES_URL = 'https://aws-api.reparv.in/frontend/all-properties';
+import {API_BASE_URL} from '../config/api';
+const ALL_PROPERTIES_URL = `${API_BASE_URL}/frontend/all-properties`;
 
 const TTL_MS = 2 * 60 * 1000;
 

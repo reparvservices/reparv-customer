@@ -1,4 +1,5 @@
 import React, {useState} from 'react';
+import {API_BASE_URL} from '../../config/api';
 import {
   View,
   Text,
@@ -46,7 +47,7 @@ const PropertyReviewModal = ({visible, onClose, property}) => {
     setIsDeleting(true);
     try {
       const response = await fetch(
-        `https://aws-api.reparv.in/customerapp/property/delete/${property.propertyid}`,
+        `${API_BASE_URL}/customerapp/property/delete/${property.propertyid}`,
         {
           method: 'DELETE',
         },
