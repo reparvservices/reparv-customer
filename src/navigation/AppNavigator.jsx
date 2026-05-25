@@ -207,8 +207,16 @@ export default function AppNavigator() {
     return <AppStack />;
   };
 
+  const navigationKey = !isAuthenticated
+    ? 'auth'
+    : !user?.id
+      ? 'auth-fallback'
+      : !isLocationComplete(user)
+        ? 'complete-profile'
+        : 'main';
+
   return (
-    <NavigationContainer ref={navigationRef}>
+    <NavigationContainer ref={navigationRef} key={navigationKey}>
       {renderStack()}
     </NavigationContainer>
   );

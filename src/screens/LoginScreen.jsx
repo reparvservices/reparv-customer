@@ -459,6 +459,7 @@ function SocialButtons({styles}) {
 // ─────────────────────────────────────────────
 export default function LoginScreen() {
   const {width, height} = useWindowDimensions();
+  const {isAuthenticated, isLoading} = useSelector(state => state.auth);
   const styles = useMemo(
     () => createLoginStyles(width, height),
     [width, height],
@@ -468,16 +469,34 @@ export default function LoginScreen() {
   const [index, setIndex] = useState(0);
   const [activeModal, setActiveModal] = useState('login');
   const [otpPhone, setOtpPhone] = useState('');
-  const [bottomVisible, setBottomVisible] = useState(true);
+
+  const isVerifyingOtp = isLoading && activeModal === 'otp';
+  const showTransition = isAuthenticated || isVerifyingOtp;
 
   useEffect(() => {
+    if (showTransition) {
+      return undefined;
+    }
     const timer = setInterval(() => {
       const nextIndex = (index + 1) % slides.length;
       setIndex(nextIndex);
       flatRef?.current?.scrollToIndex({animated: true, index: nextIndex});
     }, 3000);
     return () => clearInterval(timer);
-  }, [index]);
+  }, [index, showTransition]);
+
+  if (showTransition) {
+    return (
+      <SafeAreaView style={styles.transitionContainer} edges={['top', 'bottom']}>
+        <StatusBar
+          backgroundColor="#FAF8FF"
+          barStyle="dark-content"
+          translucent={false}
+        />
+        <ActivityIndicator size="large" color="#5E23DC" />
+      </SafeAreaView>
+    );
+  }
 
   const breakTitle = text => {
     const words = text.split(' ');
@@ -491,7 +510,7 @@ export default function LoginScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <StatusBar
         backgroundColor="#FAF8FF"
         barStyle="dark-content"
@@ -535,39 +554,31 @@ export default function LoginScreen() {
         />
       </View>
 
-      {bottomVisible && (
-        <LoginModal
-          visible={activeModal === 'login'}
-          onClose={() => {}}
-          onSwitchToSignUp={() => setActiveModal('signup')}
-          onOtpSent={handleOtpSent}
-          styles={styles}
-          width={width}
-          height={height}
-        />
-      )}
+      <LoginModal
+        visible={activeModal === 'login'}
+        onClose={() => {}}
+        onSwitchToSignUp={() => setActiveModal('signup')}
+        onOtpSent={handleOtpSent}
+        styles={styles}
+        width={width}
+        height={height}
+      />
 
-      {bottomVisible && (
-        <SignUpModal
-          visible={activeModal === 'signup'}
-          onClose={() => {}}
-          onSwitchToLogin={() => setActiveModal('login')}
-          onOtpSent={handleOtpSent}
-          styles={styles}
-          width={width}
-          height={height}
-        />
-      )}
+      <SignUpModal
+        visible={activeModal === 'signup'}
+        onClose={() => {}}
+        onSwitchToLogin={() => setActiveModal('login')}
+        onOtpSent={handleOtpSent}
+        styles={styles}
+        width={width}
+        height={height}
+      />
 
       <OtpModal
         visible={activeModal === 'otp'}
         onClose={() => setActiveModal('login')}
         phone={otpPhone}
         onEdit={() => setActiveModal('login')}
-        onVerify={() => {
-          setBottomVisible(false);
-          setActiveModal('login');
-        }}
       />
     </SafeAreaView>
   );

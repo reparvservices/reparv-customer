@@ -7,18 +7,23 @@ import {
   Animated,
   TouchableOpacity,
   TextInput,
-  Dimensions,
   ActivityIndicator,
   ToastAndroid,
   Platform,
+  useWindowDimensions,
 } from 'react-native';
 import {useDispatch, useSelector} from 'react-redux';
 import BackIcon from '../../assets/image/login/arrow.svg';
 import {verifyOtp, sendOtp} from '../../features/auth/authSlice';
 
-const {height} = Dimensions.get('window');
+const showToast = message => {
+  if (Platform.OS === 'android') {
+    ToastAndroid.show(message, ToastAndroid.SHORT);
+  }
+};
 
-export default function OtpModal({visible, onClose, phone, onEdit, onVerify}) {
+export default function OtpModal({visible, onClose, phone, onEdit}) {
+  const {height} = useWindowDimensions();
   const dispatch = useDispatch();
   const slideAnim = useRef(new Animated.Value(height)).current;
   const inputRefs = useRef([]);
@@ -46,7 +51,7 @@ export default function OtpModal({visible, onClose, phone, onEdit, onVerify}) {
         useNativeDriver: true,
       }).start(() => setShow(false));
     }
-  }, [visible]);
+  }, [visible, height, slideAnim]);
 
   /* ================= RESEND TIMER ================= */
   useEffect(() => {
@@ -102,11 +107,12 @@ export default function OtpModal({visible, onClose, phone, onEdit, onVerify}) {
         }),
       ).unwrap();
 
-      ToastAndroid.show('Login Successful', ToastAndroid.SHORT);
+      showToast('Login Successful');
 
       setOtp(Array(6).fill(''));
       setErrorMsg('');
-      onVerify(); // navigate to MainTabs
+      setShow(false);
+      slideAnim.setValue(height);
     } catch (err) {
       setErrorMsg(err || 'Invalid or expired OTP');
     }
@@ -123,7 +129,7 @@ export default function OtpModal({visible, onClose, phone, onEdit, onVerify}) {
           fullname: 'User',
         }),
       ).unwrap();
-      ToastAndroid.show('OTP Sent Again', ToastAndroid.SHORT);
+      showToast('OTP Sent Again');
       setResendTimer(30);
       setOtp(Array(6).fill(''));
       setErrorMsg('');
@@ -304,7 +310,6 @@ const styles = StyleSheet.create({
       android: {includeFontPadding: false, textAlignVertical: 'center'},
       default: {},
     }),
-    default: {},
   },
   verifyBtn: {
     backgroundColor: '#5E23DC',

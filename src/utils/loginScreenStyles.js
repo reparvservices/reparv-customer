@@ -19,6 +19,12 @@ export function createLoginStyles(width, height) {
 
   return StyleSheet.create({
     container: {flex: 1, backgroundColor: '#321376'},
+    transitionContainer: {
+      flex: 1,
+      backgroundColor: '#FAF8FF',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
     topContainer: {height: '40%', width: '100%'},
     slide: {
       width,
