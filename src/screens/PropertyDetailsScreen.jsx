@@ -85,38 +85,70 @@ const AVAILABILITY_CATEGORIES = [
   'RentalPlot',
 ];
 
+// ─────────────────────────────────────────────────────────────────────────────
+// ALL IMAGE KEYS — every DB image column in display order
+// Existing: frontView | sideView | hallView | kitchenView | bedroomView
+//           bathroomView | balconyView | nearestLandmark | developedAmenities
+//           extraImages
+// New:      entranceView | roadView | parkingView | interiorView
+//           warehouseArea | loadingArea | officeArea | cabinView
+//           washroomView | displayArea | showroomInterior
+//           farmGardenArea | terraceSitout
+// ─────────────────────────────────────────────────────────────────────────────
 const THUMBNAIL_CATEGORIES = [
+  // ── existing ──
   {key: 'frontView', label: 'Front View'},
   {key: 'sideView', label: 'Side View'},
-  {key: 'balconyView', label: 'Balcony View'},
-  {key: 'bedroomView', label: 'Bedroom View'},
-  {key: 'bathroomView', label: 'Bathroom View'},
-  {key: 'kitchenView', label: 'Kitchen View'},
-  {key: 'hallView', label: 'Hall View'},
+  {key: 'hallView', label: 'Hall'},
+  {key: 'kitchenView', label: 'Kitchen'},
+  {key: 'bedroomView', label: 'Bedroom'},
+  {key: 'bathroomView', label: 'Bathroom'},
+  {key: 'balconyView', label: 'Balcony'},
   {key: 'nearestLandmark', label: 'Landmark'},
   {key: 'developedAmenities', label: 'Amenities'},
+
+  // ── new ──
+  {key: 'entranceView', label: 'Entrance'},
+  {key: 'roadView', label: 'Road View'},
+  {key: 'parkingView', label: 'Parking'},
+  {key: 'interiorView', label: 'Interior'},
+  {key: 'warehouseArea', label: 'Warehouse'},
+  {key: 'loadingArea', label: 'Loading Area'},
+  {key: 'officeArea', label: 'Office Area'},
+  {key: 'cabinView', label: 'Cabin / Meeting'},
+  {key: 'washroomView', label: 'Washroom'},
+  {key: 'displayArea', label: 'Display Area'},
+  {key: 'showroomInterior', label: 'Showroom Interior'},
+  {key: 'farmGardenArea', label: 'Farm / Garden'},
+  {key: 'terraceSitout', label: 'Terrace / Sit-out'},
+
+  // ── extra (JSON array) ──
+  {key: 'extraImages', label: 'More Photos'},
 ];
 
-const ALL_CATEGORY_KEYS = [
-  'frontView',
-  'sideView',
-  'balconyView',
-  'bedroomView',
-  'bathroomView',
-  'kitchenView',
-  'hallView',
-  'nearestLandmark',
-  'developedAmenities',
-];
+// Flat list of all keys — used to build the combined hero image list
+const ALL_CATEGORY_KEYS = THUMBNAIL_CATEGORIES.map(t => t.key);
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
+/**
+ * Parses a DB image column value into a string[].
+ * Handles: JSON string, plain string, array, null/undefined.
+ * extraImages is a JSON array; all others are also stored as JSON arrays
+ * but may occasionally arrive as a plain URL string.
+ */
 const safeParseImages = raw => {
-  try {
-    const arr = JSON.parse(raw);
-    return Array.isArray(arr) ? arr : [];
-  } catch {
-    return [];
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw.filter(Boolean);
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+    } catch {
+      // plain URL string (legacy fallback)
+      return raw.trim() ? [raw.trim()] : [];
+    }
   }
+  return [];
 };
 
 const safeTrim = str => (str ? str.trim() : '');
@@ -402,8 +434,6 @@ const PropertyDetailsScreen = () => {
   const [removing, setRemoving] = useState(false);
   const [zoomVisible, setZoomVisible] = useState(false);
   const [zoomIndex, setZoomIndex] = useState(0);
-
-  // ── User distance from property ───────────────────────────────────────────
   const [userDistance, setUserDistance] = useState(null);
 
   const mainImageRef = useRef(null);
@@ -491,15 +521,11 @@ const PropertyDetailsScreen = () => {
 
   // ── Get user location & compute distance from property ───────────────────
   useEffect(() => {
-    // Property not fetched yet — wait
     if (!propertyData) return;
-
-    // Property loaded but coords are missing — mark as unavailable immediately
     if (!propertyData.latitude || !propertyData.longitude) {
       setUserDistance('unavailable');
       return;
     }
-
     const fetchDistance = async () => {
       try {
         if (Platform.OS === 'android') {
@@ -514,12 +540,8 @@ const PropertyDetailsScreen = () => {
               buttonPositive: 'OK',
             },
           );
-          if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
-            console.log('Location permission denied');
-            return;
-          }
+          if (granted !== PermissionsAndroid.RESULTS.GRANTED) return;
         }
-
         Geolocation.getCurrentPosition(
           position => {
             const {latitude, longitude} = position.coords;
@@ -529,7 +551,6 @@ const PropertyDetailsScreen = () => {
               parseFloat(propertyData.latitude),
               parseFloat(propertyData.longitude),
             );
-            // Show metres if < 1 km, else km rounded to 1 decimal
             setUserDistance(
               dist < 1
                 ? `${Math.round(dist * 1000)} m`
@@ -543,16 +564,17 @@ const PropertyDetailsScreen = () => {
         console.log('Location permission error:', e);
       }
     };
-
     fetchDistance();
   }, [propertyData?.latitude, propertyData?.longitude]);
 
-  // ── Derived data ──────────────────────────────────────────────────────────
+  // ── Derived: build full hero image list from ALL columns ──────────────────
+  // Only include keys that have images — order follows THUMBNAIL_CATEGORIES
   const allHeroImages = ALL_CATEGORY_KEYS.flatMap(key =>
     safeParseImages(propertyData?.[key]),
   );
 
-  // FIX: when a category is selected show only those images; otherwise show all
+  // When a thumbnail pill is tapped we store that section's images in
+  // selectedImages; clearing it (empty array) reverts to showing all.
   const heroImages = selectedImages.length > 0 ? selectedImages : allHeroImages;
   const zoomImages = heroImages.map(img => ({uri: getImageUri(img)}));
 
@@ -668,24 +690,39 @@ const PropertyDetailsScreen = () => {
   // ── Prop shapes for tab components ────────────────────────────────────────
   const propertyFeatures = {
     plotType: propertyData?.propertyType,
-    area: propertyData?.sizeAreaFeature
-      ? `${propertyData.sizeAreaFeature} Sq.ft`
-      : '—',
+    area:
+      propertyData?.propertyCategory === 'FarmLand'
+        ? propertyData?.builtUpArea
+          ? `${propertyData.builtUpArea}`
+          : '—'
+        : '—',
     facing: propertyData?.propertyFacing,
-    furnishingFeature: propertyData?.furnishing,
-    status: propertyData?.propertyStatusFeature,
+    ...(propertyData?.propertyCategory !== 'FarmLand'
+      ? {furnishingFeature: propertyData?.furnishing}
+      : {}),
+    status: 'Available',
     approval: safeTrim(propertyData?.propertyApprovedBy),
-    parking:
-      propertyData?.parkingAvailability === 'Yes'
-        ? 'Parking Available'
-        : 'No Parking',
+    ...(propertyData?.propertyCategory !== 'NewPlot' &&
+    propertyData?.propertyCategory !== 'RentalPlot' &&
+    propertyData?.propertyCategory !== 'FarmLand'
+      ? {
+          parking:
+            propertyData?.parkingAvailabilit || propertyData?.parkingFeature,
+        }
+      : {}),
     water: propertyData?.waterSupply,
   };
 
   const propertyOverview = [
     {label: 'Property Category', value: propertyData?.propertyCategory},
     {label: 'Ownership Type', value: propertyData?.ownershipType},
-    {label: 'Built Year', value: propertyData?.builtYear},
+    ...(propertyData?.propertyCategory !== 'NewPlot'
+      ? [
+          {label: 'Built Year', value: propertyData?.builtYear},
+          {label: 'Total Floors', value: propertyData?.totalFloors},
+          {label: 'Floor Number', value: propertyData?.floorNo},
+        ]
+      : []),
     {
       label: 'Carpet Area',
       value: propertyData?.carpetArea
@@ -695,13 +732,20 @@ const PropertyDetailsScreen = () => {
     {
       label: 'Built-up Area',
       value: propertyData?.builtUpArea
-        ? `${propertyData.builtUpArea} Sq.ft`
+        ? propertyData?.propertyCategory === 'FarmLand'
+          ? `${propertyData.builtUpArea}`
+          : `${propertyData.builtUpArea} Sq.ft`
         : '—',
     },
-    {label: 'Total Floors', value: propertyData?.totalFloors},
-    {label: 'Floor Number', value: propertyData?.floorNo},
-    {label: 'Loan Availability', value: propertyData?.loanAvailability},
+    ...(propertyData?.propertyCategory !== 'RentalPlot' &&
+    propertyData?.propertyCategory !== 'RentalFlat' &&
+    propertyData?.propertyCategory !== 'RentalOffice' &&
+    propertyData?.propertyCategory !== 'RentalShop' &&
+    propertyData?.propertyCategory !== 'RentalWarehouse'
+      ? [{label: 'Loan Availability', value: propertyData?.loanAvailability}]
+      : []),
     {label: 'Power Backup', value: propertyData?.powerBackup},
+    {label: 'RERA Registered', value: propertyData?.reraRegistered},
   ];
 
   const featuresData = [
@@ -746,7 +790,7 @@ const PropertyDetailsScreen = () => {
 
   const property = {
     title: propertyData?.propertyName,
-    location: `${propertyData?.city}, ${propertyData?.state} - ${propertyData?.pincode}`,
+    location: `${propertyData?.city}, ${propertyData?.state}`,
     videoLink: propertyData?.videoLink,
   };
 
@@ -802,7 +846,7 @@ const PropertyDetailsScreen = () => {
                     <Image
                       source={{uri: getImageUri(item)}}
                       style={styles.heroImage}
-                      resizeMode="cover"
+                      resizeMode="contain"
                     />
                   </TouchableOpacity>
                 ))}
@@ -821,7 +865,7 @@ const PropertyDetailsScreen = () => {
                     ),
                   }}
                   style={styles.heroImage}
-                  resizeMode="cover"
+                  resizeMode="contain"
                 />
               </TouchableOpacity>
             )}
@@ -928,6 +972,7 @@ const PropertyDetailsScreen = () => {
           </View>
 
           {/* ── THUMBNAIL PILLS ───────────────────────────────────────────── */}
+          {/* Only renders pills for keys that actually have images */}
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -944,6 +989,7 @@ const PropertyDetailsScreen = () => {
                   activeOpacity={0.85}
                   onPress={() => {
                     setActiveCategory(key);
+                    // Find this section's first image in the combined hero list
                     const globalIdx = allHeroImages.findIndex(
                       img => img === imagesArray[0],
                     );
@@ -1052,7 +1098,6 @@ const PropertyDetailsScreen = () => {
 
             {/* ── 3 FEATURE BOXES ─────────────────────────────────────────── */}
             <View style={cardStyles.featureBoxRow}>
-              {/* Box 1 — Approved By */}
               <View style={cardStyles.featureBox}>
                 <View
                   style={[
@@ -1062,12 +1107,11 @@ const PropertyDetailsScreen = () => {
                   <ShieldCheck size={20} color="#6366F1" strokeWidth={2} />
                 </View>
                 <Text style={cardStyles.featureBoxText}>
-                  {safeTrim(propertyData?.propertyApprovedBy) || 'NMRDA'}
+                  {safeTrim(propertyData?.propertyApprovedBy) || ''}
                   {'\n'}Approved
                 </Text>
               </View>
 
-              {/* Box 2 — Distance from User (live) */}
               <View style={cardStyles.featureBox}>
                 <View
                   style={[
@@ -1077,7 +1121,6 @@ const PropertyDetailsScreen = () => {
                   <MapPin size={20} color="#C026D3" strokeWidth={2} />
                 </View>
                 {userDistance == null ? (
-                  // Still waiting for propertyData or geolocation
                   <View style={cardStyles.distanceLoadingRow}>
                     <ActivityIndicator size={12} color="#C026D3" />
                     <Text style={cardStyles.featureBoxTextSmall}>
@@ -1086,7 +1129,6 @@ const PropertyDetailsScreen = () => {
                     </Text>
                   </View>
                 ) : userDistance === 'unavailable' ? (
-                  // Property has no GPS coordinates
                   <Text style={[cardStyles.featureBoxText, {color: '#9CA3AF'}]}>
                     Distance{'\n'}
                     <Text style={cardStyles.featureBoxTextSub}>
@@ -1094,7 +1136,6 @@ const PropertyDetailsScreen = () => {
                     </Text>
                   </Text>
                 ) : (
-                  // Got a real distance
                   <Text style={cardStyles.featureBoxText}>
                     {userDistance}
                     {'\n'}
@@ -1103,7 +1144,6 @@ const PropertyDetailsScreen = () => {
                 )}
               </View>
 
-              {/* Box 3 — Assured Quality */}
               <View style={cardStyles.featureBox}>
                 <View
                   style={[
@@ -1162,7 +1202,7 @@ const PropertyDetailsScreen = () => {
                   <Text style={cardStyles.serviceLabel}>EMI starts at</Text>
                   <Text style={cardStyles.serviceAmount}>
                     ₹{formatIndianAmount(propertyData?.emi)}
-                    <Text style={cardStyles.serviceUnit}> /mo</Text>
+                    <Text style={cardStyles.serviceUnit}>{'\n'}per/month</Text>
                   </Text>
                 </View>
                 <TouchableOpacity
@@ -1490,9 +1530,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
-  counterText: {
-    display: 'none',
-  },
+  counterText: {display: 'none'},
   tabsWrapper: {
     marginTop: 16,
     borderBottomWidth: 1,
@@ -1773,16 +1811,8 @@ const cardStyles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 18,
   },
-  featureBoxTextSub: {
-    fontSize: 11,
-    fontWeight: '500',
-    color: '#6B7280',
-  },
-  featureBoxTextSmall: {
-    fontSize: 11,
-    fontWeight: '500',
-    color: '#C026D3',
-  },
+  featureBoxTextSub: {fontSize: 11, fontWeight: '500', color: '#6B7280'},
+  featureBoxTextSmall: {fontSize: 11, fontWeight: '500', color: '#C026D3'},
   distanceLoadingRow: {
     flexDirection: 'row',
     alignItems: 'center',

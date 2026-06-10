@@ -37,6 +37,8 @@ import NoPropertyFound from '../screens/NoPropertyFound';
 import SimilerPropertyDetailsScreen from '../screens/SimilerPropertyDetailsScreen';
 import CityPropertyMapScreen from '../screens/Citypropertymapscreen';
 import ComingSoonScreen from '../components/home/ComingSoonScreen';
+import FollowUsScreen from '../screens/followusScreen';
+import PropertyReviewScreen from '../components/MyListing/PropertyReviewCard';
 
 //import {setUser} from '../redux/slices/authSlice'; // adjust path as needed
 
@@ -136,6 +138,8 @@ function AppStack() {
       />
       <Stack.Screen name="NoPropertyFound" component={NoPropertyFound} />
       <Stack.Screen name="ComingSoonScreen" component={ComingSoonScreen} />
+      <Stack.Screen name="FollowUs" component={FollowUsScreen} />
+      <Stack.Screen name="PropertyReview" component={PropertyReviewScreen} />
     </Stack.Navigator>
   );
 }

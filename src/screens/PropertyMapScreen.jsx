@@ -1,5 +1,4 @@
 import React, {useEffect, useRef, useState, useCallback, useMemo} from 'react';
-import {API_BASE_URL} from '../config/api';
 import {
   View,
   Text,
@@ -19,8 +18,8 @@ import {
 import {WebView} from 'react-native-webview';
 import Geolocation from '@react-native-community/geolocation';
 import {getImageUri} from '../utils/imageHandle';
-import {ArrowLeft, Filter} from 'lucide-react-native';
-import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
+import {Filter} from 'lucide-react-native';
+import {SafeAreaView} from 'react-native-safe-area-context';
 
 // Enable LayoutAnimation on Android
 if (
@@ -31,7 +30,7 @@ if (
 }
 
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
-const API_URL = `${API_BASE_URL}/frontend/all-properties`;
+const API_URL = 'https://aws-api.reparv.in/frontend/all-properties';
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
 const C = {
@@ -722,11 +721,6 @@ const PropertyCard = ({property, onClose, navigation, userCoords}) => {
               {prettifyCategory(property.propertyCategory)}
             </Text>
           </View>
-          {property.loanAvailability === 'Yes' && (
-            <View style={pc.loanBadge}>
-              <Text style={pc.loanBadgeTxt}>🏦 Loan</Text>
-            </View>
-          )}
         </View>
 
         {/* Close button */}
@@ -1046,7 +1040,6 @@ const FilterPanel = ({
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function PropertyMapScreen({navigation}) {
-  const insets = useSafeAreaInsets();
   const webViewRef = useRef(null);
 
   const [status, setStatus] = useState('loading');
@@ -1071,14 +1064,26 @@ export default function PropertyMapScreen({navigation}) {
 
   const [sortKey, setSortKey] = useState('distance');
 
+  // 1️⃣ categoryCounts first
+  const categoryCounts = useMemo(() => {
+    const map = {};
+    nearbyProperties.forEach(p => {
+      if (p.propertyCategory)
+        map[p.propertyCategory] = (map[p.propertyCategory] || 0) + 1;
+    });
+    return map;
+  }, [nearbyProperties]);
+
+  // 2️⃣ uniqueCategories second (depends on categoryCounts)
   const uniqueCategories = useMemo(() => {
     const cats = new Set();
     allProperties.forEach(p => {
       if (p.propertyCategory) cats.add(p.propertyCategory);
     });
-    return [...cats].sort();
-  }, [allProperties]);
-
+    return [...cats]
+      .filter(cat => (categoryCounts[cat] || 0) > 0)
+      .sort((a, b) => (categoryCounts[b] || 0) - (categoryCounts[a] || 0));
+  }, [allProperties, categoryCounts]);
   const activeFilterCount = useMemo(() => {
     let count = 0;
     if (selectedCategories.length > 0) count += 1;
@@ -1131,15 +1136,6 @@ export default function PropertyMapScreen({navigation}) {
       return da - db;
     });
   }, [filteredProperties, sortKey, userCoords]);
-
-  const categoryCounts = useMemo(() => {
-    const map = {};
-    nearbyProperties.forEach(p => {
-      if (p.propertyCategory)
-        map[p.propertyCategory] = (map[p.propertyCategory] || 0) + 1;
-    });
-    return map;
-  }, [nearbyProperties]);
 
   const animatePill = useCallback(() => {
     pillAnim.setValue(0);
@@ -1330,84 +1326,71 @@ export default function PropertyMapScreen({navigation}) {
 
   const handleExpandRadius = useCallback(km => applyRadius(km), [applyRadius]);
 
-  const renderCategoryTabs = () => (
-    <>
-      <TouchableOpacity
-        style={[s.topTab, activeTab === 'All' && s.topTabActive]}
-        onPress={() => handleTabSelect('All')}
-        activeOpacity={0.75}>
-        <Text style={[s.topTabTxt, activeTab === 'All' && s.topTabTxtActive]}>
-          All
-        </Text>
-        <View
-          style={[s.topTabBadge, activeTab === 'All' && s.topTabBadgeActive]}>
-          <Text
-            style={[
-              s.topTabBadgeTxt,
-              activeTab === 'All' && s.topTabBadgeTxtActive,
-            ]}>
-            {nearbyProperties.length}
-          </Text>
-        </View>
-      </TouchableOpacity>
-      {uniqueCategories.map(cat => {
-        const isActive = activeTab === cat;
-        return (
-          <TouchableOpacity
-            key={cat}
-            style={[s.topTab, isActive && s.topTabActive]}
-            onPress={() => handleTabSelect(cat)}
-            activeOpacity={0.75}>
-            <Text style={[s.topTabTxt, isActive && s.topTabTxtActive]}>
-              {prettifyCategory(cat)}
-            </Text>
-            <View style={[s.topTabBadge, isActive && s.topTabBadgeActive]}>
-              <Text
-                style={[
-                  s.topTabBadgeTxt,
-                  isActive && s.topTabBadgeTxtActive,
-                ]}>
-                {categoryCounts[cat] || 0}
-              </Text>
-            </View>
-          </TouchableOpacity>
-        );
-      })}
-    </>
-  );
-
   return (
-    <SafeAreaView style={s.container} edges={['top']}>
-      {/* ══ Header: back + category tabs ═══════════════════════════════ */}
-      <View style={s.screenHeader}>
-        <TouchableOpacity
-          style={s.headerBackBtn}
-          onPress={() => navigation.goBack()}
-          activeOpacity={0.85}
-          accessibilityRole="button"
-          accessibilityLabel="Go back">
-          <ArrowLeft size={22} color={C.text} strokeWidth={2} />
-        </TouchableOpacity>
-        {status === 'ready' && uniqueCategories.length > 0 ? (
+    <SafeAreaView style={s.container}>
+      {/* ══ Category Tab Bar ══════════════════════════════════════════════ */}
+      {status === 'ready' && uniqueCategories.length > 0 && (
+        <View style={s.topTabBar}>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            style={s.headerTabsScroll}
             contentContainerStyle={s.topTabContent}
             keyboardShouldPersistTaps="handled">
-            {renderCategoryTabs()}
+            <TouchableOpacity
+              style={[s.topTab, activeTab === 'All' && s.topTabActive]}
+              onPress={() => handleTabSelect('All')}
+              activeOpacity={0.75}>
+              <Text
+                style={[s.topTabTxt, activeTab === 'All' && s.topTabTxtActive]}>
+                All
+              </Text>
+              <View
+                style={[
+                  s.topTabBadge,
+                  activeTab === 'All' && s.topTabBadgeActive,
+                ]}>
+                <Text
+                  style={[
+                    s.topTabBadgeTxt,
+                    activeTab === 'All' && s.topTabBadgeTxtActive,
+                  ]}>
+                  {nearbyProperties.length}
+                </Text>
+              </View>
+            </TouchableOpacity>
+            {uniqueCategories.map(cat => {
+              const isActive = activeTab === cat;
+              return (
+                <TouchableOpacity
+                  key={cat}
+                  style={[s.topTab, isActive && s.topTabActive]}
+                  onPress={() => handleTabSelect(cat)}
+                  activeOpacity={0.75}>
+                  <Text style={[s.topTabTxt, isActive && s.topTabTxtActive]}>
+                    {prettifyCategory(cat)}
+                  </Text>
+                  <View
+                    style={[s.topTabBadge, isActive && s.topTabBadgeActive]}>
+                    <Text
+                      style={[
+                        s.topTabBadgeTxt,
+                        isActive && s.topTabBadgeTxtActive,
+                      ]}>
+                      {categoryCounts[cat] || 0}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
           </ScrollView>
-        ) : (
-          <Text style={s.headerTitle}>Nearby Properties</Text>
-        )}
-      </View>
+        </View>
+      )}
 
-      {/* ══ Map ══════════════════════════════════════════════════════════ */}
+      {/* ══ Map wrapper ══════════════════════════════════════════════════ */}
       <View style={s.mapWrapper}>
         <WebView
           ref={webViewRef}
           style={s.map}
-          containerStyle={s.map}
           source={{html: LEAFLET_HTML}}
           originWhitelist={['*']}
           javaScriptEnabled={true}
@@ -1495,6 +1478,61 @@ export default function PropertyMapScreen({navigation}) {
           </View>
         )}
 
+        {/* ── Bottom radius panel ── */}
+        {status === 'ready' && (
+          <View style={s.sliderPanel}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={s.presetRow}
+              style={{marginBottom: 6}}>
+              {RADIUS_PRESETS.map(p => {
+                const active = radiusKm === p.value;
+                return (
+                  <TouchableOpacity
+                    key={p.value}
+                    style={[s.presetChip, active && s.presetChipActive]}
+                    onPress={() => applyRadius(p.value)}
+                    activeOpacity={0.75}>
+                    <Text
+                      style={[
+                        s.presetChipTxt,
+                        active && s.presetChipTxtActive,
+                      ]}>
+                      {p.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+            <View style={s.sliderLabelRow}>
+              <Text style={s.sliderLabel}>Search Radius</Text>
+              <View style={s.radiusValuePill}>
+                <Text style={s.radiusValueTxt}>
+                  {sliderValue.toFixed(1)} km
+                </Text>
+              </View>
+            </View>
+            <SliderV2
+              minimumValue={1}
+              maximumValue={100}
+              step={0.5}
+              value={sliderValue}
+              trackHeight={6}
+              thumbSize={24}
+              touchHeight={44}
+              style={{marginHorizontal: 0, marginBottom: 2}}
+              formatLabel={v => `${v.toFixed(1)} km`}
+              onValueChange={setSliderValue}
+              onSlidingComplete={km => applyRadius(km)}
+            />
+            <View style={s.rangeRow}>
+              <Text style={s.rangeTxt}>1 km</Text>
+              <Text style={s.rangeTxt}>100 km</Text>
+            </View>
+          </View>
+        )}
+
         {/* Empty state */}
         {status === 'ready' &&
           displayedProperties.length === 0 &&
@@ -1542,59 +1580,6 @@ export default function PropertyMapScreen({navigation}) {
           }
         />
       </View>
-
-      {/* ══ Radius controls (pinned to bottom, safe-area aware) ══════════ */}
-      {status === 'ready' && (
-        <View
-          style={[s.sliderPanel, {paddingBottom: Math.max(insets.bottom, 10)}]}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={s.presetRow}
-            style={s.presetScroll}>
-            {RADIUS_PRESETS.map(p => {
-              const active = radiusKm === p.value;
-              return (
-                <TouchableOpacity
-                  key={p.value}
-                  style={[s.presetChip, active && s.presetChipActive]}
-                  onPress={() => applyRadius(p.value)}
-                  activeOpacity={0.75}>
-                  <Text
-                    style={[s.presetChipTxt, active && s.presetChipTxtActive]}>
-                    {p.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-          <View style={s.sliderLabelRow}>
-            <Text style={s.sliderLabel}>Search Radius</Text>
-            <View style={s.radiusValuePill}>
-              <Text style={s.radiusValueTxt}>
-                {sliderValue.toFixed(1)} km
-              </Text>
-            </View>
-          </View>
-          <SliderV2
-            minimumValue={1}
-            maximumValue={30}
-            step={0.5}
-            value={sliderValue}
-            trackHeight={6}
-            thumbSize={24}
-            touchHeight={44}
-            style={{marginHorizontal: 0, marginBottom: 2}}
-            formatLabel={v => `${v.toFixed(1)} km`}
-            onValueChange={setSliderValue}
-            onSlidingComplete={km => applyRadius(km)}
-          />
-          <View style={s.rangeRow}>
-            <Text style={s.rangeTxt}>1 km</Text>
-            <Text style={s.rangeTxt}>30 km</Text>
-          </View>
-        </View>
-      )}
     </SafeAreaView>
   );
 }
@@ -1842,42 +1827,25 @@ const pc = StyleSheet.create({
 
 // ─── General Styles ───────────────────────────────────────────────────────────
 const s = StyleSheet.create({
-  container: {flex: 1, backgroundColor: C.white},
+  container: {flex: 1, backgroundColor: C.bg},
 
-  screenHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingLeft: 12,
-    paddingRight: 4,
-    paddingVertical: 8,
+  // Tab bar
+  topTabBar: {
     backgroundColor: C.white,
     borderBottomWidth: 1,
     borderBottomColor: C.border,
+    paddingVertical: 10,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 4,
     zIndex: 10,
-  },
-  headerBackBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: C.bg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: C.border,
-  },
-  headerTabsScroll: {flex: 1},
-  headerTitle: {
-    flex: 1,
-    color: C.text,
-    fontSize: 16,
-    fontWeight: '700',
-    paddingRight: 12,
   },
   topTabContent: {
     flexDirection: 'row',
     gap: 8,
-    paddingRight: 12,
+    paddingHorizontal: 14,
     alignItems: 'center',
   },
   topTab: {
@@ -1908,8 +1876,8 @@ const s = StyleSheet.create({
   topTabBadgeTxtActive: {color: C.white},
 
   // Map
-  mapWrapper: {flex: 1, backgroundColor: '#0f172a', overflow: 'hidden'},
-  map: {flex: 1, backgroundColor: '#0f172a'},
+  mapWrapper: {flex: 1},
+  map: {flex: 1},
 
   // Overlays
   overlay: {
@@ -1962,7 +1930,7 @@ const s = StyleSheet.create({
   // Pill
   pill: {
     position: 'absolute',
-    top: 10,
+    top: Platform.OS === 'ios' ? 16 : 14,
     alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
@@ -1985,7 +1953,7 @@ const s = StyleSheet.create({
   fabCol: {
     position: 'absolute',
     right: 14,
-    bottom: 16,
+    bottom: 174,
     gap: 10,
     alignItems: 'center',
   },
@@ -2024,19 +1992,19 @@ const s = StyleSheet.create({
   // Radius slider panel
   sliderPanel: {
     width: '100%',
+    position: 'absolute',
+    bottom: 0,
     backgroundColor: C.white,
-    borderTopWidth: 1,
-    borderTopColor: C.border,
+    borderColor: C.border,
     paddingHorizontal: 16,
-    paddingTop: 10,
+    paddingTop: 12,
+    paddingBottom: 10,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: -2},
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.07,
+    shadowRadius: 10,
   },
-  presetScroll: {marginBottom: 8, flexGrow: 0},
-  presetRow: {flexDirection: 'row', gap: 6, paddingRight: 8},
+  presetRow: {flexDirection: 'row', gap: 6, paddingRight: 4},
   presetChip: {
     paddingHorizontal: 14,
     paddingVertical: 6,
@@ -2072,9 +2040,9 @@ const s = StyleSheet.create({
   // Empty state
   emptyState: {
     position: 'absolute',
-    top: '28%',
-    left: 20,
-    right: 20,
+    bottom: 150,
+    left: 24,
+    right: 24,
     backgroundColor: C.white,
     borderRadius: 20,
     padding: 24,

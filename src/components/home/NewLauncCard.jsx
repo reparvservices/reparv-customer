@@ -12,37 +12,63 @@ import {ChevronRight} from 'lucide-react-native';
 import {useNavigation} from '@react-navigation/native';
 import {getImageUri, parseFrontView} from '../../utils/imageHandle';
 import {formatIndianAmount} from '../../utils/formatIndianAmount';
-import {useAllPropertiesCache} from '../../hooks/useAllPropertiesCache';
 
+const API_URL = 'https://aws-api.reparv.in/frontend/all-properties';
 const LAUNCH_BANNER_ASPECT_RATIO = 16 / 9;
 
 export default function NewLaunchShowcase() {
   const navigation = useNavigation();
-  const {data, loading} = useAllPropertiesCache();
+
+  const [flats, setFlats] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  const flats = useMemo(
-    () =>
-      (data || []).filter(
-        item =>
-          item.status === 'Active' &&
-          item.approve === 'Approved' &&
-          item.topPicksStatus !== 'Inactive',
-      ),
-    [data],
-  );
+  // FETCH DATA
+  useEffect(() => {
+    const fetchProperties = async () => {
+      try {
+        setLoading(true);
 
+        const response = await fetch(API_URL);
+        const data = await response.json();
+
+        const filtered = (Array.isArray(data) ? data : []).filter(
+          item =>
+            item.status === 'Active' &&
+            item.approve === 'Approved' &&
+            item.topPicksStatus === 'Active' &&
+            item.topPicksBanner,
+        );
+
+        setFlats(filtered);
+      } catch (error) {
+        console.log('Fetch Error:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProperties();
+  }, []);
+
+  // AUTO SLIDER
   useEffect(() => {
     if (!flats.length) {
       return;
     }
-    setCurrentIndex(i => i % flats.length);
-  }, [flats.length]);
+
+    const interval = setInterval(() => {
+      setCurrentIndex(prev => (prev + 1) % flats.length);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [flats]);
 
   const handleNext = useCallback(() => {
     if (flats.length === 0) {
       return;
     }
+
     setCurrentIndex(prev => (prev + 1) % flats.length);
   }, [flats.length]);
 
@@ -50,16 +76,19 @@ export default function NewLaunchShowcase() {
     if (!flats.length) {
       return;
     }
-    const flat = flats[currentIndex % flats.length];
+
+    const flat = flats[currentIndex];
+
     navigation.navigate('PropertyDetails', {
       seoSlug: flat?.seoSlug,
     });
   }, [flats, currentIndex, navigation]);
 
-  if (loading && flats.length === 0) {
+  if (loading) {
     return (
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>New Launches</Text>
+
         <View style={styles.loaderBox}>
           <ActivityIndicator size="small" color="#6E56CF" />
         </View>
@@ -67,14 +96,16 @@ export default function NewLaunchShowcase() {
     );
   }
 
-  if (flats.length === 0) {
+  if (!flats.length) {
     return null;
   }
 
-  const safeIndex = currentIndex % flats.length;
-  const currentFlat = flats[safeIndex];
+  const currentFlat = flats[currentIndex];
+
   const paths = parseFrontView(currentFlat?.frontView);
-  const imgUri = paths[0] ? getImageUri(paths[0]) : null;
+
+  const imgUri = paths?.[0] ? getImageUri(paths[0]) : null;
+
   const priceLabel = currentFlat?.totalOfferPrice
     ? `Starting at ₹${formatIndianAmount(currentFlat.totalOfferPrice)}`
     : 'View pricing';
@@ -82,6 +113,7 @@ export default function NewLaunchShowcase() {
   return (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>New Launches</Text>
+
       <View style={styles.cardOuter}>
         <View style={styles.cardInner}>
           <TouchableOpacity
@@ -107,6 +139,7 @@ export default function NewLaunchShowcase() {
                 resizeMode="cover"
               />
             )}
+
             <View style={styles.preLaunchTag}>
               <Text style={styles.preLaunchText}>Pre-Launch</Text>
             </View>
@@ -120,13 +153,16 @@ export default function NewLaunchShowcase() {
               <Text style={styles.projectTitle} numberOfLines={1}>
                 {currentFlat?.propertyName || 'Premium project'}
               </Text>
+
               <Text style={styles.projectSub} numberOfLines={2}>
                 {currentFlat?.propertyCategory
                   ? `Premium ${currentFlat.propertyCategory}`
-                  : 'Premium 3 & 4 BHK Residences'}
+                  : 'Premium Residences'}
               </Text>
+
               <Text style={styles.price}>{priceLabel}</Text>
             </TouchableOpacity>
+
             <TouchableOpacity
               style={styles.arrowBtn}
               onPress={handleNext}
@@ -146,45 +182,59 @@ const styles = StyleSheet.create({
     marginTop: 24,
     marginBottom: 28,
   },
+
   sectionTitle: {
     fontSize: 18,
     fontFamily: 'SegoeUI-Bold',
     color: '#111827',
     marginBottom: 14,
+
     ...Platform.select({
-      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      android: {
+        includeFontPadding: false,
+        textAlignVertical: 'center',
+      },
       default: {},
     }),
   },
+
   loaderBox: {
     paddingVertical: 32,
     alignItems: 'center',
   },
+
   cardOuter: {
     backgroundColor: '#FFFFFF',
     borderRadius: 22,
     borderWidth: 1,
     borderColor: 'rgba(0, 0, 0, 0.08)',
+
     ...Platform.select({
-      android: {elevation: 0},
+      android: {
+        elevation: 0,
+      },
       default: {},
     }),
   },
+
   cardInner: {
     borderRadius: 22,
     overflow: 'hidden',
     backgroundColor: '#FFFFFF',
   },
+
   imageBox: {
     width: '100%',
     aspectRatio: LAUNCH_BANNER_ASPECT_RATIO,
     backgroundColor: '#E5E7EB',
     position: 'relative',
   },
+
   image: {
     width: '100%',
     height: '100%',
   },
+
   preLaunchTag: {
     position: 'absolute',
     top: 14,
@@ -193,13 +243,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.08)',
     ...Platform.select({
-      android: {elevation: 0},
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
       default: {},
     }),
   },
+
   preLaunchText: {
     color: '#FFFFFF',
     fontSize: 12,
@@ -209,16 +258,23 @@ const styles = StyleSheet.create({
       default: {},
     }),
   },
+
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 16,
     paddingHorizontal: 16,
   },
+
   footerText: {
     flex: 1,
     paddingRight: 12,
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
+
   projectTitle: {
     fontSize: 17,
     fontFamily: 'SegoeUI-Bold',
@@ -229,15 +285,13 @@ const styles = StyleSheet.create({
       default: {},
     }),
   },
+
   projectSub: {
     fontSize: 13,
     color: '#868686',
-    ...Platform.select({
-      android: {includeFontPadding: false, textAlignVertical: 'center'},
-      default: {},
-    }),
     marginBottom: 8,
   },
+
   price: {
     fontSize: 16,
     fontFamily: 'SegoeUI-Bold',
@@ -247,6 +301,7 @@ const styles = StyleSheet.create({
       default: {},
     }),
   },
+
   arrowBtn: {
     width: 44,
     height: 44,
@@ -254,11 +309,5 @@ const styles = StyleSheet.create({
     backgroundColor: '#6E56CF',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.08)',
-    ...Platform.select({
-      android: {elevation: 0},
-      default: {},
-    }),
   },
 });

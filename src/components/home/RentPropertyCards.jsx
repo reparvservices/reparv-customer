@@ -227,13 +227,25 @@ export default function RentPropertyCards() {
           item.propertyCategory?.startsWith('Rental') &&
           isCityMatch(item),
       );
+
+      // ✅ Sort newest uploaded first (by updated_at descending)
+      filtered.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+
       const updated = await Promise.all(
         filtered.map(async item => {
           const assured = item.partnerid
             ? await checkSubscription(item.partnerid)
             : false;
           const totalVisitors = await fetchVisits(item.propertyid);
-          return {...item, reparvAssured: assured, totalVisitors};
+
+          // ✅ Flag properties uploaded within the last 7 days
+          const isNew =
+            item.updated_at &&
+            (Date.now() - new Date(item.updated_at).getTime()) /
+              (1000 * 60 * 60 * 24) <=
+              7;
+
+          return {...item, reparvAssured: assured, totalVisitors, isNew};
         }),
       );
       setFlats(updated);
@@ -285,21 +297,32 @@ export default function RentPropertyCards() {
           ) : (
             <View style={[styles.image, {backgroundColor: '#eee'}]} />
           )}
+
+          {/* REPARV Assured — top left */}
           {item?.reparvAssured && (
             <View style={styles.leftBadge}>
               <Text style={styles.badgeText}>REPARV Assured</Text>
             </View>
           )}
+
+          {/* HOT DEAL — top right */}
           {item?.hotDeal === 'Active' && (
             <View style={styles.rightBadge}>
               <Text style={styles.badgeText}>HOT DEAL</Text>
+            </View>
+          )}
+
+          {/* ✅ NEW badge — bottom left, only when not Assured (avoids overlap) */}
+          {item?.isNew && !item?.reparvAssured && (
+            <View style={styles.newBadge}>
+              <Text style={styles.newBadgeText}>✦ NEW</Text>
             </View>
           )}
         </TouchableOpacity>
 
         {/* CONTENT */}
         <View style={styles.bottom}>
-          {/* ── Location text — city center distance removed ── */}
+          {/* Location row */}
           <View style={styles.propertyRow}>
             <Image source={Location} style={styles.icon} />
             <Text style={styles.propertyType} numberOfLines={1}>
@@ -307,7 +330,7 @@ export default function RentPropertyCards() {
             </Text>
           </View>
 
-          {/* ── User GPS distance shown right below location ── */}
+          {/* User GPS distance shown right below location */}
           <DistanceBadge
             userCoords={userCoords}
             locationLoading={locationLoading}
@@ -547,6 +570,8 @@ const styles = StyleSheet.create({
   },
   imageContainer: {height: 130, backgroundColor: '#F3F3F3'},
   image: {width: '100%', height: '100%', resizeMode: 'contain'},
+
+  // Top-left: REPARV Assured
   leftBadge: {
     position: 'absolute',
     top: 8,
@@ -556,6 +581,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 10,
   },
+  // Top-right: HOT DEAL
   rightBadge: {
     position: 'absolute',
     top: 8,
@@ -565,10 +591,27 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 10,
   },
+  // ✅ Bottom-left: NEW
+  newBadge: {
+    position: 'absolute',
+    bottom: 8,
+    left: 8,
+    backgroundColor: '#22C55E',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+  },
+  newBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+
   badgeText: {color: '#fff', fontSize: 10, fontWeight: '700'},
   bottom: {padding: 10, gap: 4},
 
-  // Location row — just location name, no city-center KM
+  // Location row
   propertyRow: {flexDirection: 'row', alignItems: 'center'},
   icon: {width: 16, height: 16, marginRight: 4},
   propertyType: {fontSize: 11, color: '#000000', flex: 1},
@@ -578,7 +621,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    alignSelf: 'flex-start', // hug content width
+    alignSelf: 'flex-start',
     backgroundColor: '#F3EEFF',
     borderRadius: 20,
     paddingHorizontal: 8,

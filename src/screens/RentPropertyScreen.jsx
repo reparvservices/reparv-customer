@@ -50,8 +50,8 @@ export default function RentPropertyScreen() {
       img: IndependentHouseImg,
       ptype: 'RentalFarmHouse',
     },
-    {title: 'Godown For Rent', img: GodownImg, ptype: 'RentalShop'},
-    {title: 'Showroom For Rent', img: ShowroomImg, ptype: 'RentalShop'},
+    {title: 'Godown For Rent', img: GodownImg, ptype: 'RentalGodown'},
+    {title: 'Showroom For Rent', img: ShowroomImg, ptype: 'RentalShowroom'},
     {title: 'Open Land For Rent', img: OpenLandImg, ptype: 'Lease'},
   ];
 

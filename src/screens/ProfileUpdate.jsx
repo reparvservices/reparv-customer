@@ -1,5 +1,4 @@
 import React, {useState, useEffect} from 'react';
-import {API_BASE_URL} from '../config/api';
 import {
   View,
   Text,
@@ -13,13 +12,16 @@ import {
   Modal,
   FlatList,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {ArrowLeft, Camera, ChevronDown} from 'lucide-react-native';
 import {launchImageLibrary, launchCamera} from 'react-native-image-picker';
+import {uploadToS3} from '../utils/uploadS3';
 
 const PURPLE = '#7C3AED';
 const BG = '#FAF8FF';
+const BASE_URL = 'https://aws-api.reparv.in'; // ✅ single source of truth
 
 export default function UpdateProfileScreen({navigation, route}) {
   const {
@@ -35,9 +37,8 @@ export default function UpdateProfileScreen({navigation, route}) {
   const [fullname, setFullname] = useState(f || '');
   const [email, setEmail] = useState(e || '');
   const [contact, setContact] = useState(c || '');
-  const [saving, setSaving] = useState(false); // ✅ Loading state
+  const [saving, setSaving] = useState(false);
 
-  // State / city
   const [states, setStates] = useState([]);
   const [cities, setCities] = useState([]);
   const [selectedState, setSelectedState] = useState(s ? {state: s} : null);
@@ -58,15 +59,13 @@ export default function UpdateProfileScreen({navigation, route}) {
   }, []);
 
   useEffect(() => {
-    if (selectedState) {
-      fetchCities(selectedState.state);
-    }
+    if (selectedState) fetchCities(selectedState.state);
   }, [selectedState]);
 
   const fetchStates = async () => {
     setLoadingStates(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/admin/states`);
+      const res = await fetch(`${BASE_URL}/admin/states`);
       const data = await res.json();
       setStates(data || []);
     } catch (err) {
@@ -79,9 +78,7 @@ export default function UpdateProfileScreen({navigation, route}) {
   const fetchCities = async stateName => {
     setLoadingCities(true);
     try {
-      const res = await fetch(
-        `${API_BASE_URL}/admin/cities/${stateName}`,
-      );
+      const res = await fetch(`${BASE_URL}/admin/cities/${stateName}`);
       const data = await res.json();
       setCities(data || []);
     } catch (err) {
@@ -91,7 +88,6 @@ export default function UpdateProfileScreen({navigation, route}) {
     }
   };
 
-  /* ---------- IMAGE RESULT HANDLER ---------- */
   const handleImageResult = result => {
     if (result.didCancel) return;
     if (result.errorCode) {
@@ -103,7 +99,6 @@ export default function UpdateProfileScreen({navigation, route}) {
     }
   };
 
-  /* ---------- GALLERY ---------- */
   const pickFromGallery = async () => {
     const result = await launchImageLibrary({
       mediaType: 'photo',
@@ -113,7 +108,6 @@ export default function UpdateProfileScreen({navigation, route}) {
     handleImageResult(result);
   };
 
-  /* ---------- CAMERA ---------- */
   const takePhoto = async () => {
     const result = await launchCamera({
       mediaType: 'photo',
@@ -124,7 +118,6 @@ export default function UpdateProfileScreen({navigation, route}) {
     handleImageResult(result);
   };
 
-  /* ---------- IMAGE OPTIONS ---------- */
   const pickImage = () => {
     Alert.alert(
       'Profile Photo',
@@ -143,52 +136,65 @@ export default function UpdateProfileScreen({navigation, route}) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const mobileRegex = /^[6-9]\d{9}$/;
 
-    if (!fullname.trim()) {
-      return Alert.alert('Please enter full name');
-    }
-    if (!email && !contact) {
+    if (!fullname.trim()) return Alert.alert('Please enter full name');
+    if (!email && !contact)
       return Alert.alert('Email or mobile number is required');
-    }
-    if (email && !emailRegex.test(email)) {
-      return Alert.alert('Invalid email');
-    }
-    if (contact && !mobileRegex.test(contact)) {
+    if (email && !emailRegex.test(email)) return Alert.alert('Invalid email');
+    if (contact && !mobileRegex.test(contact))
       return Alert.alert('Invalid mobile number');
-    }
 
-    setSaving(true); // ✅ Start loading
+    setSaving(true);
 
     try {
-      const formData = new FormData();
-      formData.append('user_id', userid);
-      formData.append('fullname', fullname);
+      // ✅ Upload image to S3 first if a new image was picked
+      let imageUrl = userimage || null; // keep existing by default
 
-      if (email) formData.append('email', email);
-      if (contact) formData.append('contact', contact);
-      if (selectedState) formData.append('state', selectedState.state);
-      if (selectedCity) formData.append('city', selectedCity.city);
-
-      if (
+      const isNewImage =
         profileImage?.uri &&
         (profileImage.uri.startsWith('file://') ||
-          profileImage.uri.startsWith('content://'))
-      ) {
-        formData.append('userimage', {
-          uri: profileImage.uri,
-          name: profileImage.fileName || 'profile.jpg',
-          type: profileImage.type || 'image/jpeg',
-        });
+          profileImage.uri.startsWith('content://'));
+
+      if (isNewImage) {
+        ToastAndroid.show('Uploading image...', ToastAndroid.SHORT);
+        const uploadedUrl = await uploadToS3(profileImage, 'uploads');
+        if (!uploadedUrl) {
+          ToastAndroid.show(
+            'Image upload failed. Try again.',
+            ToastAndroid.LONG,
+          );
+          setSaving(false);
+          return;
+        }
+        imageUrl = uploadedUrl;
       }
 
-      const response = await fetch(
-        `${API_BASE_URL}/customerapp/user/update`,
-        {
-          method: 'PUT',
-          body: formData,
+      // ✅ Send JSON — no FormData, no multer needed
+      const response = await fetch(`${BASE_URL}/customerapp/user/update`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
         },
-      );
+        body: JSON.stringify({
+          user_id: userid,
+          fullname,
+          email: email || null,
+          contact: contact || null,
+          state: selectedState?.state || null,
+          city: selectedCity?.city || null,
+          userimage: imageUrl,
+        }),
+      });
 
-      const data = await response.json();
+      // ✅ Safe JSON parse
+      const rawText = await response.text();
+      let data = {};
+      try {
+        data = JSON.parse(rawText);
+      } catch {
+        console.log('Non-JSON response:', rawText);
+        ToastAndroid.show('Server error. Try again.', ToastAndroid.LONG);
+        return;
+      }
 
       if (response.ok) {
         ToastAndroid.show('Profile updated successfully!', ToastAndroid.LONG);
@@ -201,9 +207,9 @@ export default function UpdateProfileScreen({navigation, route}) {
       }
     } catch (err) {
       console.log('Update profile error:', err);
-      ToastAndroid.show('Error updating profile', ToastAndroid.LONG);
+      ToastAndroid.show('Network error. Try again.', ToastAndroid.LONG);
     } finally {
-      setSaving(false); // ✅ Stop loading
+      setSaving(false);
     }
   };
 
@@ -233,7 +239,6 @@ export default function UpdateProfileScreen({navigation, route}) {
                 <Text style={styles.modalCloseText}>✕</Text>
               </TouchableOpacity>
             </View>
-
             <TextInput
               style={styles.modalSearch}
               value={searchValue}
@@ -241,7 +246,6 @@ export default function UpdateProfileScreen({navigation, route}) {
               placeholder={`Search ${title.toLowerCase()}...`}
               placeholderTextColor="#9CA3AF"
             />
-
             {loading ? (
               <View style={styles.modalLoader}>
                 <ActivityIndicator size="large" color={PURPLE} />
@@ -274,7 +278,6 @@ export default function UpdateProfileScreen({navigation, route}) {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <ArrowLeft size={22} />
@@ -284,14 +287,14 @@ export default function UpdateProfileScreen({navigation, route}) {
       </View>
 
       <ScrollView contentContainerStyle={{paddingBottom: 140}}>
-        {/* Profile Image */}
         <View style={styles.avatarWrapper}>
           <Image
-            source={
-              profileImage?.uri
-                ? {uri: profileImage.uri}
-                : {uri: 'https://randomuser.me/api/portraits/men/1.jpg'}
-            }
+            source={{
+              uri:
+                profileImage?.uri ||
+                userimage ||
+                'https://randomuser.me/api/portraits/men/1.jpg',
+            }}
             style={styles.avatar}
           />
           <TouchableOpacity style={styles.cameraBtn} onPress={pickImage}>
@@ -299,7 +302,6 @@ export default function UpdateProfileScreen({navigation, route}) {
           </TouchableOpacity>
         </View>
 
-        {/* Form */}
         <View style={styles.card}>
           <Label text="Name" />
           <Input value={fullname} onChangeText={setFullname} />
@@ -310,7 +312,6 @@ export default function UpdateProfileScreen({navigation, route}) {
           <Label text="Phone Number" />
           <Input value={contact} onChangeText={setContact} keyboard="numeric" />
 
-          {/* State Dropdown */}
           <Label text="State" />
           <TouchableOpacity
             style={styles.dropdown}
@@ -329,7 +330,6 @@ export default function UpdateProfileScreen({navigation, route}) {
             <ChevronDown size={16} color="#9CA3AF" />
           </TouchableOpacity>
 
-          {/* City Dropdown */}
           <Label text="City" />
           <TouchableOpacity
             style={[styles.dropdown, !selectedState && styles.dropdownDisabled]}
@@ -361,7 +361,6 @@ export default function UpdateProfileScreen({navigation, route}) {
         </View>
       </ScrollView>
 
-      {/* ✅ Save Button with Loading */}
       <View style={styles.bottom}>
         <TouchableOpacity
           style={[styles.saveBtn, saving && {opacity: 0.8}]}
@@ -378,7 +377,6 @@ export default function UpdateProfileScreen({navigation, route}) {
         </TouchableOpacity>
       </View>
 
-      {/* State Modal */}
       <DropdownModal
         visible={stateModal}
         onClose={() => setStateModal(false)}
@@ -395,7 +393,6 @@ export default function UpdateProfileScreen({navigation, route}) {
         onSearchChange={setStateSearch}
       />
 
-      {/* City Modal */}
       <DropdownModal
         visible={cityModal}
         onClose={() => setCityModal(false)}
@@ -411,9 +408,7 @@ export default function UpdateProfileScreen({navigation, route}) {
   );
 }
 
-/* ---------- Reusable ---------- */
 const Label = ({text}) => <Text style={styles.label}>{text}</Text>;
-
 const Input = ({value, onChangeText, keyboard}) => (
   <TextInput
     value={value}
@@ -423,10 +418,8 @@ const Input = ({value, onChangeText, keyboard}) => (
   />
 );
 
-/* ---------- Styles ---------- */
 const styles = StyleSheet.create({
   container: {flex: 1, backgroundColor: BG},
-
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -434,7 +427,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   headerTitle: {fontSize: 18, fontWeight: '600', color: '#000'},
-
   avatarWrapper: {alignItems: 'center', marginTop: 20},
   avatar: {
     width: 120,
@@ -450,22 +442,8 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 20,
   },
-
-  card: {
-    backgroundColor: '#fff',
-    margin: 16,
-    borderRadius: 16,
-    padding: 16,
-  },
-
-  label: {
-    fontSize: 13,
-    color: '#6B7280',
-    marginTop: 12,
-    marginBottom: 6,
-    color: '#000',
-  },
-
+  card: {backgroundColor: '#fff', margin: 16, borderRadius: 16, padding: 16},
+  label: {fontSize: 13, marginTop: 12, marginBottom: 6, color: '#000'},
   input: {
     backgroundColor: '#F9FAFB',
     borderRadius: 12,
@@ -474,7 +452,6 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
     color: '#000',
   },
-
   dropdown: {
     backgroundColor: '#F9FAFB',
     borderRadius: 12,
@@ -488,7 +465,6 @@ const styles = StyleSheet.create({
   dropdownDisabled: {opacity: 0.5},
   dropdownText: {fontSize: 14, color: '#111827'},
   dropdownPlaceholder: {color: '#9CA3AF'},
-
   bottom: {
     position: 'absolute',
     left: 0,
@@ -504,7 +480,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   saveText: {color: '#fff', fontSize: 16, fontWeight: '600'},
-
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.4)',

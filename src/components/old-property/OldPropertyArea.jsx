@@ -12,7 +12,16 @@ import {
 import AreaIcon from '../../assets/image/rent-oldnew-property/property-area.png';
 import Dropdown from '../../assets/image/rent-oldnew-property/dropdown.png';
 
-export default function OldPropertyArea({value, onChange, error}) {
+export default function OldPropertyArea({
+  builtUpArea,
+  carpetArea,
+  onBuiltUpChange,
+  onCarpetChange,
+  builtUpError,
+  carpetError,
+  showCarpetArea = true,
+}) {
+  console.log(builtUpArea, 'fff');
   return (
     <View style={styles.wrapper}>
       <View style={styles.headingRow}>
@@ -22,14 +31,17 @@ export default function OldPropertyArea({value, onChange, error}) {
         </Text>
       </View>
 
+      {/* Built-up Area */}
+      <Text style={styles.label}>Built-up Area *</Text>
+
       <View style={styles.inputWrapper}>
         <TextInput
-          placeholder="Enter area"
+          placeholder="Enter built-up area"
           placeholderTextColor="#868686"
           style={styles.input}
           keyboardType="numeric"
-          value={value}
-          onChangeText={onChange}
+          value={builtUpArea}
+          onChangeText={onBuiltUpChange}
         />
 
         <View style={styles.divider} />
@@ -39,13 +51,42 @@ export default function OldPropertyArea({value, onChange, error}) {
           <Image source={Dropdown} style={styles.arrow} />
         </TouchableOpacity>
       </View>
-      {error && <Text style={styles.error}>{error}</Text>}
+
+      {builtUpError && <Text style={styles.error}>{builtUpError}</Text>}
+
+      {showCarpetArea && (
+        <>
+          {/* Carpet Area */}
+          <Text style={[styles.label, {marginTop: 16}]}>Carpet Area *</Text>
+
+          <View style={styles.inputWrapper}>
+            <TextInput
+              placeholder="Enter carpet area"
+              placeholderTextColor="#868686"
+              style={styles.input}
+              keyboardType="numeric"
+              value={carpetArea}
+              onChangeText={onCarpetChange}
+            />
+
+            <View style={styles.divider} />
+            <TouchableOpacity style={styles.unitWrapper}>
+              <Text style={styles.unitText}>sq.ft</Text>
+              <Image source={Dropdown} style={styles.arrow} />
+            </TouchableOpacity>
+          </View>
+
+          {carpetError && <Text style={styles.error}>{carpetError}</Text>}
+        </>
+      )}
 
       <View style={styles.helperRow}>
         <View style={styles.infoCircle}>
           <Text style={styles.infoText}>i</Text>
         </View>
-        <Text style={styles.helperText}>Enter the total built-up area</Text>
+        <Text style={styles.helperText}>
+          Enter both built-up and carpet area
+        </Text>
       </View>
     </View>
   );
@@ -61,32 +102,41 @@ const styles = StyleSheet.create({
   headingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
-    ...Platform.select({
-      android: {includeFontPadding: false, textAlignVertical: 'center'},
-      default: {},
-    }),
+    marginBottom: 16,
   },
+
   icon: {
     width: 26,
     height: 26,
     marginRight: 8,
     tintColor: '#8A38F5',
   },
+
   heading: {
     fontSize: 16,
-    fontWeight: '700',
     fontFamily: 'SegoeUI-Bold',
+    color: '#000',
     ...Platform.select({
       android: {includeFontPadding: false, textAlignVertical: 'center'},
       default: {},
     }),
-    color: '#000',
-    fontFamily: 'SegoeUI-Regular',
   },
+
+  label: {
+    fontSize: 14,
+    fontFamily: 'SegoeUI-Bold',
+    color: '#383737',
+    marginBottom: 8,
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
+  },
+
   required: {
     color: '#E33629',
   },
+
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -97,37 +147,48 @@ const styles = StyleSheet.create({
     height: 48,
     paddingHorizontal: 16,
   },
+
   input: {
     flex: 1,
     fontSize: 16,
     color: '#000',
   },
+
   divider: {
     width: 1,
     height: 36,
     backgroundColor: '#B8B8B8',
     marginHorizontal: 12,
   },
+
   unitWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
   },
+
   unitText: {
     fontSize: 16,
-    fontWeight: '400',
     color: '#000',
     marginRight: 6,
     fontFamily: 'SegoeUI-Regular',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
+
   arrow: {
-    fontSize: 18,
-    color: '#000',
+    width: 12,
+    height: 12,
+    resizeMode: 'contain',
   },
+
   helperRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 12,
   },
+
   infoCircle: {
     width: 18,
     height: 18,
@@ -137,6 +198,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: 8,
   },
+
   infoText: {
     color: '#fff',
     fontSize: 12,
@@ -146,13 +208,15 @@ const styles = StyleSheet.create({
       default: {},
     }),
   },
+
   helperText: {
     fontSize: 12,
     color: '#868686',
   },
+
   error: {
     color: '#E33629',
     fontSize: 12,
-    marginVertical: 6,
+    marginTop: 4,
   },
 });

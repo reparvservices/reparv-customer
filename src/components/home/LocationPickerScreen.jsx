@@ -206,6 +206,8 @@ export default function LocationPickerScreen() {
             JSON.stringify({...JSON.parse(raw), city, state}),
           );
         }
+        // ✅ Mark as manually chosen — GPS must not override this
+        await AsyncStorage.setItem('locationSource', 'manual');
       } catch {}
       dispatch(setUserLocation({city, state}));
       if (onSelectParam) onSelectParam(city, state);
@@ -213,7 +215,6 @@ export default function LocationPickerScreen() {
     },
     [dispatch, onSelectParam, navigation],
   );
-
   // ── slide animations ───────────────────────────────────────────────────────
   const slideToCity = useCallback(() => {
     Animated.timing(slideAnim, {

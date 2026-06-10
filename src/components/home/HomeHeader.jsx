@@ -208,11 +208,12 @@ export default function HomeHeader() {
   // ── Fetch city + state from GPS coords ─────────────────────────────────
   const getUserCityAndState = useCallback(async () => {
     try {
-      //  Skip if location already set in Redux — avoid re-asking every focus
-      // if (user?.city && user?.state) {
-      //   devLog('📍 Location already in Redux, skipping GPS fetch.');
-      //   return;
-      // }
+      // ✅ If user manually picked a location, never override with GPS
+      const locationSource = await AsyncStorage.getItem('locationSource');
+      if (locationSource === 'manual' && user?.city && user?.state) {
+        devLog('📍 Manual location set, skipping GPS fetch.');
+        return;
+      }
 
       const hasPermission = await requestLocationPermission();
       if (!hasPermission) {
@@ -241,9 +242,8 @@ export default function HomeHeader() {
           const state = data?.address?.state || '';
 
           if (city && state) {
-            devLog('📍 Resolved location:', {city, state});
+            devLog('📍 Resolved GPS location:', {city, state});
 
-            // Persist to AsyncStorage
             try {
               const raw = await AsyncStorage.getItem('Reparvuser');
               if (raw) {
@@ -252,11 +252,12 @@ export default function HomeHeader() {
                   JSON.stringify({...JSON.parse(raw), city, state}),
                 );
               }
+              // ✅ Mark source as gps so future manual picks can still override
+              await AsyncStorage.setItem('locationSource', 'gps');
             } catch (storageError) {
               devLog('AsyncStorage error:', storageError);
             }
 
-            //  Update Redux so UI re-renders immediately
             dispatch(setUserLocation({city, state}));
           }
         },
@@ -273,7 +274,6 @@ export default function HomeHeader() {
       devLog('getUserCityAndState error:', error);
     }
   }, [dispatch, user?.city, user?.state]);
-
   // ── Fetch user profile image ────────────────────────────────────────────
   const fetchProfile = useCallback(async () => {
     try {

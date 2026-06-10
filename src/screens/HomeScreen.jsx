@@ -50,9 +50,9 @@ export default function HomeScreen() {
     }, []),
   );
 
-  useEffect(() => {
-    dispatch(loadUser());
-  }, []);
+  // useEffect(() => {
+  //   dispatch(loadUser());
+  // }, []);
 
   return (
     <SafeAreaView style={{flex: 1}} edges={['top', 'left', 'right']}>

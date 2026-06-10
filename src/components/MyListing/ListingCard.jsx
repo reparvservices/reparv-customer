@@ -1,446 +1,1139 @@
 import React, {useCallback, useEffect, useState} from 'react';
-import {API_BASE_URL} from '../../config/api';
 import {
   View,
   Text,
   StyleSheet,
   Image,
   TouchableOpacity,
+  Modal,
+  ToastAndroid,
+  ActivityIndicator,
 } from 'react-native';
 import {
   Eye,
-  Mail,
   MoreVertical,
   Building,
-  PhoneCallIcon,
+  CheckCircle2,
+  Trash2,
+  AlertTriangle,
+  RefreshCw,
 } from 'lucide-react-native';
 import {useNavigation} from '@react-navigation/native';
-import Svg, {Path} from 'react-native-svg';
+import Svg, {Path, Circle} from 'react-native-svg';
 import PropertyReviewModal from './PropertyReviewCard';
 import {getImageUri, parseFrontView} from '../../utils/imageHandle';
 import {devLog} from '../../utils/devLog';
+import {formatArea} from '../../utils/formatArea';
 
 const PURPLE = '#6C3EF0';
 
-export const ListingCard = ({propertyData}) => {
+/* ─── Progress ring ─── */
+const ProgressRing = ({percent = 60, size = 52, strokeWidth = 5}) => {
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const filled = circumference * (percent / 100);
+  const empty = circumference - filled;
+  return (
+    <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      <Circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        stroke="#E5E7EB"
+        strokeWidth={strokeWidth}
+        fill="none"
+      />
+      <Circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        stroke="#F97316"
+        strokeWidth={strokeWidth}
+        fill="none"
+        strokeDasharray={`${filled} ${empty}`}
+        strokeLinecap="round"
+        rotation={-90}
+        origin={`${size / 2}, ${size / 2}`}
+      />
+    </Svg>
+  );
+};
+
+const FARM_TYPES = new Set(['FarmLand', 'FarmHouse']);
+
+const NO_INTERIOR_CATS = new Set([
+  'NewPlot',
+  'ResaleFarmLand',
+  'NewShop',
+  'OfficeSpace',
+  'Showrooms',
+  'Warehouse',
+  'ResaleShop',
+  'ResaleOffice',
+  'ResaleGodown',
+  'RentalShop',
+  'RentalOffice',
+  'FarmLand',
+  'FarmHouse',
+  'ResaleWarehouse',
+  'CommercialPlot',
+  'ResaleCommercial',
+  'ResalePlot',
+  'RentalVilla',
+  'RentalBungalow',
+  'RentalFarmHouse',
+  'RentalShowroom',
+  'RentalGodown',
+]);
+
+const NO_LOAN_CATS = new Set([
+  'RentalFlat',
+  'RentalPlot',
+  'RentalShop',
+  'RentalOffice',
+  'RentalVilla',
+  'RentalBungalow',
+  'RentalFarmHouse',
+  'RentalShowroom',
+  'RentalGodown',
+]);
+
+const NO_FLOOR_CATS = new Set([
+  'FarmLand',
+  'NewPlot',
+  'RentalPlot',
+  'ResaleHouse',
+  'ResaleVilla',
+  'ResaleBungalow',
+  'IndependentHouse',
+  'ResaleFarmHouse',
+  'Warehouse',
+  'ResaleGodown',
+  'CommercialPlot',
+  'ResaleCommercial',
+  'ResalePlot',
+  'RentalVilla',
+  'RentalBungalow',
+  'RentalFarmHouse',
+  'RentalGodown',
+]);
+
+const NO_RERA_TYPES = new Set([
+  'ResaleHouse',
+  'ResaleVilla',
+  'ResaleBungalow',
+  'IndependentHouse',
+  'FarmHouse',
+  'ResaleFarmHouse',
+  'OfficeSpace',
+  'ResaleOffice',
+  'Warehouse',
+  'ResaleWarehouse',
+  'ResaleGodown',
+  'RentalFlat',
+  'RentalShop',
+  'RentalPlot',
+  'RentalOffice',
+  'RentalVilla',
+  'RentalBungalow',
+  'RentalFarmHouse',
+  'RentalShowroom',
+  'RentalGodown',
+]);
+
+const NO_UTILITIES_CATS = new Set([
+  'CommercialPlot',
+  'ResaleCommercial',
+  'FarmLand',
+  'ResalePlot',
+  'NewPlot',
+]);
+
+const NO_FURNISHING_TYPES = new Set([
+  'Warehouse',
+  'ResaleWarehouse',
+  'ResaleGodown',
+  'NewPlot',
+  'ResaleOffice',
+  'CommercialPlot',
+  'ResaleCommercial',
+  'ResalePlot',
+  'FarmLand',
+]);
+
+/* ─── Completion fields ─── */
+export const COMPLETION_FIELDS = [
+  {
+    key: 'propertyType',
+    label: 'Property Features',
+    icon: 'features',
+    description: 'Corner plot, park facing etc.',
+  },
+  {
+    key: 'propertyCategory',
+    label: 'Property Category',
+    icon: 'category',
+    description: 'Type of property (Plot, Flat…)',
+  },
+  {
+    key: 'propertyName',
+    label: 'Property Name',
+    icon: 'name',
+    description: 'Title/name of the listing',
+  },
+  {
+    key: 'totalSalesPrice',
+    label: 'Sales Price',
+    icon: 'price',
+    description: 'Total sales price',
+  },
+  {
+    key: 'totalOfferPrice',
+    label: 'Offer Price',
+    icon: 'price',
+    description: 'Discounted / offer price',
+  },
+  {
+    key: 'contact',
+    label: 'Contact',
+    icon: 'phone',
+    description: 'Owner / agent contact number',
+  },
+  {
+    key: 'projectBy',
+    label: 'Project By',
+    icon: 'name',
+    description: 'Developer / builder name',
+  },
+  {
+    key: 'state',
+    label: 'State',
+    icon: 'location',
+    description: 'State where property is located',
+  },
+  {
+    key: 'city',
+    label: 'City',
+    icon: 'location',
+    description: 'City where property is located',
+  },
+  {
+    key: 'address',
+    label: 'Address',
+    icon: 'location',
+    description: 'Full address of the property',
+  },
+  {
+    key: 'seoSlug',
+    label: 'SEO Slug',
+    icon: 'name',
+    description: 'URL-friendly property slug',
+  },
+  {
+    key: 'propertyDescription',
+    label: 'Description',
+    icon: 'name',
+    description: 'Detailed property description',
+  },
+  {
+    key: 'ownershipType',
+    label: 'Ownership Type',
+    icon: 'ownership',
+    description: 'Freehold, leasehold etc.',
+  },
+  {
+    key: 'propertyFacing',
+    label: 'Facing Direction',
+    icon: 'facing',
+    description: 'North, South, East, West facing',
+  },
+  {
+    key: 'loanAvailability',
+    label: 'Loan Availability',
+    icon: 'price',
+    description: 'Is home loan available?',
+  },
+  {
+    key: 'reraRegistered',
+    label: 'RERA Number',
+    icon: 'ownership',
+    description: 'RERA registration number',
+  },
+  {
+    key: 'waterSupply',
+    label: 'Water Supply',
+    icon: 'amenities',
+    description: 'Municipal, borewell etc.',
+  },
+  {
+    key: 'powerBackup',
+    label: 'Power Backup',
+    icon: 'amenities',
+    description: 'Generator, inverter etc.',
+  },
+  {
+    key: 'locationFeature',
+    label: 'Location Feature',
+    icon: 'location',
+    description: 'Main road, highway facing etc.',
+  },
+  {
+    key: 'parkingFeature',
+    label: 'Parking',
+    icon: 'amenities',
+    description: 'Covered, basement, open parking',
+  },
+  {
+    key: 'amenitiesFeature',
+    label: 'Amenities',
+    icon: 'amenities',
+    description: 'Lift, gym, pool etc.',
+  },
+  {
+    key: 'smartHomeFeature',
+    label: 'Smart Home',
+    icon: 'amenities',
+    description: 'CCTV, smart locks etc.',
+  },
+  {
+    key: 'securityBenefit',
+    label: 'Security',
+    icon: 'amenities',
+    description: '24x7 security, gated community',
+  },
+  {
+    key: 'frontView',
+    label: 'Property Photos',
+    icon: 'photo',
+    description: 'Clear front-view photos',
+  },
+];
+
+const isFilledVal = val => {
+  if (val === null || val === undefined) return false;
+  if (Array.isArray(val)) return val.length > 0;
+  if (typeof val === 'string') {
+    const t = val.trim();
+    return t !== '' && t !== 'null' && t !== '[]' && t !== '{}';
+  }
+  return true;
+};
+
+export const getCompletionInfo = propertyData => {
+  const propType = propertyData?.propertyCategory || propertyData?.propertyType;
+  const isPlot = NO_INTERIOR_CATS.has(propType);
+  const isNoLoan = NO_LOAN_CATS.has(propType);
+  const isNoFloor =
+    NO_FLOOR_CATS.has(propType) || NO_INTERIOR_CATS.has(propType);
+  const isNoRera = NO_RERA_TYPES.has(propType);
+  const isNoUtil = NO_UTILITIES_CATS.has(propType);
+  const isNoFurnish =
+    NO_FURNISHING_TYPES.has(propType) || NO_INTERIOR_CATS.has(propType);
+
+  const skippedKeys = new Set();
+  if (isNoLoan) skippedKeys.add('loanAvailability');
+  if (isNoRera) skippedKeys.add('reraRegistered');
+  if (isPlot) skippedKeys.add('propertyStatusFeature');
+  if (isNoFurnish) skippedKeys.add('furnishingFeature');
+  if (isNoFloor) {
+    skippedKeys.add('totalFloors');
+    skippedKeys.add('floorNo');
+  }
+  if (isNoUtil) {
+    skippedKeys.add('waterSupply');
+    skippedKeys.add('powerBackup');
+  }
+  if (isPlot) {
+    skippedKeys.add('terraceFeature');
+    skippedKeys.add('parkingFeature');
+  }
+
+  const applicableFields = COMPLETION_FIELDS.filter(
+    f => !skippedKeys.has(f.key),
+  );
+  const results = applicableFields.map(f => ({
+    ...f,
+    isFilled: isFilledVal(propertyData?.[f.key]),
+  }));
+  const filledCount = results.filter(f => f.isFilled).length;
+  const percent = Math.round((filledCount / results.length) * 100);
+  return {percent, fields: results, missing: results.filter(f => !f.isFilled)};
+};
+
+/* ─── Delete Confirm Modal ─── */
+const DeleteConfirmModal = ({
+  visible,
+  property,
+  onCancel,
+  onConfirm,
+  isDeleting,
+}) => (
+  <Modal
+    visible={visible}
+    animationType="fade"
+    transparent
+    onRequestClose={onCancel}>
+    <View style={delStyles.bg}>
+      <View style={delStyles.card}>
+        <View style={delStyles.warningCircle}>
+          <AlertTriangle size={38} color="#EF4444" strokeWidth={2} />
+        </View>
+        <Text style={delStyles.title}>Delete Property?</Text>
+        <Text style={delStyles.desc}>
+          Are you sure? This action cannot be undone and all data will be
+          permanently removed.
+        </Text>
+        <View style={delStyles.infoBox}>
+          <Text style={delStyles.infoName}>{property?.propertyName}</Text>
+          <Text style={delStyles.infoId}>ID: REP#{property?.propertyid}</Text>
+        </View>
+        <View style={delStyles.btns}>
+          <TouchableOpacity
+            style={delStyles.cancelBtn}
+            onPress={onCancel}
+            disabled={isDeleting}>
+            <Text style={delStyles.cancelText}>Cancel</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={delStyles.confirmBtn}
+            onPress={onConfirm}
+            disabled={isDeleting}>
+            {isDeleting ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <>
+                <Trash2 size={15} color="#fff" />
+                <Text style={delStyles.confirmText}>Delete</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  </Modal>
+);
+
+/* ═══════════════════════════════════════════
+   LISTING CARD
+═══════════════════════════════════════════ */
+export const ListingCard = ({propertyData, onDeleteSuccess}) => {
   const navigation = useNavigation();
   const [totalVisitors, setTotalVisitors] = useState(0);
   const [totalCalls, setTotalCalls] = useState(0);
   const [totalWhatsapp, setTotalWhatsapp] = useState(0);
   const [propertyView, setPropertyView] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  const fetchWishlist = useCallback(async () => {
-    const propertyId = propertyData?.propertyid;
-    if (!propertyId) {
-      return;
-    }
+  const {percent: completionPercent} = getCompletionInfo(propertyData);
+  const isCompleted = completionPercent >= 90;
 
+  const isApproved = propertyData?.approve === 'Approved';
+  const isRejected = propertyData?.approve === 'Rejected';
+  const isNotApproved = propertyData?.approve === 'Not Approved';
+  const isPending = !isApproved && !isRejected && !isNotApproved;
+
+  const fetchVisitors = useCallback(async () => {
+    const id = propertyData?.propertyid;
+    if (!id) return;
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/customerapp/enquiry/getvisits?propertyid=${propertyId}`,
+      const res = await fetch(
+        `https://aws-api.reparv.in/customerapp/enquiry/getvisits?propertyid=${id}`,
       );
-
-      const data = await response.json();
-
-      let visitors = 0;
-      let calls = 0;
-      let whatsapp = 0;
-
-      if (response.ok && data) {
-        visitors = Number(data.totalVisitors || 0);
-        calls = Number(data.calls || 0);
-        whatsapp = Number(data.whatsapp_enquiry || 0);
+      const data = await res.json();
+      if (res.ok && data) {
+        setTotalVisitors(Number(data.totalVisitors || 0));
+        setTotalCalls(Number(data.calls || 0));
+        setTotalWhatsapp(Number(data.whatsapp_enquiry || 0));
       }
-
-      setTotalVisitors(visitors);
-      setTotalCalls(calls);
-      setTotalWhatsapp(whatsapp);
     } catch (err) {
-      devLog(`Visitor fetch failed for property ${propertyId}`, err);
+      devLog(
+        `Visitor fetch failed for property ${propertyData?.propertyid}`,
+        err,
+      );
     }
   }, [propertyData?.propertyid]);
 
   useEffect(() => {
-    fetchWishlist();
-  }, [fetchWishlist]);
+    fetchVisitors();
+  }, [fetchVisitors]);
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      const response = await fetch(
+        `https://aws-api.reparv.in/customerapp/property/delete/${propertyData.propertyid}`,
+        {method: 'DELETE'},
+      );
+      const data = await response.json();
+      if (response.ok) {
+        setShowDeleteModal(false);
+        ToastAndroid.show('Property deleted successfully!', ToastAndroid.SHORT);
+        onDeleteSuccess?.();
+      } else {
+        ToastAndroid.show(
+          'Delete failed: ' + (data.message || 'Unknown error'),
+          ToastAndroid.SHORT,
+        );
+      }
+    } catch {
+      ToastAndroid.show('Something went wrong', ToastAndroid.SHORT);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  /* ── Badge colors ── */
+  const badgeColor = isApproved
+    ? '#22C55E'
+    : isRejected
+    ? '#EF4444'
+    : isNotApproved
+    ? '#F59E0B'
+    : '#F59E0B';
+
+  const badgeLabel = isApproved
+    ? 'Approved'
+    : isRejected
+    ? 'Rejected'
+    : isNotApproved
+    ? 'Pending'
+    : 'Pending';
 
   return (
-    <View style={styles.listingCard}>
-      {/* Image */}
-      <Image
-        source={{
-          uri: getImageUri(parseFrontView(propertyData?.frontView)[0]),
-        }}
-        resizeMode="contain"
-        style={styles.listingImage}
-      />
+    <View style={[styles.card, isRejected && styles.cardRejected]}>
+      {/* ── TOP ROW: image + info ── */}
+      <View style={styles.topRow}>
+        <View style={styles.imgWrap}>
+          <TouchableOpacity
+            activeOpacity={0.9}
+            onPress={() =>
+              navigation.navigate('PropertyDetails', {
+                seoSlug: propertyData?.seoSlug,
+              })
+            }>
+            <Image
+              source={{
+                uri: getImageUri(parseFrontView(propertyData?.frontView)[0]),
+              }}
+              style={styles.img}
+              resizeMode="cover"
+            />
+          </TouchableOpacity>
 
-      {/* More Button */}
-      <TouchableOpacity
-        style={styles.moreBtn}
-        onPress={() => {
-          setPropertyView(true);
-        }}>
-        <MoreVertical size={18} color="#111" />
-      </TouchableOpacity>
-
-      {/* Content */}
-      <View style={styles.listingContent}>
-        {/* Title + Status */}
-        <View style={styles.rowBetween}>
-          <Text style={styles.listingTitle}>{propertyData?.propertyName}</Text>
-
-          {propertyData?.approve !== 'Not Approved' ? (
-            <View style={styles.activeBadge}>
-              <View style={styles.checkCircle}>
-                <Svg
-                  width="10"
-                  height="9"
-                  viewBox="0 0 12 9"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg">
-                  <Path
-                    d="M4.243 8.487L0 4.243L1.414 2.829L4.243 5.657L9.899 0L11.314 1.415L4.243 8.487Z"
-                    fill="#13DD2D"
-                  />
-                </Svg>
+          {/* ── REJECTED stamp overlay ── */}
+          {isRejected && (
+            <View style={styles.rejectedStampWrap} pointerEvents="none">
+              <View style={styles.rejectedStamp}>
+                <Text style={styles.rejectedStampText}>REJECTED</Text>
               </View>
-
-              <Text style={[styles.inactiveText, {color: '#13DD2D'}]}>
-                {propertyData?.approve}
-              </Text>
             </View>
-          ) : (
-            <View style={styles.inactiveBadge}>
-              <View style={styles.inactiveCircle}>
-                <Svg
-                  width="10"
-                  height="9"
-                  viewBox="0 0 12 9"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg">
-                  <Path
-                    d="M4.243 8.487L0 4.243L1.414 2.829L4.243 5.657L9.899 0L11.314 1.415L4.243 8.487Z"
-                    fill="#F59E0B"
-                  />
-                </Svg>
-              </View>
+          )}
 
-              <Text style={[styles.inactiveText]}>{propertyData?.approve}</Text>
+          {/* Status badge */}
+          {propertyData?.approve && (
+            <View style={[styles.badge, {backgroundColor: badgeColor}]}>
+              <Text style={styles.badgeText}>{badgeLabel}</Text>
+            </View>
+          )}
+
+          {/* "Under Correction" secondary badge for rejected */}
+          {isRejected && (
+            <View style={styles.correctionBadge}>
+              <Text style={styles.correctionBadgeText}>Under Correction</Text>
             </View>
           )}
         </View>
 
-        {/* Location */}
-        <View style={styles.locationRow}>
-          <Text style={styles.locationIcon}>
+        <View style={styles.infoCol}>
+          <View style={styles.titleRow}>
+            <Text style={styles.title} numberOfLines={2}>
+              {propertyData?.propertyName}
+            </Text>
+          </View>
+
+          <View style={styles.locRow}>
             <Svg
-              width="17"
-              height="17"
+              width={12}
+              height={12}
               viewBox="0 0 17 20"
               fill="none"
-              xmlns="http://www.w3.org/2000/svg">
+              style={{marginRight: 3, marginTop: 1}}>
               <Path
-                d="M8.33404 2.08336C10.0101 2.08336 11.584 2.72295 12.7653 3.88545C13.9382 5.03857 14.584 6.57191 14.584 8.19795C14.584 9.82399 13.9382 11.3542 12.7663 12.5094L8.33404 16.8677L3.90279 12.5073C2.73091 11.3542 2.08508 9.82399 2.08508 8.19586C2.08508 6.56774 2.73091 5.03753 3.90279 3.88232C5.0855 2.72277 6.67775 2.07637 8.33404 2.08336ZM8.33404 3.17781e-05C6.13042 -0.00603455 4.01319 0.856649 2.44133 2.40107C1.66855 3.15592 1.05448 4.05764 0.635228 5.05324C0.215976 6.04883 0 7.1182 0 8.19847C0 9.27874 0.215976 10.3481 0.635228 11.3437C1.05448 12.3393 1.66855 13.241 2.44133 13.9959L8.33404 19.7907L14.2267 13.9938C14.9992 13.239 15.613 12.3374 16.0321 11.342C16.4511 10.3466 16.667 9.27744 16.667 8.19743C16.667 7.11741 16.4511 6.04829 16.0321 5.05288C15.613 4.05748 14.9992 3.15588 14.2267 2.40107C12.6549 0.856649 10.5377 -0.00603455 8.33404 3.17781e-05ZM8.33404 5.72816C9.02987 5.72816 9.68404 5.99899 10.1757 6.48961C10.4178 6.73146 10.6098 7.01864 10.7408 7.33473C10.8718 7.65082 10.9392 7.98964 10.9392 8.3318C10.9392 8.67397 10.8718 9.01278 10.7408 9.32887C10.6098 9.64496 10.4178 9.93214 10.1757 10.174C9.683 10.6657 9.02987 10.9354 8.33404 10.9354C7.63821 10.9354 6.98508 10.6646 6.49237 10.174C6.25033 9.93214 6.05831 9.64496 5.9273 9.32887C5.7963 9.01278 5.72887 8.67397 5.72887 8.3318C5.72887 7.98964 5.7963 7.65082 5.9273 7.33473C6.05831 7.01864 6.25033 6.73146 6.49237 6.48961C6.98102 6.00165 7.64347 5.72775 8.33404 5.72816ZM8.33404 4.68649C7.73411 4.68612 7.14336 4.83376 6.61414 5.11632C6.08493 5.39888 5.63359 5.80763 5.30014 6.30635C4.96669 6.80507 4.76142 7.37835 4.70253 7.97538C4.64364 8.5724 4.73294 9.17474 4.96253 9.729C5.19212 10.2833 5.5549 10.7723 6.01871 11.1528C6.48252 11.5333 7.03304 11.7935 7.62148 11.9104C8.20992 12.0272 8.81809 11.9971 9.3921 11.8227C9.96611 11.6483 10.4882 11.3349 10.9122 10.9104C11.5955 10.2263 11.9794 9.2988 11.9794 8.3318C11.9794 7.3648 11.5955 6.43734 10.9122 5.75316C10.2282 5.06983 9.30085 4.68614 8.33404 4.68649Z"
+                d="M8.33 2.08C10.01 2.08 11.58 2.72 12.77 3.89C13.94 5.04 14.58 6.57 14.58 8.2C14.58 9.82 13.94 11.35 12.77 12.51L8.33 16.87L3.9 12.51C2.73 11.35 2.09 9.82 2.09 8.2C2.09 6.57 2.73 5.04 3.9 3.88C5.09 2.72 6.68 2.08 8.33 2.08ZM8.33 0C6.13 0 4.01 0.86 2.44 2.4C0.87 3.93 0 6.01 0 8.2C0 10.39 0.87 12.37 2.44 13.9L8.33 19.79L14.23 13.99C15.8 12.45 16.67 10.37 16.67 8.2C16.67 6.01 15.8 3.93 14.23 2.4C12.65 0.86 10.54 0 8.33 0Z"
                 fill="#868686"
               />
             </Svg>
-          </Text>
-          <Text style={styles.locationText}>
-            {propertyData?.address} ,{`${propertyData?.city}`} ,{' '}
-            {`${propertyData?.state}`}
-          </Text>
-        </View>
-
-        {/* Features */}
-
-        <View style={styles.featuresRow}>
-          <View style={[styles.featureChip, {flexDirection: 'row'}]}>
-            <View
-              style={{
-                width: 26,
-                height: 26,
-                borderRadius: 50,
-                backgroundColor: '#F1F1F1',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}>
-              <Building size={15} color={'#2a2929ff'} />
-            </View>
-            <Text style={styles.featureText}>
-              {propertyData?.propertyCategory}
+            <Text style={styles.locText} numberOfLines={2}>
+              {propertyData?.address}, {propertyData?.city},{' '}
+              {propertyData?.state}
             </Text>
           </View>
 
-          <View style={[styles.featureChip, {flexDirection: 'row'}]}>
-            <View
-              style={{
-                width: 26,
-                height: 26,
-                borderRadius: 50,
-                backgroundColor: '#F1F1F1',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}>
-              <Svg width={16} height={16} viewBox="0 0 16 16" fill="none">
-                <Path
-                  d="M6.66667 2H2V6M14 9.33333V14H10M2 10V8.66667H3.33333M6 8.66667H7.33333V10M7.33333 12.6667V14H6M2 12.6667V14H3.33333M9.296 3.39067L9.31467 6.672L12.596 6.69067M9.66933 6.31733L13.324 2.66267"
-                  stroke="#868686"
-                  strokeWidth={1.3}
-                  strokeLinecap="square"
-                />
-              </Svg>
-            </View>
-            <Text style={styles.featureText}>
-              {propertyData?.builtUpArea
-                ? `${Number(propertyData.builtUpArea).toLocaleString(
-                    'en-IN',
-                  )} sq.ft`
-                : '--'}
-            </Text>
+          <View style={styles.chipsCol}>
+            {propertyData?.propertyCategory ? (
+              <View style={styles.chip}>
+                <Building size={12} color="#6B7280" />
+                <Text style={styles.chipText}>
+                  {propertyData.propertyCategory}
+                </Text>
+              </View>
+            ) : null}
+            {propertyData?.builtUpArea ? (
+              <View style={[styles.chip, {marginTop: 5}]}>
+                <Svg width={12} height={12} viewBox="0 0 16 16" fill="none">
+                  <Path
+                    d="M6.66667 2H2V6M14 9.33333V14H10M2 10V8.66667H3.33333M6 8.66667H7.33333V10M7.33333 12.6667V14H6M2 12.6667V14H3.33333M9.296 3.39067L9.31467 6.672L12.596 6.69067M9.66933 6.31733L13.324 2.66267"
+                    stroke="#6B7280"
+                    strokeWidth={1.3}
+                    strokeLinecap="square"
+                  />
+                </Svg>
+                <Text style={styles.chipText}>
+                  {formatArea(propertyData.builtUpArea)}
+                </Text>
+              </View>
+            ) : null}
           </View>
         </View>
-
-        <View style={styles.divider} />
-
-        {/* Footer */}
-        <View style={styles.footerRow}>
-          <View style={styles.statsRowMini}>
-            <View style={styles.statMini}>
-              <Eye size={14} color="#2563EB" />
-              <Text style={styles.statMiniText}>{totalVisitors}</Text>
-            </View>
-
-            <View style={styles.statMini}>
-              <Mail size={14} color="#22C55E" />
-              <Text style={styles.statMiniText}>{totalWhatsapp}</Text>
-            </View>
-
-            <View style={styles.statMini}>
-              <PhoneCallIcon size={14} color="#F97316" />
-              <Text style={styles.statMiniText}>{totalCalls}</Text>
-            </View>
-          </View>
-
-          <TouchableOpacity
-            style={styles.editBtn}
-            onPress={() => {
-              navigation.navigate('RentOldNewProperty', {
-                mode: 'edit',
-                propertyData: propertyData, // full property object from API
-              });
-            }}>
-            <Text style={styles.editText}>Edit</Text>
-            <Svg
-              width="13"
-              height="13"
-              viewBox="0 0 13 13"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg">
-              <Path
-                d="M2.5 3.16699H1.83333C1.47971 3.16699 1.14057 3.30747 0.890524 3.55752C0.640476 3.80756 0.5 4.1467 0.5 4.50033V10.5003C0.5 10.8539 0.640476 11.1931 0.890524 11.4431C1.14057 11.6932 1.47971 11.8337 1.83333 11.8337H7.83333C8.18696 11.8337 8.52609 11.6932 8.77614 11.4431C9.02619 11.1931 9.16667 10.8539 9.16667 10.5003V9.83366"
-                stroke="white"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-              <Path
-                d="M8.49992 1.8334L10.4999 3.8334M11.4233 2.89007C11.6858 2.62751 11.8333 2.27139 11.8333 1.90007C11.8333 1.52875 11.6858 1.17264 11.4233 0.910071C11.1607 0.647507 10.8046 0.5 10.4333 0.5C10.0619 0.5 9.70582 0.647507 9.44325 0.910071L3.83325 6.50007V8.50007H5.83325L11.4233 2.89007Z"
-                stroke="white"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </Svg>
-          </TouchableOpacity>
-        </View>
-        <PropertyReviewModal
-          visible={propertyView}
-          onClose={() => {
-            setPropertyView(false);
-          }}
-          property={propertyData}
-        />
       </View>
+
+      {/* ── REJECTED INLINE SECTION ── */}
+      {isRejected && (
+        <>
+          <View style={styles.divider} />
+          <View style={styles.rejectionBox}>
+            <View style={styles.rejectionHeader}>
+              <AlertTriangle size={14} color="#D97706" />
+              <Text style={styles.rejectionTitle}>Rejection Reason</Text>
+            </View>
+            <Text style={styles.rejectionItem}>
+              • {propertyData?.rejectreason || 'Not specified by admin'}
+            </Text>
+            {/* <Text style={styles.rejectionItem}>
+              • Low quality images uploaded
+            </Text>
+            <Text style={styles.rejectionItem}>
+              • Missing ownership documents
+            </Text> */}
+          </View>
+          <View style={styles.divider} />
+          {/* Rejected action buttons */}
+          <View style={styles.rejectedActions}>
+            <TouchableOpacity
+              style={styles.fixResubmitBtn}
+              activeOpacity={0.85}
+              onPress={() =>
+                navigation.navigate('RentOldNewProperty', {
+                  mode: 'edit',
+                  propertyData,
+                })
+              }>
+              <RefreshCw size={14} color="#fff" />
+              <Text style={styles.fixResubmitText}>Fix & Resubmit</Text>
+            </TouchableOpacity>
+
+            <View style={styles.rejectedBtnRow}>
+              <TouchableOpacity
+                style={styles.viewDetailsBtn}
+                activeOpacity={0.8}
+                onPress={() =>
+                  navigation.navigate('PropertyDetails', {
+                    seoSlug: propertyData?.seoSlug,
+                  })
+                }>
+                <Eye size={14} color={PURPLE} />
+                <Text style={styles.viewDetailsText}>View Details</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.deleteOutlineBtn}
+                activeOpacity={0.8}
+                onPress={() => setShowDeleteModal(true)}>
+                <Trash2 size={14} color="#EF4444" />
+                <Text style={styles.deleteOutlineText}>Delete</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </>
+      )}
+
+      {/* ── NON-REJECTED SECTIONS ── */}
+      {!isRejected && (
+        <>
+          <View style={styles.divider} />
+
+          {/* COMPLETION ROW */}
+          {!isApproved && (
+            <>
+              {isCompleted ? (
+                <View style={styles.completedRow}>
+                  <CheckCircle2 size={18} color="#22C55E" />
+                  <Text style={styles.completedText}>Listing Completed</Text>
+                  <Text style={styles.completedPct}>{completionPercent}%</Text>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  style={styles.completionRow}
+                  onPress={() =>
+                    navigation.navigate('PropertyReview', {
+                      property: propertyData,
+                    })
+                  }>
+                  <View style={styles.ringWrap}>
+                    <ProgressRing
+                      percent={completionPercent}
+                      size={52}
+                      strokeWidth={5}
+                    />
+                    <View style={styles.ringLabelAbs}>
+                      <Text style={styles.ringPct}>{completionPercent}%</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.completeLabel}>Complete</Text>
+                  <View style={styles.completeBtn}>
+                    <Text style={styles.completeBtnText}>Complete Now ›</Text>
+                  </View>
+                </TouchableOpacity>
+              )}
+              <View style={styles.divider} />
+            </>
+          )}
+
+          {/* FOOTER */}
+          <View style={styles.footerRow}>
+            <View style={styles.statsRow}>
+              <View style={styles.stat}>
+                <Eye size={14} color="#9CA3AF" />
+                <Text style={styles.statText}>{totalVisitors}</Text>
+              </View>
+              <View style={styles.stat}>
+                <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+                  <Path
+                    d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
+                    stroke="#22C55E"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </Svg>
+                <Text style={styles.statText}>{totalCalls}</Text>
+              </View>
+              <View style={styles.stat}>
+                <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+                  <Path
+                    d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"
+                    stroke="#6B7280"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </Svg>
+                <Text style={styles.statText}>{totalWhatsapp}</Text>
+              </View>
+              <View style={styles.stat}>
+                <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+                  <Path
+                    d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                    stroke="#F97316"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </Svg>
+                <Text style={styles.statText}>0</Text>
+              </View>
+            </View>
+
+            {/* Edit + Delete buttons */}
+            <View style={styles.footerBtns}>
+              <TouchableOpacity
+                style={styles.deleteIconBtn}
+                onPress={() => setShowDeleteModal(true)}
+                hitSlop={{top: 6, bottom: 6, left: 6, right: 6}}>
+                <Trash2 size={15} color="#EF4444" />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.editBtn}
+                onPress={() =>
+                  navigation.navigate('RentOldNewProperty', {
+                    mode: 'edit',
+                    propertyData,
+                  })
+                }>
+                <Text style={styles.editText}>Edit</Text>
+                <Svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                  <Path
+                    d="M2.5 3.167H1.833a1.333 1.333 0 00-1.333 1.333V10.5a1.333 1.333 0 001.333 1.333H7.833A1.333 1.333 0 009.167 10.5V9.834"
+                    stroke="white"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <Path
+                    d="M8.5 1.833L10.5 3.833M11.423 2.89a1.833 1.833 0 00-2.593-2.593L3.333 6.5V8.5H5.333L11.423 2.89z"
+                    stroke="white"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </Svg>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </>
+      )}
+
+      {/* ── Modals ── */}
+      {/* <PropertyReviewModal
+        visible={propertyView}
+        onClose={() => setPropertyView(false)}
+        property={propertyData}
+      /> */}
+
+      <DeleteConfirmModal
+        visible={showDeleteModal}
+        property={propertyData}
+        isDeleting={isDeleting}
+        onCancel={() => setShowDeleteModal(false)}
+        onConfirm={handleDelete}
+      />
     </View>
   );
 };
-const styles = StyleSheet.create({
-  /* ---------------- PROPERTY LISTING CARD ---------------- */
 
-  listingCard: {
+const styles = StyleSheet.create({
+  card: {
     backgroundColor: '#fff',
     borderRadius: 16,
-    marginBottom: 16,
-    overflow: 'hidden',
+    marginHorizontal: 16,
+    marginBottom: 14,
     borderWidth: 0.5,
     borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    shadowOffset: {width: 0, height: 2},
+    elevation: 2,
+    overflow: 'hidden',
   },
-
-  listingImage: {
-    width: '100%',
-    height: 170,
+  cardRejected: {
+    borderColor: '#FECACA',
+    borderWidth: 1,
   },
-
-  moreBtn: {
+  topRow: {flexDirection: 'row', padding: 12, gap: 12},
+  imgWrap: {
+    position: 'relative',
+    width: 120,
+    height: 120,
+    borderRadius: 12,
+    overflow: 'hidden',
+    flexShrink: 0,
+  },
+  img: {width: 120, height: 120},
+  badge: {
     position: 'absolute',
-    top: 12,
-    right: 12,
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 6,
-    // elevation: 3,
+    top: 8,
+    left: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
   },
-
-  listingContent: {
-    padding: 14,
-  },
-
-  rowBetween: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-
-  listingTitle: {
-    fontSize: 15,
+  badgeText: {
+    color: '#fff',
+    fontSize: 10,
     fontWeight: '700',
-    color: '#111',
+    letterSpacing: 0.4,
   },
+  correctionBadge: {
+    position: 'absolute',
+    bottom: 8,
+    left: 0,
+    right: 0,
+    marginHorizontal: 6,
+    backgroundColor: '#FFF7ED',
+    borderRadius: 5,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    alignItems: 'center',
+  },
+  correctionBadgeText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#D97706',
+    letterSpacing: 0.2,
+  },
+  infoCol: {flex: 1, paddingTop: 2},
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 6,
+    marginBottom: 5,
+  },
+  title: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+    flex: 1,
+    lineHeight: 22,
+  },
+  locRow: {flexDirection: 'row', alignItems: 'flex-start', marginBottom: 8},
+  locText: {fontSize: 12, color: '#6B7280', flex: 1, lineHeight: 17},
+  chipsCol: {flexDirection: 'column'},
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 5,
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+  },
+  chipText: {fontSize: 12, color: '#6B7280', fontWeight: '500'},
+  divider: {height: 1, backgroundColor: '#F3F4F6'},
 
-  activeBadge: {
+  /* ── Rejection inline section ── */
+  rejectionBox: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: '#FFFBEB',
+  },
+  rejectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    //backgroundColor: '#ECFDF3',
-    borderRadius: 20,
-    alignSelf: 'flex-start',
+    marginBottom: 6,
   },
+  rejectionTitle: {fontSize: 13, fontWeight: '700', color: '#D97706'},
+  rejectionItem: {fontSize: 12, color: '#78350F', lineHeight: 20},
 
-  checkCircle: {
-    width: 20,
-    height: 20,
-    borderRadius: 11,
-    borderWidth: 1,
-    borderColor: '#13DD2D',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  activeText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#13DD2D',
-  },
-  inactiveBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    backgroundColor: '#FFFBEB', // light yellow
-    borderRadius: 20,
-    alignSelf: 'flex-start',
-  },
-
-  inactiveCircle: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 1,
-    borderColor: '#F59E0B',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  inactiveText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#F59E0B',
-  },
-
-  locationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 6,
-  },
-
-  locationIcon: {
-    fontSize: 12,
-    marginRight: 4,
-  },
-
-  locationText: {
-    fontSize: 12,
-    color: '#6B7280',
-  },
-
-  featuresRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 10,
-    width: '100%',
-  },
-  featureChip: {
-    // backgroundColor: '#F3F4F6',
+  /* ── Rejected action buttons ── */
+  rejectedActions: {
     paddingHorizontal: 12,
-    gap: 2,
-    paddingVertical: 6,
-    borderRadius: 999, // true pill shape
+    paddingVertical: 12,
+    gap: 8,
+  },
+  fixResubmitBtn: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    maxWidth: '100%',
+    backgroundColor: PURPLE,
+    borderRadius: 10,
+    paddingVertical: 12,
+    gap: 7,
   },
-
-  featureText: {
-    fontSize: 11,
-    color: '#6B7280',
-    fontWeight: '500',
+  fixResubmitText: {color: '#fff', fontSize: 14, fontWeight: '700'},
+  rejectedBtnRow: {
+    flexDirection: 'row',
+    gap: 8,
   },
+  viewDetailsBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: PURPLE,
+    borderRadius: 10,
+    paddingVertical: 10,
+    gap: 6,
+  },
+  viewDetailsText: {color: PURPLE, fontSize: 13, fontWeight: '600'},
+  deleteOutlineBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: '#EF4444',
+    borderRadius: 10,
+    paddingVertical: 10,
+    gap: 6,
+  },
+  deleteOutlineText: {color: '#EF4444', fontSize: 13, fontWeight: '600'},
 
+  /* Completion row — incomplete */
+  completionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 12,
+    backgroundColor: '#fff',
+  },
+  ringWrap: {
+    width: 52,
+    height: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  ringLabelAbs: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ringPct: {fontSize: 11, fontWeight: '800', color: '#F97316'},
+  completeLabel: {fontSize: 15, fontWeight: '600', color: '#374151', flex: 1},
+  completeBtn: {
+    borderWidth: 1.5,
+    borderColor: PURPLE,
+    borderRadius: 22,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+  },
+  completeBtnText: {color: PURPLE, fontSize: 13, fontWeight: '700'},
+
+  /* Completion row — completed ≥90% */
+  completedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 8,
+    backgroundColor: '#F0FDF4',
+  },
+  completedText: {fontSize: 14, fontWeight: '600', color: '#15803D', flex: 1},
+  completedPct: {fontSize: 13, fontWeight: '700', color: '#22C55E'},
+
+  /* Footer */
   footerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 4,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
+  statsRow: {flexDirection: 'row', gap: 14, alignItems: 'center'},
+  stat: {flexDirection: 'row', alignItems: 'center', gap: 4},
+  statText: {fontSize: 12, fontWeight: '600', color: '#374151'},
 
-  statsRowMini: {
-    flexDirection: 'row',
-    gap: 14,
-  },
+  footerBtns: {flexDirection: 'row', alignItems: 'center', gap: 8},
 
-  statMini: {
-    flexDirection: 'row',
+  deleteIconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 9,
+    borderWidth: 1.5,
+    borderColor: '#FCA5A5',
+    backgroundColor: '#FEF2F2',
     alignItems: 'center',
-    gap: 4,
+    justifyContent: 'center',
   },
-
-  statMiniText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#111',
-  },
-
   editBtn: {
     flexDirection: 'row',
-    backgroundColor: PURPLE,
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 10,
     alignItems: 'center',
     gap: 6,
+    backgroundColor: PURPLE,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: 10,
   },
-
-  editText: {
-    color: '#fff',
+  editText: {color: '#fff', fontSize: 13, fontWeight: '600'},
+  /* ── Rejected stamp overlay ── */
+  rejectedStampWrap: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
+  rejectedStamp: {
+    borderWidth: 3,
+    borderColor: '#D32F2F',
+    borderRadius: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 1,
+    transform: [{rotate: '-25deg'}],
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  rejectedStampText: {
     fontSize: 13,
+    fontWeight: '900',
+    color: '#D32F2F',
+    letterSpacing: 3,
+    textTransform: 'uppercase',
+    opacity: 0.85,
+  },
+});
+
+/* ── Delete modal styles ── */
+const delStyles = StyleSheet.create({
+  bg: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    alignItems: 'center',
+  },
+  warningCircle: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    backgroundColor: '#FEE2E2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 18,
+  },
+  title: {fontSize: 21, fontWeight: '700', color: '#1F2937', marginBottom: 10},
+  desc: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 18,
+  },
+  infoBox: {
+    width: '100%',
+    backgroundColor: '#F9FAFB',
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 22,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  infoName: {
+    fontSize: 14,
     fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 4,
   },
-  divider: {
-    height: 1,
-    backgroundColor: '#D9D9D9',
-    marginVertical: 10,
+  infoId: {fontSize: 12, color: '#6B7280'},
+  btns: {flexDirection: 'row', gap: 12, width: '100%'},
+  cancelBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
+  cancelText: {fontSize: 15, fontWeight: '600', color: '#374151'},
+  confirmBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 10,
+    backgroundColor: '#EF4444',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmText: {fontSize: 15, fontWeight: '600', color: '#fff'},
 });

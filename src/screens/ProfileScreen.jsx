@@ -1,5 +1,4 @@
 import React, {useCallback, useMemo, useState} from 'react';
-import {API_BASE_URL} from '../config/api';
 import {
   View,
   Text,
@@ -35,6 +34,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import VersionCheck from 'react-native-version-check';
+import {getImageUri} from '../utils/imageHandle';
 
 const MANAGE_DEVICE_ALLOWED_CONTACTS = new Set([
   '9322396236',
@@ -82,7 +82,7 @@ export default function ProfileScreen() {
 
   const deleteVerificationText = useMemo(() => {
     return 'DELETEMYACCOUNT';
-  }, [user?.fullname]);
+  }, []);
 
   /** Native marketing version + build (matches Xcode / Play Console). */
   const appVersionLabel = useMemo(() => {
@@ -114,7 +114,7 @@ export default function ProfileScreen() {
       }
 
       const res = await fetch(
-        `${API_BASE_URL}/customerapp/user/profile?id=${parsedUser.id}`,
+        `https://aws-api.reparv.in/customerapp/user/profile?id=${parsedUser.id}`,
       );
       const data = await res.json();
       if (res.ok) setUser(data?.data);
@@ -128,7 +128,7 @@ export default function ProfileScreen() {
     try {
       if (!auth?.user?.id) return;
       const res = await fetch(
-        `${API_BASE_URL}/customerapp/property/myproperty/${auth.user.id}`,
+        `https://aws-api.reparv.in/customerapp/property/myproperty/${auth.user.id}`,
       );
       const data = await res.json();
       setProperty(Array.isArray(data) ? data.length : 0);
@@ -138,7 +138,7 @@ export default function ProfileScreen() {
   const fetchWishlist = useCallback(async () => {
     try {
       const res = await fetch(
-        `${API_BASE_URL}/customerapp/property/get-wishlist/${auth?.user?.id}`,
+        `https://aws-api.reparv.in/customerapp/property/get-wishlist/${auth?.user?.id}`,
       );
       const json = await res.json();
       setSaved(json?.data?.length);
@@ -149,7 +149,7 @@ export default function ProfileScreen() {
     try {
       if (!auth?.user?.id) return;
       const res = await fetch(
-        `${API_BASE_URL}/customerapp/enquiry/getvisitors/${auth.user.id}`,
+        `https://aws-api.reparv.in/customerapp/enquiry/getvisitors/${auth.user.id}`,
       );
       const data = await res.json();
       setEnquiryCount(Array.isArray(data) ? data.length : 0);
@@ -178,7 +178,7 @@ export default function ProfileScreen() {
       setDeleting(true);
 
       const res = await fetch(
-        `${API_BASE_URL}/customerapp/user/delete-account`,
+        'https://aws-api.reparv.in/customerapp/user/delete-account',
         {
           method: 'DELETE',
           headers: {'Content-Type': 'application/json'},
@@ -292,9 +292,7 @@ export default function ProfileScreen() {
                 userid: user?.id,
                 state: user?.state,
                 city: user?.city,
-                userimage: user?.userimage
-                  ? `${API_BASE_URL}/${user.userimage}`
-                  : null,
+                userimage: user?.userimage ? getImageUri(user.userimage) : null,
               })
             }>
             <Text style={styles.editText}>
@@ -322,7 +320,9 @@ export default function ProfileScreen() {
 
           <View style={styles.verticalDivider} />
 
-          <TouchableOpacity style={styles.statWrapper}>
+          <TouchableOpacity
+            style={styles.statWrapper}
+            onPress={() => navigation.navigate('mylisting')}>
             <StatItem
               icon={PhoneIncoming}
               label="Enquiry"
@@ -351,6 +351,14 @@ export default function ProfileScreen() {
             page="OldProperty"
             navigation={navigation}
           />
+          {/* Rent Property: uses onPress for custom navigation params */}
+          <MenuItem
+            label="Rent Property"
+            image={require('../assets/image/Profile/sell.png')}
+            onPress={() =>
+              navigation.navigate('OldProperty', {mode: 'add', type: 'rent'})
+            }
+          />
           <MenuItem
             label="Loan Application"
             image={require('../assets/image/Profile/loan.png')}
@@ -361,6 +369,13 @@ export default function ProfileScreen() {
             label="Help Center"
             image={require('../assets/image/Profile/help.png')}
             page="HelpCenter"
+            navigation={navigation}
+          />
+          <MenuItem
+            label="Follow Us"
+            image={require('../assets/image/Profile/insta.png')}
+            page="FollowUs"
+            big={true}
             navigation={navigation}
           />
         </View>
@@ -484,21 +499,30 @@ const StatItem = ({icon: Icon, label, value}) => (
   </View>
 );
 
-const MenuItem = ({image, label, list, page, navigation}) => (
+// ── MenuItem: supports both page-based nav and a direct onPress handler ──
+const MenuItem = ({image, label, list, page, navigation, big, onPress}) => (
   <TouchableOpacity
     style={styles.menuItem}
-    onPress={() => page && navigation.navigate(page)}>
+    onPress={() => {
+      if (onPress) {
+        onPress();
+      } else if (page && navigation) {
+        navigation.navigate(page);
+      }
+    }}>
     <View style={styles.menuLeft}>
       <View
         style={[
           styles.menuIcon,
           list && {backgroundColor: '#5E23DC', padding: 6},
+          big && {backgroundColor: '#FFFFFF', marginLeft: -7},
         ]}>
         <Image
           source={image}
           style={[
             styles.menuImage,
             list && {width: 19, height: 19, tintColor: '#FFF'},
+            big && {width: 44, height: 44},
           ]}
           resizeMode="contain"
         />

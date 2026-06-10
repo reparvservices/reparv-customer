@@ -7,23 +7,19 @@ import {
   Animated,
   TouchableOpacity,
   TextInput,
+  Dimensions,
   ActivityIndicator,
   ToastAndroid,
   Platform,
-  useWindowDimensions,
 } from 'react-native';
 import {useDispatch, useSelector} from 'react-redux';
 import BackIcon from '../../assets/image/login/arrow.svg';
 import {verifyOtp, sendOtp} from '../../features/auth/authSlice';
+import RNOtpVerify from 'react-native-otp-verify';
 
-const showToast = message => {
-  if (Platform.OS === 'android') {
-    ToastAndroid.show(message, ToastAndroid.SHORT);
-  }
-};
+const {height} = Dimensions.get('window');
 
-export default function OtpModal({visible, onClose, phone, onEdit}) {
-  const {height} = useWindowDimensions();
+export default function OtpModal({visible, onClose, phone, onEdit, onVerify}) {
   const dispatch = useDispatch();
   const slideAnim = useRef(new Animated.Value(height)).current;
   const inputRefs = useRef([]);
@@ -51,7 +47,31 @@ export default function OtpModal({visible, onClose, phone, onEdit}) {
         useNativeDriver: true,
       }).start(() => setShow(false));
     }
-  }, [visible, height, slideAnim]);
+  }, [visible]);
+
+  useEffect(() => {
+    if (!visible) return;
+
+    RNOtpVerify.getOtp()
+      .then(() => {
+        RNOtpVerify.addListener(message => {
+          const code = message.match(/\d{6}/)?.[0];
+
+          if (code) {
+            setOtp(code.split(''));
+
+            setTimeout(() => {
+              verifyOtpAutomatically(code);
+            }, 300);
+          }
+        });
+      })
+      .catch(console.log);
+
+    return () => {
+      RNOtpVerify.removeListener();
+    };
+  }, [visible]);
 
   /* ================= RESEND TIMER ================= */
   useEffect(() => {
@@ -107,12 +127,11 @@ export default function OtpModal({visible, onClose, phone, onEdit}) {
         }),
       ).unwrap();
 
-      showToast('Login Successful');
+      ToastAndroid.show('Login Successful', ToastAndroid.SHORT);
 
       setOtp(Array(6).fill(''));
       setErrorMsg('');
-      setShow(false);
-      slideAnim.setValue(height);
+      onVerify(); // navigate to MainTabs
     } catch (err) {
       setErrorMsg(err || 'Invalid or expired OTP');
     }
@@ -123,18 +142,18 @@ export default function OtpModal({visible, onClose, phone, onEdit}) {
     if (resendTimer > 0) return;
 
     try {
-      await dispatch(
+      dispatch(
         sendOtp({
           contact: phone,
           fullname: 'User',
         }),
-      ).unwrap();
-      showToast('OTP Sent Again');
+      ),
+        ToastAndroid.show('OTP Sent Again', ToastAndroid.SHORT);
       setResendTimer(30);
       setOtp(Array(6).fill(''));
       setErrorMsg('');
     } catch (err) {
-      setErrorMsg('Failed to resend OTP');
+      //  setErrorMsg('Failed to resend OTP');
     }
   };
 
@@ -176,6 +195,9 @@ export default function OtpModal({visible, onClose, phone, onEdit}) {
                 value={value}
                 onChangeText={text => handleChange(text, i)}
                 onKeyPress={e => handleKeyPress(e, i)}
+                textContentType="oneTimeCode"
+                autoComplete="sms-otp"
+                importantForAutofill="yes"
               />
             ))}
           </View>
@@ -310,6 +332,7 @@ const styles = StyleSheet.create({
       android: {includeFontPadding: false, textAlignVertical: 'center'},
       default: {},
     }),
+    default: {},
   },
   verifyBtn: {
     backgroundColor: '#5E23DC',

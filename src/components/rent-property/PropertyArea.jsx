@@ -118,10 +118,18 @@ const styles = StyleSheet.create({
     color: '#000',
     marginRight: 6,
     fontFamily: 'Segoe UI',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
   arrow: {
     fontSize: 18,
     color: '#000',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
   },
   helperRow: {
     flexDirection: 'row',

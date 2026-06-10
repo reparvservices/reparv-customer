@@ -13,6 +13,8 @@ import {
   ActivityIndicator,
   StatusBar,
   Platform,
+  BackHandler,
+  Pressable,
 } from 'react-native';
 import PropertyCard from '../components/property/PropertyCard';
 import CustomSlider from '../components/utilsComponents/CustomSlider';
@@ -21,14 +23,14 @@ import DistenceSlider from '../components/utilsComponents/DistenceSlider';
 import BackIcon from '../assets/image/new-property/back-icon.svg';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import SearchIcon from '../assets/image/home/search.png';
-import {ListFilter} from 'lucide-react-native';
+import {ListFilter, X} from 'lucide-react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {parseBhkList} from '../utils/parseBhk';
 import {fetchAllPropertiesCached} from '../services/allPropertiesCache';
 import {useSelector} from 'react-redux';
+import {getImageUri, parseFrontView} from '../utils/imageHandle';
 
 const {width} = Dimensions.get('window');
-const CARD_WIDTH = width - 32;
 
 const AMENITIES_DATA = [
   '24x7 Security',
@@ -60,6 +62,10 @@ const AMENITY_MATCH_MAP = {
   'Eco-friendly features': ['eco'],
 };
 
+// ─── BHK-only pattern: only show genuine BHK / bedroom type values ───
+const BHK_VALID_PATTERN = /^\d+(\.\d+)?\s*(bhk|rk|bedroom|bed|studio)/i;
+const isBhkValue = val => BHK_VALID_PATTERN.test(String(val).trim());
+
 // ─── Highlight matching text bold ───
 const HighlightMatch = ({text, query, style}) => {
   if (!text || !query) return <Text style={style}>{text}</Text>;
@@ -75,6 +81,20 @@ const HighlightMatch = ({text, query, style}) => {
     </Text>
   );
 };
+
+// ─── Active Filter Chip ───
+const ActiveChip = ({label, onRemove}) => (
+  <View style={styles.activeChip}>
+    <Text style={styles.activeChipText} numberOfLines={1}>
+      {label}
+    </Text>
+    <TouchableOpacity
+      onPress={onRemove}
+      hitSlop={{top: 6, bottom: 6, left: 6, right: 6}}>
+      <X size={11} color="#7A2EFF" strokeWidth={2.5} />
+    </TouchableOpacity>
+  </View>
+);
 
 const PropertyListScreen = () => {
   const navigation = useNavigation();
@@ -102,8 +122,8 @@ const PropertyListScreen = () => {
   // Filter option lists
   const [propertyCategory, setPropertyCategory] = useState([]);
   const [bhk, setBhk] = useState([]);
-  const [budget, setBudget] = useState([0, 500]);
-  const [radius, setRadius] = useState(5);
+  const [budget, setBudget] = useState([0.01, 2000]); // 0.01L=₹1K to 2000L=₹20Cr
+  const [radius, setRadius] = useState(0);
 
   // Active filter states
   const [amenities, setAmenities] = useState([]);
@@ -111,6 +131,19 @@ const PropertyListScreen = () => {
   const [filterbhk, setFilterBhk] = useState([]);
   const [filterbudget, setFilterBudget] = useState([]);
   const [filterradius, setFilterRadius] = useState();
+
+  // ─── Android back handler closes filter ───
+  useEffect(() => {
+    const onBackPress = () => {
+      if (filterVisible) {
+        setFilterVisible(false);
+        return true;
+      }
+      return false;
+    };
+    const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => sub.remove();
+  }, [filterVisible]);
 
   // ─── Init ───
   useEffect(() => {
@@ -138,9 +171,15 @@ const PropertyListScreen = () => {
       .replace(/\s+/g, ' ')
       .trim();
 
+  // value is in Lakhs (e.g. 0.01 = ₹1K, 1 = ₹1L, 100 = ₹1Cr)
   const formatPrice = value => {
-    if (value >= 100) return `${(value / 100).toFixed(1)} Cr`;
-    return `${value} L`;
+    if (value >= 100)
+      return `${(value / 100).toFixed(value % 100 === 0 ? 0 : 1)} Cr`;
+    if (value >= 1)
+      return `${Number.isInteger(value) ? value : value.toFixed(1)} L`;
+    // Below 1 lakh → show in thousands
+    const thousands = Math.round(value * 100); // 0.01 lakh = 1000 → 1K
+    return `${thousands}K`;
   };
 
   const getUniqueCleanValues = (data, key) => {
@@ -164,12 +203,17 @@ const PropertyListScreen = () => {
       .trim()
       .toLowerCase();
 
-  // ─── Normalize property category for comparison ───
+  const cityMatches = (itemCity, activeCity) => {
+    if (!activeCity) return true;
+    const a = normalizeCity(itemCity);
+    const b = normalizeCity(activeCity);
+    return a.includes(b) || b.includes(a);
+  };
+
   const normalizePropertyCategory = value => {
     if (!value) return '';
-    // Convert "NewFlat" → "new flat", "RentalVilla" → "rental villa"
     return value
-      .replace(/([a-z])([A-Z])/g, '$1 $2') // Add space before capitals
+      .replace(/([a-z])([A-Z])/g, '$1 $2')
       .toLowerCase()
       .trim();
   };
@@ -196,8 +240,11 @@ const PropertyListScreen = () => {
       setFlats(activeApproved);
       setFilteredFlats(activeApproved);
 
+      // ── FIX: Only real BHK values in BHK filter ──
       const rawBhk = getUniqueCleanValues(activeApproved, 'propertyType');
-      setBhk(parseBhkList(rawBhk));
+      const cleanBhk = parseBhkList(rawBhk).filter(isBhkValue);
+      setBhk(cleanBhk);
+
       setPropertyCategory(
         getUniqueCleanValues(activeApproved, 'propertyCategory'),
       );
@@ -224,86 +271,41 @@ const PropertyListScreen = () => {
         return;
       }
       const lower = text.toLowerCase();
-      const results = [];
-
-      // Cities
-      const matchedCities = cities
-        .filter(c => c.toLowerCase().includes(lower))
-        .slice(0, 3)
-        .map(c => ({type: 'City', label: c, sublabel: c, city: c}));
-
-      // Projects
-      const matchedProjects = flats
-        .filter(f => f.propertyName?.toLowerCase().includes(lower))
-        .slice(0, 3)
+      const matched = flats
+        .filter(
+          f =>
+            f.propertyName?.toLowerCase().includes(lower) ||
+            f.location?.toLowerCase().includes(lower) ||
+            f.city?.toLowerCase().includes(lower) ||
+            f.address?.toLowerCase().includes(lower),
+        )
+        .slice(0, 8)
         .map(f => ({
           type: 'Project',
           label: f.propertyName,
-          sublabel: f.city,
           city: f.city,
+          location: f.location,
+          image: f.frontView
+            ? getImageUri(parseFrontView(f.frontView)[0])
+            : f.propertyImages?.[0] || null,
           searchText: f.propertyName,
+          seoSlug: f.seoSlug,
         }));
-
-      // Localities
-      const matchedLocalities = [
-        ...new Map(
-          flats
-            .filter(f => f.location?.toLowerCase().includes(lower))
-            .map(f => [
-              f.location,
-              {
-                type: 'Locality',
-                label: f.location,
-                sublabel: f.city,
-                city: f.city,
-                searchText: f.location,
-              },
-            ]),
-        ).values(),
-      ].slice(0, 3);
-
-      // Landmarks / address
-      const matchedLandmarks = [
-        ...new Map(
-          flats
-            .filter(f => f.address?.toLowerCase().includes(lower))
-            .map(f => [
-              f.address,
-              {
-                type: 'Landmark',
-                label: f.address,
-                sublabel: f.city,
-                city: f.city,
-                searchText: f.address,
-              },
-            ]),
-        ).values(),
-      ].slice(0, 2);
-
-      results.push(
-        ...matchedCities,
-        ...matchedProjects,
-        ...matchedLocalities,
-        ...matchedLandmarks,
-      );
-
-      setSuggestions(results);
-      setShowSuggestions(results.length > 0);
+      setSuggestions(matched);
+      setShowSuggestions(matched.length > 0);
     },
-    [cities, flats],
+    [flats],
   );
 
-  // ─── ENHANCED NLP Search Parser ───
+  // ─── NLP Search Parser ───
   const parseSearchQuery = useCallback(
     text => {
       if (!text) return {bhk: null, city: null, category: null, rawText: ''};
       const lower = text.toLowerCase().trim();
 
-      // 1. Extract BHK  →  "2bhk" | "2 bhk" | "2 bedroom"
       const bhkMatch = lower.match(/(\d+)\s*(?:bhk|bedroom|bed)/);
       const parsedBhk = bhkMatch ? `${bhkMatch[1]} BHK` : null;
 
-      // 2. Extract city  →  "in <city>" OR direct city name
       let parsedCity = null;
       const inMatch = lower.match(/\bin\s+([a-zA-Z\s]+?)(?:\s|$)/);
       const cityCandidate = inMatch ? inMatch[1].trim() : lower;
@@ -314,9 +316,7 @@ const PropertyListScreen = () => {
         ) ||
         null;
 
-      // 3. Extract property category — HANDLES BOTH FORMATS
       const CATEGORY_KEYWORDS = {
-        // ── Multi-word categories FIRST (higher priority) ──
         'rental flat': [
           'rental flat',
           'rental flats',
@@ -383,8 +383,6 @@ const PropertyListScreen = () => {
           'newflat',
         ],
         'new villa': ['new villa', 'new villas', 'newvilla'],
-
-        // ── Single-word categories LAST (lower priority) ──
         flat: ['flat', 'flats', 'apartment', 'apartments'],
         villa: ['villa', 'villas'],
         'row house': ['rowhouse', 'row house', 'row-house'],
@@ -393,17 +391,13 @@ const PropertyListScreen = () => {
       };
 
       let parsedCategory = null;
-
-      // Iterate through categories in definition order (specific → generic)
       for (const [key, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
         if (keywords.some(kw => lower.includes(kw))) {
-          // Find match in propertyCategory - check both formats
           parsedCategory =
             propertyCategory.find(
               c => normalizePropertyCategory(c) === key.toLowerCase(),
             ) || null;
-
-          if (parsedCategory) break; // Stop at first match
+          if (parsedCategory) break;
         }
       }
 
@@ -417,16 +411,14 @@ const PropertyListScreen = () => {
     [cities, propertyCategory],
   );
 
-  // ─── Enhanced Filters with COMPREHENSIVE SEARCH ───
+  // ─── Apply Filters ───
   const applyFilters = useCallback(() => {
-    // ── Parse natural language from searchText ──
     const {
       bhk: parsedBhk,
       city: parsedCity,
       category: parsedCategory,
     } = parseSearchQuery(searchText);
 
-    // Auto-apply parsed city/tab if found
     const effectiveCity = parsedCity || selectedCity;
     const effectiveTab = parsedCategory || selectedTab;
 
@@ -435,13 +427,11 @@ const PropertyListScreen = () => {
       setSelectedTab(parsedCategory);
 
     const filtered = flats.filter(item => {
-      // ── Category tab — NORMALIZE COMPARISON ──
       const matchTab =
         !effectiveTab ||
         normalizePropertyCategory(item.propertyCategory) ===
           normalizePropertyCategory(effectiveTab);
 
-      // ── Filter modal property type — NORMALIZE COMPARISON ──
       const matchCategory =
         !filterpropertyCategory.length ||
         filterpropertyCategory.some(
@@ -450,7 +440,6 @@ const PropertyListScreen = () => {
             normalizePropertyCategory(item.propertyCategory),
         );
 
-      // ── BHK — from filter modal OR parsed from search ──
       const activeBhkFilters = filterbhk.length
         ? filterbhk
         : parsedBhk
@@ -465,7 +454,6 @@ const PropertyListScreen = () => {
             ),
           ));
 
-      // ── Budget ──
       const priceInLakh = item.totalOfferPrice
         ? Number(item.totalOfferPrice) / 100000
         : 0;
@@ -473,21 +461,11 @@ const PropertyListScreen = () => {
         !filterbudget.length ||
         (priceInLakh >= filterbudget[0] && priceInLakh <= filterbudget[1]);
 
-      // ── City — exact match on parsed/selected ──
-      const matchCity =
-        !effectiveCity ||
-        normalizeCity(item.city) === normalizeCity(effectiveCity);
+      const matchCity = cityMatches(item.city, effectiveCity);
 
-      // ── COMPREHENSIVE RAW TEXT SEARCH ──
       let strippedQuery = searchText.toLowerCase();
-
-      // Remove BHK patterns
       strippedQuery = strippedQuery.replace(/\d+\s*(?:bhk|bedroom|bed)/g, '');
-
-      // Remove "in <city>" patterns
       strippedQuery = strippedQuery.replace(/\bin\s+[\w\s]+/g, '');
-
-      // Remove category keywords (all of them)
       const allCategoryKeywords = [
         'rental',
         'rent',
@@ -513,15 +491,12 @@ const PropertyListScreen = () => {
         'project',
         'land',
       ];
-
       allCategoryKeywords.forEach(keyword => {
         const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
         strippedQuery = strippedQuery.replace(regex, '');
       });
-
       strippedQuery = strippedQuery.replace(/\s+/g, ' ').trim();
 
-      // Search across ALL relevant fields
       const searchableFields = [
         item.city,
         item.location,
@@ -531,7 +506,7 @@ const PropertyListScreen = () => {
         item.nearestLandmark,
         item.seoSlug,
         item.propertyDescription,
-        normalizePropertyCategory(item.propertyCategory), // Include normalized category
+        normalizePropertyCategory(item.propertyCategory),
         ...(Array.isArray(item.propertyType) ? item.propertyType : []),
       ]
         .filter(Boolean)
@@ -541,7 +516,6 @@ const PropertyListScreen = () => {
         !strippedQuery ||
         searchableFields.some(field => field.includes(strippedQuery));
 
-      // ── Amenities filter ──
       const matchAmenities =
         !amenities.length ||
         amenities.every(selectedAmenity => {
@@ -575,10 +549,8 @@ const PropertyListScreen = () => {
     filterbudget,
     amenities,
     parseSearchQuery,
-    getPropertyAmenities,
   ]);
 
-  // ─── Suggestion select handler ───
   const handleSuggestionSelect = item => {
     if (item.city) setSelectedCity(item.city);
     setSearchText(item.searchText || item.label);
@@ -586,7 +558,6 @@ const PropertyListScreen = () => {
     searchInputRef.current?.blur();
   };
 
-  // ─── Render ───
   const renderItem = useCallback(({item}) => <PropertyCard item={item} />, []);
 
   const filteredCategories = React.useMemo(() => {
@@ -600,6 +571,62 @@ const PropertyListScreen = () => {
     );
   }, [ptype, propertyCategory]);
 
+  // ─── Active filters for display chips ───
+  const activeFilterChips = React.useMemo(() => {
+    const chips = [];
+    filterpropertyCategory.forEach(cat =>
+      chips.push({
+        key: `cat-${cat}`,
+        label: cat,
+        onRemove: () =>
+          setFilterPropertyCategory(prev => prev.filter(c => c !== cat)),
+      }),
+    );
+    filterbhk.forEach(b =>
+      chips.push({
+        key: `bhk-${b}`,
+        label: b,
+        onRemove: () => setFilterBhk(prev => prev.filter(c => c !== b)),
+      }),
+    );
+    amenities.forEach(a =>
+      chips.push({
+        key: `am-${a}`,
+        label: a,
+        onRemove: () => setAmenities(prev => prev.filter(c => c !== a)),
+      }),
+    );
+    if (
+      filterbudget.length === 2 &&
+      (filterbudget[0] > 0.01 || filterbudget[1] < 2000)
+    ) {
+      chips.push({
+        key: 'budget',
+        label: `₹${formatPrice(filterbudget[0])} – ₹${formatPrice(
+          filterbudget[1],
+        )}`,
+        onRemove: () => {
+          setFilterBudget([]);
+          setBudget([0.01, 2000]);
+        },
+      });
+    }
+    return chips;
+  }, [filterpropertyCategory, filterbhk, amenities, filterbudget]);
+
+  const hasActiveFilters = activeFilterChips.length > 0;
+
+  const resetAllFilters = () => {
+    setFilterPropertyCategory([]);
+    setFilterBhk([]);
+    setFilterBudget([]);
+    setBudget([0.01, 2000]);
+    setFilterRadius(0);
+    setRadius(0);
+    setAmenities([]);
+    applyFilters();
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar
@@ -612,14 +639,12 @@ const PropertyListScreen = () => {
         <View style={styles.container}>
           {/* ── Search Row ── */}
           <View style={styles.searchRow}>
-            {/* Back Button — round pill */}
             <TouchableOpacity
               style={styles.backBtn}
               onPress={() => navigation.goBack()}>
               <BackIcon width={18} height={18} fill="#555" />
             </TouchableOpacity>
 
-            {/* Search Input */}
             <View style={styles.searchBox}>
               <Image
                 source={SearchIcon}
@@ -666,60 +691,78 @@ const PropertyListScreen = () => {
               )}
             </View>
 
-            {/* Filter Button — solid purple square */}
             <TouchableOpacity
-              style={styles.filterBtn}
+              style={[
+                styles.filterBtn,
+                hasActiveFilters && styles.filterBtnActive,
+              ]}
               onPress={() => setFilterVisible(true)}
               activeOpacity={0.85}>
               <ListFilter width={20} height={20} color="#fff" />
+              {hasActiveFilters && (
+                <View style={styles.filterBadge}>
+                  <Text style={styles.filterBadgeText}>
+                    {activeFilterChips.length}
+                  </Text>
+                </View>
+              )}
             </TouchableOpacity>
           </View>
 
           {/* ── Autocomplete Dropdown ── */}
           {showSuggestions && suggestions.length > 0 && (
             <View style={styles.suggestionsContainer}>
-              {/* "Search for X" row */}
               <TouchableOpacity
-                style={styles.suggestionSearchRow}
+                style={styles.showAllRow}
                 onPress={() => {
                   setShowSuggestions(false);
                   applyFilters();
                 }}>
-                <Text style={styles.suggestionSearchIcon}>↗</Text>
-                <Text style={styles.suggestionSearchText}>
-                  Search for{' '}
-                  <Text style={{fontWeight: '700'}}>"{searchText}"</Text>
-                </Text>
+                <Text style={styles.showAllText}>Show All</Text>
               </TouchableOpacity>
-
-              {suggestions.map((item, idx) => (
-                <TouchableOpacity
-                  key={`${item.type}-${idx}`}
-                  style={[
-                    styles.suggestionItem,
-                    idx === suggestions.length - 1 && {borderBottomWidth: 0},
-                  ]}
-                  onPress={() => handleSuggestionSelect(item)}>
-                  <View style={styles.suggestionLeft}>
-                    <HighlightMatch
-                      text={item.label}
-                      query={searchText}
-                      style={styles.suggestionLabel}
-                    />
-                    <View style={styles.suggestionMeta}>
-                      <Text style={styles.suggestionType}>{item.type}</Text>
-                      {item.sublabel && item.sublabel !== item.label && (
-                        <>
-                          <Text style={styles.suggestionDot}> | </Text>
-                          <Text style={styles.suggestionSublabel}>
-                            {item.sublabel}
-                          </Text>
-                        </>
+              <ScrollView
+                keyboardShouldPersistTaps="handled"
+                style={{maxHeight: 320}}
+                showsVerticalScrollIndicator={false}>
+                {suggestions.map((item, idx) => (
+                  <TouchableOpacity
+                    key={`${item.type}-${idx}`}
+                    style={[
+                      styles.suggestionItem,
+                      idx === suggestions.length - 1 && {borderBottomWidth: 0},
+                    ]}
+                    onPress={() =>
+                      navigation.navigate('PropertyDetails', {
+                        seoSlug: item?.seoSlug,
+                      })
+                    }>
+                    <View style={styles.suggestionThumb}>
+                      {item.image ? (
+                        <Image
+                          source={{uri: item.image}}
+                          style={styles.suggestionThumbImg}
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <View style={styles.suggestionThumbPlaceholder} />
                       )}
                     </View>
-                  </View>
-                </TouchableOpacity>
-              ))}
+                    <View style={styles.suggestionLeft}>
+                      <HighlightMatch
+                        text={item.label}
+                        query={searchText}
+                        style={styles.suggestionLabel}
+                      />
+                      <Text style={styles.suggestionSublabel} numberOfLines={1}>
+                        {item.city}
+                        {item.location
+                          ? ` - ${item.location.toUpperCase()}`
+                          : ''}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
             </View>
           )}
 
@@ -749,6 +792,33 @@ const PropertyListScreen = () => {
             </ScrollView>
           </View>
 
+          {/* ── Active Filter Chips ── */}
+          {hasActiveFilters && (
+            <View style={styles.activeFiltersRow}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.activeFiltersScroll}>
+                {activeFilterChips.map(chip => (
+                  <ActiveChip
+                    key={chip.key}
+                    label={chip.label}
+                    onRemove={() => {
+                      chip.onRemove();
+                      // re-apply with slight delay so state updates
+                      setTimeout(applyFilters, 50);
+                    }}
+                  />
+                ))}
+                <TouchableOpacity
+                  onPress={resetAllFilters}
+                  style={styles.clearAllChip}>
+                  <Text style={styles.clearAllChipText}>Clear All</Text>
+                </TouchableOpacity>
+              </ScrollView>
+            </View>
+          )}
+
           {/* ── Result Count Row ── */}
           <View style={styles.resultRow}>
             <View>
@@ -775,8 +845,6 @@ const PropertyListScreen = () => {
                 in {selectedCity || 'All Cities'}
               </Text>
             </View>
-
-            {/* Clear city chip — shows only when a city is selected */}
             {selectedCity ? (
               <TouchableOpacity
                 onPress={() => {
@@ -799,9 +867,7 @@ const PropertyListScreen = () => {
             <EmptyState
               city={selectedCity || 'your city'}
               suggestedCities={cities
-                .filter(
-                  city => normalizeCity(city) !== normalizeCity(selectedCity),
-                )
+                .filter(city => !cityMatches(city, selectedCity))
                 .slice(0, 8)}
               onSelectCity={city => {
                 setSelectedCity(city);
@@ -810,8 +876,8 @@ const PropertyListScreen = () => {
               onReset={() => {
                 setFilterPropertyCategory([]);
                 setFilterBhk([]);
-                setFilterBudget([0, 0]);
-                setFilterRadius(5);
+                setFilterBudget([]);
+                setFilterRadius(0);
                 setAmenities([]);
                 setSelectedCity('');
                 setSelectedTab('');
@@ -835,36 +901,55 @@ const PropertyListScreen = () => {
           )}
 
           {/* ── FILTER MODAL ── */}
-          <Modal visible={filterVisible} transparent animationType="slide">
-            <View style={styles.overlay}>
-              <View style={styles.sheet}>
-                <TouchableOpacity
-                  style={styles.dragHandle}
-                  onPress={() => setFilterVisible(false)}
-                />
+          <Modal
+            visible={filterVisible}
+            transparent
+            animationType="slide"
+            onRequestClose={() => setFilterVisible(false)}>
+            {/* ── Backdrop tap closes modal ── */}
+            <Pressable
+              style={styles.overlay}
+              onPress={() => setFilterVisible(false)}>
+              {/* Inner sheet — stop propagation so tapping inside doesn't close */}
+              <Pressable
+                style={styles.sheet}
+                onPress={e => e.stopPropagation()}>
+                {/* ── Drag handle ── */}
+                <View style={styles.dragHandle} />
 
+                {/* ── Header ── */}
                 <View style={styles.headerRow}>
                   <Text style={styles.headerTitle}>Filters</Text>
-                  <TouchableOpacity
-                    onPress={() => {
-                      setFilterPropertyCategory([]);
-                      setFilterBhk([]);
-                      setFilterBudget([0, 500]);
-                      setBudget([0, 500]);
-                      setFilterRadius(5);
-                      setRadius(5);
-                      setAmenities([]);
-                      applyFilters();
-                    }}>
-                    <Text style={styles.resetText}>Reset All</Text>
-                  </TouchableOpacity>
+                  <View style={styles.headerActions}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setFilterPropertyCategory([]);
+                        setFilterBhk([]);
+                        setFilterBudget([0.01, 2000]);
+                        setBudget([0.01, 2000]);
+                        setFilterRadius(0);
+                        setRadius(0);
+                        setAmenities([]);
+                      }}>
+                      <Text style={styles.resetText}>Reset All</Text>
+                    </TouchableOpacity>
+
+                    {/* ── Close (✕) button ── */}
+                    <TouchableOpacity
+                      onPress={() => setFilterVisible(false)}
+                      style={styles.closeBtn}
+                      hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
+                      <X size={18} color="#444" strokeWidth={2.5} />
+                    </TouchableOpacity>
+                  </View>
                 </View>
 
                 <View style={styles.separator} />
 
+                {/* ── Scrollable content ── */}
                 <ScrollView
                   showsVerticalScrollIndicator={false}
-                  contentContainerStyle={{paddingBottom: 20}}>
+                  contentContainerStyle={{paddingBottom: 8}}>
                   {/* Property Type */}
                   <Text style={styles.sectionTitle}>Property Type</Text>
                   <View style={styles.chipWrap}>
@@ -899,7 +984,7 @@ const PropertyListScreen = () => {
 
                   <View style={styles.separator} />
 
-                  {/* BHK */}
+                  {/* BHK — only real BHK values */}
                   <Text style={styles.sectionTitle}>BHK Configuration</Text>
                   <View style={styles.chipWrap}>
                     {bhk.length > 0 &&
@@ -930,25 +1015,30 @@ const PropertyListScreen = () => {
 
                   <View style={styles.separator} />
 
-                  {/* Budget */}
+                  {/* Budget — 1L to 20Cr */}
                   <Text style={[styles.sectionTitle, {marginTop: 5}]}>
                     Budget Range
                   </Text>
                   <View style={styles.rangeRow}>
                     <View style={styles.rangeBox}>
-                      <Text style={{color: '#000'}}>
+                      <Text style={styles.rangeLabel}>Min</Text>
+                      <Text style={styles.rangeValue}>
                         ₹ {formatPrice(budget[0])}
                       </Text>
                     </View>
+                    <View style={styles.rangeDash}>
+                      <Text style={{color: '#999'}}>—</Text>
+                    </View>
                     <View style={styles.rangeBox}>
-                      <Text style={{color: '#000'}}>
+                      <Text style={styles.rangeLabel}>Max</Text>
+                      <Text style={styles.rangeValue}>
                         ₹ {formatPrice(budget[1])}
                       </Text>
                     </View>
                   </View>
                   <CustomSlider
-                    min={0}
-                    max={500}
+                    min={0.01}
+                    max={2000}
                     values={budget}
                     onChange={val => {
                       setBudget(val);
@@ -967,8 +1057,8 @@ const PropertyListScreen = () => {
                     </Text>
                   </View>
                   <DistenceSlider
-                    min={1}
-                    max={20}
+                    min={0}
+                    max={100}
                     value={radius}
                     unit="km"
                     onChange={val => {
@@ -1001,21 +1091,47 @@ const PropertyListScreen = () => {
                           style={[
                             styles.checkbox,
                             amenities.includes(item) && styles.checkboxActive,
-                          ]}
-                        />
+                          ]}>
+                          {amenities.includes(item) && (
+                            <Text
+                              style={{
+                                color: '#fff',
+                                fontSize: 10,
+                                fontWeight: '700',
+                              }}>
+                              ✓
+                            </Text>
+                          )}
+                        </View>
                         <Text style={styles.checkboxText}>{item}</Text>
                       </TouchableOpacity>
                     )}
                   />
                 </ScrollView>
 
-                <TouchableOpacity
-                  style={styles.applyBtn}
-                  onPress={applyFilters}>
-                  <Text style={styles.applyText}>Apply Filter</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
+                {/* ── Sticky bottom buttons ── */}
+                <View style={styles.stickyFooter}>
+                  <TouchableOpacity
+                    style={styles.footerResetBtn}
+                    onPress={() => {
+                      setFilterPropertyCategory([]);
+                      setFilterBhk([]);
+                      setFilterBudget([0.01, 2000]);
+                      setBudget([0.01, 2000]);
+                      setFilterRadius(0);
+                      setRadius(0);
+                      setAmenities([]);
+                    }}>
+                    <Text style={styles.footerResetText}>Reset</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.applyBtn}
+                    onPress={applyFilters}>
+                    <Text style={styles.applyText}>Apply Filters</Text>
+                  </TouchableOpacity>
+                </View>
+              </Pressable>
+            </Pressable>
           </Modal>
         </View>
       </View>
@@ -1030,7 +1146,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F7F7F7',
   },
-
   container: {
     flex: 1,
     backgroundColor: '#F7F7F7',
@@ -1044,7 +1159,6 @@ const styles = StyleSheet.create({
     gap: 10,
     marginBottom: 12,
   },
-
   backBtn: {
     width: 44,
     height: 44,
@@ -1056,7 +1170,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flexShrink: 0,
   },
-
   searchBox: {
     flex: 1,
     flexDirection: 'row',
@@ -1068,13 +1181,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     height: 52,
   },
-
   searchIcon: {
     width: 17,
     height: 17,
     tintColor: '#9CA3AF',
   },
-
   searchInput: {
     flex: 1,
     marginLeft: 10,
@@ -1086,17 +1197,10 @@ const styles = StyleSheet.create({
       default: {},
     }),
   },
+  clearBtn: {paddingHorizontal: 6, paddingVertical: 4},
+  clearX: {fontSize: 13, color: '#AAAAAA'},
 
-  clearBtn: {
-    paddingHorizontal: 6,
-    paddingVertical: 4,
-  },
-
-  clearX: {
-    fontSize: 13,
-    color: '#AAAAAA',
-  },
-
+  // ── Filter button with badge ──
   filterBtn: {
     width: 52,
     height: 52,
@@ -1106,90 +1210,93 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flexShrink: 0,
   },
+  filterBtnActive: {
+    backgroundColor: '#5E10E6',
+  },
+  filterBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: '#FF3B30',
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#F7F7F7',
+  },
+  filterBadgeText: {
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: '800',
+  },
 
   // ── Autocomplete ──
   suggestionsContainer: {
     position: 'absolute',
     top: 68,
-    left: 16,
-    right: 16,
+    left: 0,
+    right: 0,
     backgroundColor: '#fff',
     borderRadius: 16,
     zIndex: 999,
-    elevation: 12,
-    shadowColor: '#000',
+    elevation: 14,
+    shadowColor: '#7A2EFF',
     shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.14,
-    shadowRadius: 10,
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#EDE9FE',
   },
-
-  suggestionSearchRow: {
-    flexDirection: 'row',
+  showAllRow: {
     alignItems: 'center',
-    paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',
   },
-
-  suggestionSearchIcon: {
-    fontSize: 16,
-    color: '#555',
-    marginRight: 10,
-  },
-
-  suggestionSearchText: {
+  showAllText: {
+    color: '#7A2EFF',
+    fontWeight: '700',
     fontSize: 14,
-    color: '#333',
+    letterSpacing: 0.3,
   },
-
   suggestionItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 13,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
     borderBottomWidth: 1,
     borderBottomColor: '#F5F5F5',
+    gap: 12,
   },
-
-  suggestionLeft: {
-    flex: 1,
+  suggestionThumb: {
+    width: 62,
+    height: 52,
+    borderRadius: 10,
+    overflow: 'hidden',
+    flexShrink: 0,
+    backgroundColor: '#EDE9FE',
   },
-
+  suggestionThumbImg: {width: '100%', height: '100%'},
+  suggestionThumbPlaceholder: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#EDE9FE',
+  },
+  suggestionLeft: {flex: 1, gap: 4},
   suggestionLabel: {
-    fontSize: 14,
-    color: '#222',
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#111827',
+    letterSpacing: 0.2,
+    textTransform: 'uppercase',
   },
-
-  suggestionMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 3,
-  },
-
-  suggestionType: {
-    fontSize: 12,
-    color: '#7A2EFF',
-    fontWeight: '600',
-  },
-
-  suggestionDot: {
-    fontSize: 12,
-    color: '#bbb',
-  },
-
-  suggestionSublabel: {
-    fontSize: 12,
-    color: '#888',
-  },
+  suggestionSublabel: {fontSize: 12, color: '#6B7280'},
 
   // ── Tabs ──
-  tabRow: {
-    flexDirection: 'row',
-    marginBottom: 10,
-  },
-
+  tabRow: {flexDirection: 'row', marginBottom: 10},
   tab: {
     paddingHorizontal: 18,
     paddingVertical: 4,
@@ -1199,18 +1306,49 @@ const styles = StyleSheet.create({
     marginRight: 8,
     height: 30,
   },
+  activeTab: {backgroundColor: '#7A2EFF', borderColor: '#7A2EFF'},
+  tabText: {color: '#777'},
+  activeTabText: {color: 'white'},
 
-  activeTab: {
-    backgroundColor: '#7A2EFF',
-    borderColor: '#7A2EFF',
+  // ── Active filter chips ──
+  activeFiltersRow: {
+    marginBottom: 8,
   },
-
-  tabText: {
-    color: '#777',
+  activeFiltersScroll: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingRight: 16,
   },
-
-  activeTabText: {
-    color: 'white',
+  activeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#EDE9FE',
+    borderWidth: 1,
+    borderColor: '#C4B5FD',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    maxWidth: 160,
+  },
+  activeChipText: {
+    fontSize: 12,
+    color: '#7A2EFF',
+    fontWeight: '600',
+    flexShrink: 1,
+  },
+  clearAllChip: {
+    backgroundColor: '#FEE2E2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  clearAllChipText: {
+    fontSize: 12,
+    color: '#EF4444',
+    fontWeight: '700',
   },
 
   // ── Result Row ──
@@ -1220,23 +1358,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginVertical: 10,
   },
-
-  resultText: {
-    color: 'black',
-  },
-
+  resultText: {color: 'black'},
   clearCityBtn: {
     backgroundColor: '#F4EDFF',
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: 20,
   },
-
-  clearCityText: {
-    color: '#7A2EFF',
-    fontWeight: '600',
-    fontSize: 13,
-  },
+  clearCityText: {color: '#7A2EFF', fontWeight: '600', fontSize: 13},
 
   // ── Loader ──
   loaderContainer: {
@@ -1245,43 +1374,38 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 40,
   },
-
-  loaderText: {
-    marginTop: 10,
-    fontSize: 14,
-    color: '#868686',
-  },
+  loaderText: {marginTop: 10, fontSize: 14, color: '#868686'},
 
   // ── Filter Modal ──
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: 'rgba(0,0,0,0.45)',
     justifyContent: 'flex-end',
   },
-
   sheet: {
     backgroundColor: '#FFF',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 20,
-    maxHeight: '85%',
+    paddingBottom: 0,
+    maxHeight: '88%',
   },
-
   dragHandle: {
     width: 40,
     height: 4,
     backgroundColor: '#CCC',
     borderRadius: 4,
     alignSelf: 'center',
-    marginBottom: 12,
+    marginBottom: 14,
   },
 
+  // ── Modal Header ──
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 4,
   },
-
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
@@ -1291,14 +1415,27 @@ const styles = StyleSheet.create({
       default: {},
     }),
   },
-
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
   resetText: {
     color: '#7A2EFF',
     fontWeight: '600',
+    fontSize: 14,
     ...Platform.select({
       android: {includeFontPadding: false, textAlignVertical: 'center'},
       default: {},
     }),
+  },
+  closeBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   sectionTitle: {
@@ -1312,24 +1449,14 @@ const styles = StyleSheet.create({
       default: {},
     }),
   },
-
-  chipWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-
+  chipWrap: {flexDirection: 'row', flexWrap: 'wrap', gap: 10},
   chip: {
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
     backgroundColor: '#F4EDFF',
   },
-
-  chipActive: {
-    backgroundColor: '#7A2EFF',
-  },
-
+  chipActive: {backgroundColor: '#7A2EFF'},
   chipText: {
     color: '#555',
     ...Platform.select({
@@ -1337,7 +1464,6 @@ const styles = StyleSheet.create({
       default: {},
     }),
   },
-
   chipTextActive: {
     color: '#fff',
     fontWeight: '600',
@@ -1347,22 +1473,34 @@ const styles = StyleSheet.create({
     }),
   },
 
+  // ── Budget ──
   rangeRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
+    marginBottom: 12,
   },
-
   rangeBox: {
     backgroundColor: '#F4EDFF',
     padding: 10,
-    borderRadius: 8,
-    width: '45%',
-    color: '#000',
-    ...Platform.select({
-      android: {includeFontPadding: false, textAlignVertical: 'center'},
-      default: {},
-    }),
+    borderRadius: 10,
+    width: '44%',
+    alignItems: 'center',
   },
+  rangeLabel: {
+    fontSize: 10,
+    color: '#9CA3AF',
+    fontWeight: '600',
+    marginBottom: 2,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  rangeValue: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#7A2EFF',
+  },
+  rangeDash: {alignItems: 'center', justifyContent: 'center'},
 
   radiusRow: {
     flexDirection: 'row',
@@ -1370,6 +1508,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
 
+  // ── Amenities checkboxes ──
   checkboxRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -1377,25 +1516,24 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingRight: 12,
   },
-
   checkbox: {
     width: 18,
     height: 18,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: '#999',
     marginRight: 8,
     borderRadius: 4,
     marginTop: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-
   checkboxActive: {
     backgroundColor: '#7A2EFF',
     borderColor: '#7A2EFF',
   },
-
   checkboxText: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 13,
     color: '#444',
     flexWrap: 'wrap',
     ...Platform.select({
@@ -1404,17 +1542,43 @@ const styles = StyleSheet.create({
     }),
   },
 
+  // ── Sticky footer ──
+  stickyFooter: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 4,
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F0',
+    backgroundColor: '#FFF',
+  },
+  footerResetBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: '#7A2EFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  footerResetText: {
+    color: '#7A2EFF',
+    fontWeight: '700',
+    fontSize: 14,
+  },
   applyBtn: {
+    flex: 2,
     backgroundColor: '#7A2EFF',
     paddingVertical: 14,
     borderRadius: 10,
-    marginTop: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-
   applyText: {
     color: '#FFF',
     textAlign: 'center',
     fontWeight: '700',
+    fontSize: 14,
     ...Platform.select({
       android: {includeFontPadding: false, textAlignVertical: 'center'},
       default: {},
@@ -1424,7 +1588,7 @@ const styles = StyleSheet.create({
   separator: {
     width: '100%',
     height: 1,
-    backgroundColor: '#D9D9D9',
+    backgroundColor: '#E5E7EB',
     marginVertical: 10,
   },
 });

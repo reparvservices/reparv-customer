@@ -60,7 +60,7 @@ const C = {
 };
 
 const BUDGET_MIN = 1_000;
-const BUDGET_MAX = 20_000_000;
+const BUDGET_MAX = 50_000_000;
 const BUDGET_STEP = 15_000;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -789,11 +789,13 @@ const PropertyCard = ({property, onClose, navigation, userCoords}) => {
               {prettifyCategory(property.propertyCategory)}
             </Text>
           </View>
-          {property.loanAvailability === 'Yes' && (
-            <View style={pc.loanBadge}>
-              <Text style={pc.loanBadgeTxt}>🏦 Loan</Text>
-            </View>
-          )}
+          {property.loanAvailability === 'Yes' &&
+            property.propertyCategory !== 'RentalFlat' &&
+            property.propertyCategory !== 'RentalOffice' && (
+              <View style={pc.loanBadge}>
+                <Text style={pc.loanBadgeTxt}>🏦 Loan</Text>
+              </View>
+            )}
         </View>
 
         {/* Close button */}
@@ -999,7 +1001,7 @@ const FilterPanel = ({
           <Text style={s.filterLabel}>Max Budget</Text>
           <View style={s.budgetBadge}>
             <Text style={s.budgetBadgeTxt}>
-              {maxBudget >= BUDGET_MAX ? '₹2Cr+' : formatPrice(maxBudget)}
+              {maxBudget >= BUDGET_MAX ? '₹5Cr+' : formatPrice(maxBudget)}
             </Text>
           </View>
         </View>
@@ -1088,7 +1090,7 @@ const FilterPanel = ({
 
         <View style={s.sliderRangeRow}>
           <Text style={s.sliderRangeTxt}>₹1K</Text>
-          <Text style={s.sliderRangeTxt}>₹2Cr</Text>
+          <Text style={s.sliderRangeTxt}>₹5Cr</Text>
         </View>
         <TouchableOpacity
           style={s.applyBtn}

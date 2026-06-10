@@ -105,16 +105,16 @@ export default function PersonalInfoForm({data, setData, errors}) {
       <Text style={styles.label}>
         Date of Birth <Text style={styles.star}>*</Text>
       </Text>
-
       <TouchableOpacity
         activeOpacity={0.8}
         onPress={() => setShowCalendar(true)}>
-        <View pointerEvents="none">
+        <View>
           <TextInput
             placeholder="DD/MM/YYYY"
-            value={data.dob}
+            placeholderTextColor="#999"
+            value={data?.dob || ''}
             editable={false}
-            style={styles.input}
+            style={[styles.input, {color: '#000'}]}
           />
         </View>
       </TouchableOpacity>
@@ -148,7 +148,7 @@ export default function PersonalInfoForm({data, setData, errors}) {
       <TextInput
         placeholder="Enter Your email address"
         placeholderTextColor="#868686"
-        style={styles.input}
+        style={[styles.input, {color: '#000'}]}
         value={data.email}
         onChangeText={v => setData({...data, email: v})}
       />

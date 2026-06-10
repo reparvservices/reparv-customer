@@ -312,7 +312,7 @@ export default function CalculatorScreen() {
 
                 <Field
                   label="Interest Rate (% P.A.)"
-                  value={`${rate}%`}
+                  value={`${Math.round(rate * 10) / 10}%`}
                   onPress={() => setShowRateModal(true)}
                 />
                 <MultiSlider

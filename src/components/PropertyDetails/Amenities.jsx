@@ -17,10 +17,8 @@ export const Amenities = ({featuresData = [], benefitsData = []}) => {
   const filterData = data =>
     data.filter(item => {
       if (!item?.value) return false;
-      if (typeof item.value === 'string') {
-        return item.value.trim().toUpperCase() !== 'NO';
-      }
-      return true;
+      const val = String(item.value).trim();
+      return val !== '' && val.toUpperCase() !== 'NO' && val !== '—';
     });
 
   const amenities = filterData(featuresData);

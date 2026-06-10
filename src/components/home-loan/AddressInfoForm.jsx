@@ -276,14 +276,20 @@ function JobForm({data, setData, errors}) {
       {/* Other Income */}
       <Text style={[styles.label, platformText]}>Other Income (Optional)</Text>
       <View style={styles.checkboxRow}>
-        {['Co-applicant Income', 'Rental Income', 'Other Income'].map(item => (
-          <Checkbox
-            key={item}
-            selected={data.otherIncomeType === item}
-            onPress={() => setData({...data, otherIncomeType: item})}
-            label={item}
-          />
-        ))}
+        {['Co-applicant Income', 'Rental Income', 'Other Income', 'None'].map(
+          item => (
+            <Checkbox
+              key={item}
+              selected={
+                data.otherIncomeType === 'None'
+                  ? false
+                  : data.otherIncomeType === item
+              }
+              onPress={() => setData({...data, otherIncomeType: item})}
+              label={item}
+            />
+          ),
+        )}
       </View>
 
       {/* Annual Income ITR */}

@@ -1,5 +1,4 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react';
-import {API_BASE_URL} from '../config/api';
 import {
   View,
   Text,
@@ -14,7 +13,14 @@ import {
   Platform,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
-import {ArrowLeft, Heart, Trash2, X} from 'lucide-react-native';
+import {
+  ArrowLeft,
+  Heart,
+  Trash2,
+  X,
+  Home,
+  AlertCircle,
+} from 'lucide-react-native';
 import WishlistIcon from '../assets/icons/WishlistIcon';
 import EnquiriesIcon from '../assets/icons/EnquiriesIcon';
 import HomeBookingIcon from '../assets/icons/HomeBookingIcon';
@@ -25,8 +31,7 @@ import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import ActivityCard from '../components/activities/ActivityCard';
 
 const {width} = Dimensions.get('window');
-
-const BASE_URL = `${API_BASE_URL}/customerapp`;
+const BASE_URL = 'https://aws-api.reparv.in/customerapp';
 
 const TABS = [
   {key: 'wishlist', label: 'Wishlist', icon: WishlistIcon, type: 'fill'},
@@ -35,8 +40,67 @@ const TABS = [
   {key: 'bookings', label: 'Bookings', icon: CalendarCheckIcon, type: 'stroke'},
 ];
 
+// ─── Checks if a property item has enough data to render a card ───────────────
+// If the backend returns the enquiry row but the joined property was deleted,
+// fields like propertyName / name / title will all be null/empty.
+function isValidPropertyItem(item) {
+  
+  if (!item) return false;
+  const name =
+    item?.propertyName ||
+    item?.name ||
+    item?.title ||
+    item?.propertytitle ||
+    '';
+  // Consider valid if it has at least a name OR an id we can show
+  return name.trim().length > 0 || !!(item?.propertyid || item?.id);
+}
+
+// ─── Ghost card shown when the linked property was deleted ────────────────────
+function DeletedPropertyCard({item, tab}) {
+  const date = item?.created_at
+    ? new Date(item.created_at).toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      })
+    : null;
+
+  const labelMap = {
+    enquiries: 'Enquiry made',
+    visits: 'Visit scheduled',
+    bookings: 'Booking placed',
+    wishlist: 'Saved',
+  };
+
+  return (
+    <View style={gStyles.card}>
+      {/* Icon bubble */}
+      <View style={gStyles.iconWrap}>
+        <Home size={22} color="#9CA3AF" />
+      </View>
+
+      <View style={gStyles.textWrap}>
+        <View style={gStyles.badgeRow}>
+          <AlertCircle size={12} color="#F97316" />
+          <Text style={gStyles.deletedBadge}>Property no longer available</Text>
+        </View>
+        <Text style={gStyles.title} numberOfLines={1}>
+          {item?.propertyName || item?.name || 'Unnamed Property'}
+        </Text>
+        {item?.city ? <Text style={gStyles.sub}>{item.city}</Text> : null}
+        {date ? (
+          <Text style={gStyles.date}>
+            {labelMap[tab] || 'Activity'} on {date}
+          </Text>
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
 // ─────────────────────────────────────────────
-// CONFIRM MODAL COMPONENT
+// CONFIRM MODAL
 // ─────────────────────────────────────────────
 function ConfirmModal({visible, onCancel, onConfirm, loading, propertyName}) {
   const scaleAnim = useRef(new Animated.Value(0.85)).current;
@@ -70,51 +134,35 @@ function ConfirmModal({visible, onCancel, onConfirm, loading, propertyName}) {
       animationType="none"
       statusBarTranslucent
       onRequestClose={onCancel}>
-      {/* Dimmed backdrop */}
       <Animated.View style={[styles.modalBackdrop, {opacity: opacityAnim}]}>
-        {/* Tap-outside to dismiss */}
         <TouchableOpacity
           style={StyleSheet.absoluteFill}
           activeOpacity={1}
           onPress={!loading ? onCancel : undefined}
         />
-
-        {/* Modal card */}
         <Animated.View
           style={[
             styles.modalCard,
             {transform: [{scale: scaleAnim}], opacity: opacityAnim},
           ]}>
-          {/* ✕ Close button */}
           {!loading && (
             <TouchableOpacity style={styles.modalClose} onPress={onCancel}>
               <X size={16} color="#9CA3AF" />
             </TouchableOpacity>
           )}
-
-          {/* Heart icon with rings */}
           <View style={styles.modalIconOuter}>
             <View style={styles.modalIconInner}>
               <Heart size={30} color="#EF4444" fill="#EF4444" />
             </View>
           </View>
-
-          {/* Title */}
           <Text style={styles.modalTitle}>Remove from Wishlist?</Text>
-
-          {/* Subtitle */}
           <Text style={styles.modalSubtitle}>
             {propertyName
               ? `"${propertyName}" will be removed\nfrom your saved properties.`
               : 'This property will be removed\nfrom your saved properties.'}
           </Text>
-
-          {/* Thin divider */}
           <View style={styles.modalDivider} />
-
-          {/* Action buttons */}
           <View style={styles.modalBtnRow}>
-            {/* Keep it */}
             <TouchableOpacity
               activeOpacity={0.75}
               disabled={loading}
@@ -122,8 +170,6 @@ function ConfirmModal({visible, onCancel, onConfirm, loading, propertyName}) {
               style={styles.cancelBtn}>
               <Text style={styles.cancelBtnText}>Keep it</Text>
             </TouchableOpacity>
-
-            {/* Remove */}
             <TouchableOpacity
               activeOpacity={0.8}
               disabled={loading}
@@ -162,7 +208,6 @@ export default function ActivitiesScreen() {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Modal state
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [removing, setRemoving] = useState(false);
@@ -174,9 +219,7 @@ export default function ActivitiesScreen() {
     bookings: 0,
   });
 
-  // ─────────────────────────────────────────────
-  // FETCH FUNCTIONS
-  // ─────────────────────────────────────────────
+  // ── Fetch functions ───────────────────────────────────────────────────────
 
   const fetchWishlist = async () => {
     if (!userId) return;
@@ -202,6 +245,7 @@ export default function ActivitiesScreen() {
       const json = await res.json();
       const data = json?.data || [];
       setEnquiries(data);
+      // Count only items that still have a valid property
       setCounts(c => ({...c, enquiries: data.length}));
     } catch (e) {
       console.error('fetchEnquiries error:', e);
@@ -250,13 +294,9 @@ export default function ActivitiesScreen() {
     }
   };
 
-  // ─────────────────────────────────────────────
-  // REMOVE FROM WISHLIST
-  // ─────────────────────────────────────────────
+  // ── Wishlist remove ───────────────────────────────────────────────────────
 
-  // Step 1 — open modal with selected property info
   const openRemoveModal = item => {
-    // Your backend uses propertyid as the column name (from getUserWishlist JOIN)
     setSelectedItem({
       id: item?.propertyid,
       propertyName: item?.propertyName || item?.name || '',
@@ -264,14 +304,12 @@ export default function ActivitiesScreen() {
     setModalVisible(true);
   };
 
-  // Step 2 — dismiss modal
   const closeModal = () => {
     if (removing) return;
     setModalVisible(false);
     setSelectedItem(null);
   };
 
-  // Step 3 — call DELETE API then refresh wishlist from server
   const confirmRemove = async () => {
     if (!selectedItem?.id || !userId) return;
     setRemoving(true);
@@ -281,14 +319,10 @@ export default function ActivitiesScreen() {
         {method: 'DELETE'},
       );
       const json = await res.json();
-
       if (json?.success || res.ok) {
-        // Close modal first, then refresh list from server
         setModalVisible(false);
         setSelectedItem(null);
-        await fetchWishlist(); // ← re-fetch to get accurate server data
-      } else {
-        console.error('Remove wishlist failed:', json?.message);
+        await fetchWishlist();
       }
     } catch (e) {
       console.error('confirmRemove error:', e);
@@ -297,9 +331,7 @@ export default function ActivitiesScreen() {
     }
   };
 
-  // ─────────────────────────────────────────────
-  // EFFECTS
-  // ─────────────────────────────────────────────
+  // ── Effects ───────────────────────────────────────────────────────────────
 
   useEffect(() => {
     if (activeTab === 'wishlist') fetchWishlist();
@@ -317,9 +349,7 @@ export default function ActivitiesScreen() {
     }, []),
   );
 
-  // ─────────────────────────────────────────────
-  // HELPERS
-  // ─────────────────────────────────────────────
+  // ── Helpers ───────────────────────────────────────────────────────────────
 
   const getActiveList = () => {
     switch (activeTab) {
@@ -360,15 +390,13 @@ export default function ActivitiesScreen() {
   const getBookingImage = frontView => {
     try {
       if (!frontView) return null;
-      if (Array.isArray(frontView)) {
+      if (Array.isArray(frontView))
         return frontView.length
-          ? `${API_BASE_URL}${frontView[0]}`
+          ? `https://aws-api.reparv.in${frontView[0]}`
           : null;
-      }
       const images = JSON.parse(frontView);
-      if (Array.isArray(images) && images.length > 0) {
-        return `${API_BASE_URL}${images[0]}`;
-      }
+      if (Array.isArray(images) && images.length > 0)
+        return `https://aws-api.reparv.in${images[0]}`;
       return null;
     } catch {
       return null;
@@ -377,6 +405,75 @@ export default function ActivitiesScreen() {
 
   const activeList = getActiveList();
 
+  // ── Render item — handles deleted-property case ───────────────────────────
+  const renderItem = (item, index) => {
+    // Bookings have their own card, skip validity check
+    if (activeTab === 'bookings') {
+      return (
+        <ActivityCard
+          key={item?.enquirersid || index}
+          image={getBookingImage(item?.frontView)}
+          name={item?.customer}
+          phone={item?.contact}
+          dateTime={item?.created_at}
+          status={mapBookingStatus(item?.status)}
+          onView={() =>
+            navigation.navigate('PropertyBookDetails', {booking: item})
+          }
+        />
+      );
+    }
+
+    if (activeTab === 'wishlist') {
+      // Wishlist items: deleted ones still show a ghost card (user can remove)
+      if (!isValidPropertyItem(item)) {
+        return (
+          <View
+            key={item?.propertyid || item?.id || index}
+            style={styles.wishlistCardWrapper}>
+            <DeletedPropertyCard item={item} tab={activeTab} />
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => openRemoveModal(item)}
+              style={styles.removeBtn}>
+              <Heart size={13} color="#EF4444" fill="#EF4444" />
+              <Text style={styles.removeBtnText}>Remove</Text>
+            </TouchableOpacity>
+          </View>
+        );
+      }
+      return (
+        <View
+          key={item?.propertyid || item?.id || index}
+          style={styles.wishlistCardWrapper}>
+          <PropertyCard item={item} iswishList={true} />
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={() => openRemoveModal(item)}
+            style={styles.removeBtn}>
+            <Heart size={13} color="#EF4444" fill="#EF4444" />
+            <Text style={styles.removeBtnText}>Remove</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    // Enquiries / Visits — show ghost card instead of blank if property deleted
+    if (!isValidPropertyItem(item)) {
+      return (
+        <DeletedPropertyCard
+          key={item?.id || item?.enquirersid || index}
+          item={item}
+          tab={activeTab}
+        />
+      );
+    }
+
+    return (
+      <PropertyCard key={item?.id || index} item={item} iswishList={true} />
+    );
+  };
+
   // ─────────────────────────────────────────────
   // RENDER
   // ─────────────────────────────────────────────
@@ -384,7 +481,6 @@ export default function ActivitiesScreen() {
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <StatusBar backgroundColor="#FAF8FF" barStyle="dark-content" />
 
-      {/* Confirm Remove Modal */}
       <ConfirmModal
         visible={modalVisible}
         onCancel={closeModal}
@@ -451,10 +547,10 @@ export default function ActivitiesScreen() {
         </ScrollView>
       </View>
 
-      {/* Section Title */}
+      {/* Section title */}
       <Text style={styles.sectionTitle}>{getTabTitle()}</Text>
 
-      {/* Content List */}
+      {/* Content */}
       <ScrollView
         style={{marginTop: 12, paddingHorizontal: 10}}
         showsVerticalScrollIndicator={false}>
@@ -477,63 +573,66 @@ export default function ActivitiesScreen() {
             found
           </Text>
         ) : (
-          activeList.map((item, index) => {
-            // ── Bookings ──
-            if (activeTab === 'bookings') {
-              return (
-                <ActivityCard
-                  key={item?.enquirersid || index}
-                  image={getBookingImage(item?.frontView)}
-                  name={item?.customer}
-                  phone={item?.contact}
-                  dateTime={item?.created_at}
-                  status={mapBookingStatus(item?.status)}
-                  onView={() =>
-                    navigation.navigate('PropertyBookDetails', {booking: item})
-                  }
-                />
-              );
-            }
-
-            // ── Wishlist — card + remove overlay ──
-            if (activeTab === 'wishlist') {
-              return (
-                <View
-                  key={item?.propertyid || item?.id || index}
-                  style={styles.wishlistCardWrapper}>
-                  <PropertyCard item={item} iswishList={true} />
-
-                  <TouchableOpacity
-                    activeOpacity={0.85}
-                    onPress={() => openRemoveModal(item)}
-                    style={styles.removeBtn}>
-                    <Heart size={13} color="#EF4444" fill="#EF4444" />
-                    <Text style={styles.removeBtnText}>Remove</Text>
-                  </TouchableOpacity>
-                </View>
-              );
-            }
-
-            // ── Enquiries / Visits ──
-            return (
-              <PropertyCard
-                key={item?.id || index}
-                item={item}
-                iswishList={true}
-              />
-            );
-          })
+          activeList.map((item, index) => renderItem(item, index))
         )}
-
         <View style={{height: 30}} />
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-// ─────────────────────────────────────────────
-// STYLES
-// ─────────────────────────────────────────────
+// ─── Ghost / deleted-property card styles ────────────────────────────────────
+const gStyles = StyleSheet.create({
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#FFE4C8',
+    borderStyle: 'dashed',
+    padding: 14,
+    marginBottom: 12,
+    opacity: 0.85,
+  },
+  iconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  textWrap: {flex: 1, gap: 3},
+  badgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 2,
+  },
+  deletedBadge: {
+    fontSize: 11,
+    color: '#F97316',
+    fontWeight: '600',
+  },
+  title: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  sub: {
+    fontSize: 12,
+    color: '#9CA3AF',
+  },
+  date: {
+    fontSize: 11,
+    color: '#D1D5DB',
+    marginTop: 2,
+  },
+});
+
+// ─── Main styles ──────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: {flex: 1, backgroundColor: '#FAF8FF'},
 
@@ -647,14 +746,13 @@ const styles = StyleSheet.create({
     marginTop: 60,
     color: '#6B7280',
     fontFamily: 'SegoeUI-Regular',
+    fontSize: 15,
     ...Platform.select({
       android: {includeFontPadding: false, textAlignVertical: 'center'},
       default: {},
     }),
-    fontSize: 15,
   },
 
-  // ── Wishlist card ──────────────────────────────
   wishlistCardWrapper: {position: 'relative', marginBottom: 2},
 
   removeBtn: {
@@ -688,7 +786,6 @@ const styles = StyleSheet.create({
     }),
   },
 
-  // ── Confirm Modal ──────────────────────────────
   modalBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.52)',
@@ -721,12 +818,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#F3F4F6',
   },
 
-  // Outer faint ring → inner filled circle
   modalIconOuter: {
     width: 88,
     height: 88,
     borderRadius: 44,
-    backgroundColor: '#FEE2E2', // faint red ring
+    backgroundColor: '#FEE2E2',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
@@ -736,7 +832,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#FEF2F2', // slightly lighter fill
+    backgroundColor: '#FEF2F2',
     borderWidth: 2,
     borderColor: '#FECACA',
     justifyContent: 'center',
@@ -776,11 +872,7 @@ const styles = StyleSheet.create({
     marginVertical: 22,
   },
 
-  modalBtnRow: {
-    flexDirection: 'row',
-    gap: 12,
-    width: '100%',
-  },
+  modalBtnRow: {flexDirection: 'row', gap: 12, width: '100%'},
 
   cancelBtn: {
     flex: 1,

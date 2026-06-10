@@ -47,7 +47,7 @@ const ALL_YEARS = Array.from(
   (_, i) => MAX_YEAR - i,
 );
 
-const VIEW = {CALENDAR: 'cal', YEAR: 'year', MONTH: 'month'};
+const VIEW = {YEAR: 'year', MONTH: 'month', CALENDAR: 'cal'};
 
 const PURPLE = '#7C3AED';
 const PURPLE_BG = '#F5F3FF';
@@ -60,7 +60,7 @@ export default function CustomCalendar({
   currentMonth,
   setCurrentMonth,
 }) {
-  const [view, setView] = useState(VIEW.CALENDAR);
+  const [view, setView] = useState(VIEW.YEAR);
   const yearListRef = useRef(null);
 
   const year = currentMonth.getFullYear();
@@ -69,23 +69,28 @@ export default function CustomCalendar({
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
+  // Reset to YEAR every time modal opens
   useEffect(() => {
-    if (!visible) setView(VIEW.CALENDAR);
+    if (visible) setView(VIEW.YEAR);
   }, [visible]);
 
+  // Auto-scroll to selected year after list renders
   useEffect(() => {
-    if (view === VIEW.YEAR && yearListRef.current) {
+    if (view === VIEW.YEAR) {
       const idx = ALL_YEARS.indexOf(year);
-      if (idx !== -1)
-        setTimeout(
-          () =>
-            yearListRef.current?.scrollToIndex({index: idx, animated: false}),
-          80,
-        );
+      if (idx !== -1) {
+        setTimeout(() => {
+          yearListRef.current?.scrollToIndex({
+            index: idx,
+            animated: false,
+            viewPosition: 0.5,
+          });
+        }, 150);
+      }
     }
   }, [view]);
 
-  /* Build day grid */
+  /* ── Build day grid ── */
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const firstDay = new Date(year, month, 1).getDay();
   const days = [
@@ -101,7 +106,9 @@ export default function CustomCalendar({
       d.getMonth() + 1,
     ).padStart(2, '0')}/${d.getFullYear()}`;
 
-  /* ── YEAR PICKER ── */
+  /* ════════════════════════════════════════════════
+     STEP 1 — YEAR PICKER
+  ════════════════════════════════════════════════ */
   if (view === VIEW.YEAR)
     return (
       <Modal transparent visible={visible} animationType="fade">
@@ -109,9 +116,7 @@ export default function CustomCalendar({
           <View style={s.card}>
             <View style={s.pickerHeader}>
               <Text style={s.pickerHeading}>Select Year</Text>
-              <TouchableOpacity
-                onPress={() => setView(VIEW.CALENDAR)}
-                style={s.iconBtn}>
+              <TouchableOpacity onPress={onClose} style={s.iconBtn}>
                 <Text style={s.iconBtnTxt}>✕</Text>
               </TouchableOpacity>
             </View>
@@ -127,11 +132,13 @@ export default function CustomCalendar({
                 paddingVertical: 8,
                 paddingHorizontal: 12,
               }}
+              initialScrollIndex={Math.floor(ALL_YEARS.indexOf(year) / 3) * 3}
               getItemLayout={(_, i) => ({
-                length: 52,
-                offset: 52 * Math.floor(i / 3),
+                length: 54, // yearCell height (46) + margin top (4) + margin bottom (4)
+                offset: 54 * Math.floor(i / 3),
                 index: i,
               })}
+              onScrollToIndexFailed={() => {}}
               renderItem={({item: y}) => {
                 const sel = y === year;
                 return (
@@ -139,7 +146,7 @@ export default function CustomCalendar({
                     style={[s.yearCell, sel && s.cellActive]}
                     onPress={() => {
                       setCurrentMonth(new Date(y, month, 1));
-                      setView(VIEW.CALENDAR);
+                      setView(VIEW.MONTH);
                     }}>
                     <Text style={[s.yearCellTxt, sel && s.cellActiveTxt]}>
                       {y}
@@ -153,17 +160,22 @@ export default function CustomCalendar({
       </Modal>
     );
 
-  /* ── MONTH PICKER ── */
+  /* ════════════════════════════════════════════════
+     STEP 2 — MONTH PICKER
+  ════════════════════════════════════════════════ */
   if (view === VIEW.MONTH)
     return (
       <Modal transparent visible={visible} animationType="fade">
         <View style={s.overlay}>
           <View style={s.card}>
             <View style={s.pickerHeader}>
-              <Text style={s.pickerHeading}>{year}</Text>
               <TouchableOpacity
-                onPress={() => setView(VIEW.CALENDAR)}
+                onPress={() => setView(VIEW.YEAR)}
                 style={s.iconBtn}>
+                <Text style={s.iconBtnTxt}>‹</Text>
+              </TouchableOpacity>
+              <Text style={s.pickerHeading}>{year}</Text>
+              <TouchableOpacity onPress={onClose} style={s.iconBtn}>
                 <Text style={s.iconBtnTxt}>✕</Text>
               </TouchableOpacity>
             </View>
@@ -203,7 +215,9 @@ export default function CustomCalendar({
       </Modal>
     );
 
-  /* ── CALENDAR VIEW ── */
+  /* ════════════════════════════════════════════════
+     STEP 3 — DATE PICKER
+  ════════════════════════════════════════════════ */
   return (
     <Modal transparent visible={visible} animationType="fade">
       <Pressable style={s.overlay} onPress={onClose}>
@@ -282,8 +296,6 @@ export default function CustomCalendar({
           </View>
 
           <View style={s.divider} />
-
-          {/* ─ Footer ─ */}
         </Pressable>
       </Pressable>
     </Modal>
@@ -309,10 +321,7 @@ const s = StyleSheet.create({
     shadowOffset: {width: 0, height: 10},
     elevation: 12,
   },
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: '#E5E7EB',
-  },
+  divider: {height: StyleSheet.hairlineWidth, backgroundColor: '#E5E7EB'},
 
   /* ─ Calendar Header ─ */
   header: {
@@ -323,23 +332,14 @@ const s = StyleSheet.create({
     paddingTop: 18,
     paddingBottom: 14,
   },
-  headerMonthRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-  },
+  headerMonthRow: {flexDirection: 'row', alignItems: 'center', gap: 3},
   headerMonth: {
     fontSize: 20,
     fontWeight: '700',
     color: '#111827',
     letterSpacing: -0.3,
   },
-  headerArrow: {
-    fontSize: 20,
-    color: PURPLE,
-    fontWeight: '700',
-    marginTop: 1,
-  },
+  headerArrow: {fontSize: 20, color: PURPLE, fontWeight: '700', marginTop: 1},
   headerYear: {
     fontSize: 13,
     fontWeight: '600',
@@ -347,10 +347,7 @@ const s = StyleSheet.create({
     marginTop: 3,
     letterSpacing: 0.5,
   },
-  navGroup: {
-    flexDirection: 'row',
-    gap: 6,
-  },
+  navGroup: {flexDirection: 'row', gap: 6},
   navBtn: {
     width: 36,
     height: 36,
@@ -359,12 +356,7 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  navTxt: {
-    fontSize: 22,
-    color: PURPLE,
-    fontWeight: '500',
-    lineHeight: 26,
-  },
+  navTxt: {fontSize: 22, color: PURPLE, fontWeight: '500', lineHeight: 26},
 
   /* ─ Weekday row ─ */
   weekRow: {
@@ -381,9 +373,7 @@ const s = StyleSheet.create({
     color: '#9CA3AF',
     letterSpacing: 0.5,
   },
-  weekEndTxt: {
-    color: '#CBD5E1',
-  },
+  weekEndTxt: {color: '#CBD5E1'},
 
   /* ─ Day grid ─ */
   grid: {
@@ -406,49 +396,12 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  dayTxt: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#1F2937',
-  },
-  dayCircleToday: {
-    backgroundColor: PURPLE,
-  },
-  dayTodayTxt: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-  },
-  dayFutureTxt: {
-    color: '#D1D5DB',
-  },
+  dayTxt: {fontSize: 14, fontWeight: '500', color: '#1F2937'},
+  dayCircleToday: {backgroundColor: PURPLE},
+  dayTodayTxt: {color: '#FFFFFF', fontWeight: '700'},
+  dayFutureTxt: {color: '#D1D5DB'},
 
-  /* ─ Footer ─ */
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 18,
-    paddingVertical: 14,
-  },
-  todayLink: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: PURPLE,
-  },
-  doneBtn: {
-    backgroundColor: PURPLE,
-    paddingHorizontal: 24,
-    paddingVertical: 9,
-    borderRadius: 10,
-  },
-  doneTxt: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-    letterSpacing: 0.2,
-  },
-
-  /* ─ Shared picker styles ─ */
+  /* ─ Shared picker header ─ */
   pickerHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -471,11 +424,7 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  iconBtnTxt: {
-    fontSize: 13,
-    color: '#6B7280',
-    fontWeight: '600',
-  },
+  iconBtnTxt: {fontSize: 13, color: '#6B7280', fontWeight: '600'},
 
   /* ─ Year picker ─ */
   yearCell: {
@@ -487,11 +436,7 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  yearCellTxt: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
-  },
+  yearCellTxt: {fontSize: 14, fontWeight: '500', color: '#374151'},
 
   /* ─ Month picker ─ */
   monthGrid: {
@@ -509,24 +454,11 @@ const s = StyleSheet.create({
     backgroundColor: '#F9FAFB',
     alignItems: 'center',
   },
-  monthCellTxt: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
-  },
+  monthCellTxt: {fontSize: 14, fontWeight: '500', color: '#374151'},
 
-  /* ─ Shared active state ─ */
-  cellActive: {
-    backgroundColor: PURPLE,
-  },
-  cellActiveTxt: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-  },
-  cellDisabled: {
-    opacity: 0.32,
-  },
-  txtDisabled: {
-    color: '#9CA3AF',
-  },
+  /* ─ Shared active / disabled ─ */
+  cellActive: {backgroundColor: PURPLE},
+  cellActiveTxt: {color: '#FFFFFF', fontWeight: '700'},
+  cellDisabled: {opacity: 0.32},
+  txtDisabled: {color: '#9CA3AF'},
 });

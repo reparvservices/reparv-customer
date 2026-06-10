@@ -21,7 +21,7 @@ import Geolocation from '@react-native-community/geolocation';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {store} from './src/app/store';
 import AppNavigator from './src/navigation/AppNavigator';
-
+import notifee from '@notifee/react-native';
 import {loadUser} from './src/features/auth/authSlice';
 import {setUserLocation} from './src/features/auth/authSlice'; // ← Add this action to authSlice
 import {Settings} from 'react-native-fbsdk-next';
@@ -32,6 +32,7 @@ import {tuyaApi} from './src/features/tuya/tuyaApiSlice';
 import {devLog} from './src/utils/devLog';
 import {AppErrorBoundary} from './src/components/AppErrorBoundary';
 import {Fonts} from './src/theme/fonts';
+import {displayNotification} from './src/utils/notificationService';
 
 if (Platform.OS === 'android') {
   Settings.initializeSDK();
@@ -90,7 +91,7 @@ const Root = () => {
           PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
         );
       }
-
+      await notifee.requestPermission();
       const authStatus = await messaging().requestPermission();
 
       const enabled =
@@ -258,18 +259,25 @@ const Root = () => {
   // 🔔 Foreground — app is open, notification arrives
   useEffect(() => {
     const unsubscribe = messaging().onMessage(async remoteMessage => {
-      devLog('📩 Foreground Notification:', remoteMessage);
+      console.log('📩 Foreground Notification:', remoteMessage);
+
+      await displayNotification(remoteMessage);
+
       handleNotificationNavigation(remoteMessage.data);
     });
+
     return unsubscribe;
   }, []);
 
   // 🔔 Background tap — user taps notification while app is in background
   useEffect(() => {
-    const unsubscribe = messaging().onNotificationOpenedApp(remoteMessage => {
-      devLog('📲 Background notification tap:', remoteMessage);
-      handleNotificationNavigation(remoteMessage.data);
-    });
+    const unsubscribe = messaging().setBackgroundMessageHandler(
+      async remoteMessage => {
+        console.log('📩 Background Message:', remoteMessage);
+
+        await displayNotification(remoteMessage);
+      },
+    );
     return unsubscribe;
   }, []);
 

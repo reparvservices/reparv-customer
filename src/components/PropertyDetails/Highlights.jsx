@@ -104,29 +104,52 @@ export const Highlights = ({propertyFeatures, propertyData}) => {
 
   const getHighestBHK = (types = []) => {
     if (!Array.isArray(types)) return null;
+
     let maxBHK = null;
     let hasRK = false;
+
     types.forEach(type => {
-      const lower = type.toLowerCase();
-      if (lower.includes('rk')) hasRK = true;
-      const match = lower.match(/(\d+)\s*bhk/);
+      const lower = type.toLowerCase().trim();
+
+      // Check RK
+      if (lower.includes('rk')) {
+        hasRK = true;
+      }
+
+      // Match: 1 BHK, 2 BHK, 2.5 BHK, 4+ BHK
+      const match = lower.match(/(\d+(?:\.\d+)?)\s*\+?\s*bhk/);
+
       if (match) {
-        const bhkNumber = parseInt(match[1], 10);
-        if (!maxBHK || bhkNumber > maxBHK) maxBHK = bhkNumber;
+        const bhkNumber = parseFloat(match[1]);
+
+        if (maxBHK === null || bhkNumber > maxBHK) {
+          maxBHK = bhkNumber;
+        }
       }
     });
-    if (maxBHK) return `${maxBHK} BHK`;
+
+    if (maxBHK !== null) {
+      // Remove decimal if whole number
+      return Number.isInteger(maxBHK) ? `${maxBHK} BHK` : `${maxBHK} BHK`;
+    }
+
     if (hasRK) return '1 RK';
+
     return null;
   };
-
   const highlightsData = [
-    {
-      key: 'plotType',
-      title: getHighestBHK(features.plotType) || '—',
-      subtitle: 'Spacious rooms',
-      iconIndex: 0,
-    },
+    // Hide Spacious rooms for NewPlot
+    ...(propertyData?.propertyCategory !== 'NewPlot'
+      ? [
+          {
+            key: 'plotType',
+            title: getHighestBHK(features.plotType) || '—',
+            subtitle: 'Spacious rooms',
+            iconIndex: 0,
+          },
+        ]
+      : []),
+
     {
       key: 'water',
       title: features?.water || '—',
@@ -145,12 +168,20 @@ export const Highlights = ({propertyFeatures, propertyData}) => {
       subtitle: 'Parking',
       iconIndex: 3,
     },
-    {
-      key: 'furnishing',
-      title: features.furnishingFeature || 'Not Mention',
-      subtitle: 'Furnishing',
-      iconIndex: 4,
-    },
+
+    // Hide Furnishing for NewPlot
+    ...(propertyData?.propertyCategory !== 'NewPlot' &&
+    propertyData?.propertyCategory !== 'FarmLand'
+      ? [
+          {
+            key: 'furnishing',
+            title: features.furnishingFeature || 'Not Mention',
+            subtitle: 'Furnishing',
+            iconIndex: 4,
+          },
+        ]
+      : []),
+
     {
       key: 'status',
       title: features.status || '—',
@@ -171,21 +202,23 @@ export const Highlights = ({propertyFeatures, propertyData}) => {
     },
   ];
 
+  const validHighlights = highlightsData.filter(
+    item =>
+      item?.title && item.title !== '—' && String(item.title).trim() !== '',
+  );
   return (
     <>
-      <OfferedPropertyType
-        propertyType={propertyData?.propertyType}
-        Imguri={
-          propertyData?.brochureFile
-            ? `${baseURL}${propertyData.brochureFile}`
-            : ''
-        }
-      />
+      {propertyData?.brochureFile && (
+        <OfferedPropertyType
+          propertyType={propertyData?.propertyType}
+          Imguri={`${baseURL}${propertyData.brochureFile}`}
+        />
+      )}
 
       <View style={styles.highlightContainer}>
         <Text style={styles.sectionTitle}>Property Highlights</Text>
         <View style={styles.grid}>
-          {highlightsData.map(item => (
+          {validHighlights.map(item => (
             <HighlightItem
               key={item.key}
               icon={icons?.[item.iconIndex]}
