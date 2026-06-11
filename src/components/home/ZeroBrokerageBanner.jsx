@@ -3,17 +3,29 @@ import {View, Text, StyleSheet, TouchableOpacity, Platform} from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import {Zap} from 'lucide-react-native';
 import {useNavigation} from '@react-navigation/native';
+import {useDispatch, useSelector} from 'react-redux';
+import {AUTH_ACTION_TYPES, requireAuth} from '../../utils/authGuard';
 
 export default function ZeroBrokerageBanner() {
   const navigation = useNavigation();
+  const dispatch = useDispatch();
+  const auth = useSelector(state => state.auth);
 
   return (
     <TouchableOpacity
       style={styles.wrap}
       activeOpacity={0.92}
-      onPress={() =>
-        navigation.navigate('OldProperty', {mode: 'add', type: 'sell'})
-      }>
+      onPress={() => {
+        if (
+          !requireAuth(navigation, dispatch, auth, {
+            type: AUTH_ACTION_TYPES.SELL_PROPERTY,
+            params: {mode: 'add', type: 'sell'},
+          })
+        ) {
+          return;
+        }
+        navigation.navigate('OldProperty', {mode: 'add', type: 'sell'});
+      }}>
       <LinearGradient
         colors={['#FFF4E8', '#FFE8CC']}
         start={{x: 0, y: 0}}

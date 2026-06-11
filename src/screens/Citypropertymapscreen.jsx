@@ -789,11 +789,6 @@ const PropertyCard = ({property, onClose, navigation, userCoords}) => {
               {prettifyCategory(property.propertyCategory)}
             </Text>
           </View>
-          {property.loanAvailability === 'Yes' && (
-            <View style={pc.loanBadge}>
-              <Text style={pc.loanBadgeTxt}>🏦 Loan</Text>
-            </View>
-          )}
         </View>
 
         {/* Close button */}
@@ -2192,17 +2187,6 @@ const pc = StyleSheet.create({
   },
   categoryBadgeTxt: {
     color: '#FFF',
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  loanBadge: {
-    backgroundColor: C.success,
-    borderRadius: 20,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  loanBadgeTxt: {
-    color: '#fff',
     fontSize: 11,
     fontWeight: '600',
   },

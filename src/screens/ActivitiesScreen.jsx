@@ -19,7 +19,8 @@ import WishlistIcon from '../assets/icons/WishlistIcon';
 import EnquiriesIcon from '../assets/icons/EnquiriesIcon';
 import HomeBookingIcon from '../assets/icons/HomeBookingIcon';
 import CalendarCheckIcon from '../assets/icons/CalendarCheckIcon';
-import {useSelector} from 'react-redux';
+import {useDispatch, useSelector} from 'react-redux';
+import {AUTH_ACTION_TYPES, isLoggedIn, requireAuth} from '../utils/authGuard';
 import PropertyCard from '../components/property/PropertyCard';
 import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import ActivityCard from '../components/activities/ActivityCard';
@@ -150,6 +151,7 @@ function ConfirmModal({visible, onCancel, onConfirm, loading, propertyName}) {
 // ─────────────────────────────────────────────
 export default function ActivitiesScreen() {
   const [activeTab, setActiveTab] = useState('wishlist');
+  const dispatch = useDispatch();
   const {user} = useSelector(state => state.auth);
   const auth = useSelector(state => state.auth);
   const navigation = useNavigation();
@@ -162,7 +164,6 @@ export default function ActivitiesScreen() {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Modal state
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [removing, setRemoving] = useState(false);
@@ -361,9 +362,7 @@ export default function ActivitiesScreen() {
     try {
       if (!frontView) return null;
       if (Array.isArray(frontView)) {
-        return frontView.length
-          ? `${API_BASE_URL}${frontView[0]}`
-          : null;
+        return frontView.length ? `${API_BASE_URL}${frontView[0]}` : null;
       }
       const images = JSON.parse(frontView);
       if (Array.isArray(images) && images.length > 0) {
@@ -376,6 +375,30 @@ export default function ActivitiesScreen() {
   };
 
   const activeList = getActiveList();
+
+  if (!isLoggedIn(auth)) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <StatusBar backgroundColor="#FAF8FF" barStyle="dark-content" />
+        <View style={styles.guestGate}>
+          <Text style={styles.guestGateTitle}>Sign in required</Text>
+          <Text style={styles.guestGateText}>
+            View your wishlist, enquiries, visits, and bookings after signing
+            in.
+          </Text>
+          <TouchableOpacity
+            style={styles.guestGateBtn}
+            onPress={() =>
+              requireAuth(navigation, dispatch, auth, {
+                type: AUTH_ACTION_TYPES.ACTIVITIES,
+              })
+            }>
+            <Text style={styles.guestGateBtnText}>Sign in</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   // ─────────────────────────────────────────────
   // RENDER
@@ -536,6 +559,36 @@ export default function ActivitiesScreen() {
 // ─────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: {flex: 1, backgroundColor: '#FAF8FF'},
+  guestGate: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 28,
+  },
+  guestGateTitle: {
+    fontSize: 20,
+    fontFamily: 'SegoeUI-Bold',
+    color: '#111',
+    marginBottom: 10,
+  },
+  guestGateText: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  guestGateBtn: {
+    marginTop: 22,
+    backgroundColor: '#5E23DC',
+    paddingHorizontal: 28,
+    paddingVertical: 12,
+    borderRadius: 10,
+  },
+  guestGateBtnText: {
+    color: '#fff',
+    fontFamily: 'SegoeUI-Bold',
+    fontSize: 15,
+  },
 
   header: {
     height: 56,

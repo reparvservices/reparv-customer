@@ -8,6 +8,8 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
+import {useDispatch, useSelector} from 'react-redux';
+import {AUTH_ACTION_TYPES, requireAuth} from '../../utils/authGuard';
 import {
   Home,
   KeyRound,
@@ -95,8 +97,7 @@ function createStyles(width, fontScale) {
 
   const horizontalPadding = ms(16, 0.3);
   const cardGap = ms(10, 0.3);
-  const rawCardWidth =
-    (width - horizontalPadding * 2 - cardGap * 2) / 3;
+  const rawCardWidth = (width - horizontalPadding * 2 - cardGap * 2) / 3;
   const cardWidth = Math.max(76, rawCardWidth);
 
   const iconRingSize = ms(52, 0.25);
@@ -274,6 +275,8 @@ function createStyles(width, fontScale) {
 
 export default function ActionCards() {
   const navigation = useNavigation();
+  const dispatch = useDispatch();
+  const auth = useSelector(state => state.auth);
   const {width, fontScale} = useWindowDimensions();
   const styles = useMemo(
     () => createStyles(width, fontScale),
@@ -306,9 +309,19 @@ export default function ActionCards() {
                   <TouchableOpacity
                     style={[styles.card, {backgroundColor: item.cardBg}]}
                     activeOpacity={0.88}
-                    onPress={() =>
-                      navigation.navigate(item.screen, item.params)
-                    }>
+                    onPress={() => {
+                      if (item.screen === 'OldProperty') {
+                        if (
+                          !requireAuth(navigation, dispatch, auth, {
+                            type: AUTH_ACTION_TYPES.SELL_PROPERTY,
+                            params: item.params,
+                          })
+                        ) {
+                          return;
+                        }
+                      }
+                      navigation.navigate(item.screen, item.params);
+                    }}>
                     <View style={[styles.dotPattern, {opacity: 0.06}]} />
 
                     {item.popular && (

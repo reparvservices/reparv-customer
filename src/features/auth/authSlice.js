@@ -8,6 +8,41 @@ import {
   logoutAPI,
   facebookLoginApi,
 } from './authService';
+import {logInfo, logWarn} from '../../utils/appLogger';
+
+const GUEST_MODE_KEY = 'ReparvGuestMode';
+const ONBOARDING_DONE_KEY = 'ReparvOnboardingDone';
+const GUEST_LOCATION_KEY = 'ReparvGuestLocation';
+
+async function readGuestLocation() {
+  try {
+    const raw = await AsyncStorage.getItem(GUEST_LOCATION_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed?.city) return null;
+    return {city: parsed.city, state: parsed.state || ''};
+  } catch {
+    return null;
+  }
+}
+
+export async function persistGuestLocation(city, state) {
+  await AsyncStorage.setItem(
+    GUEST_LOCATION_KEY,
+    JSON.stringify({city, state: state || ''}),
+  );
+}
+
+export async function clearGuestLocationStorage() {
+  await AsyncStorage.removeItem(GUEST_LOCATION_KEY);
+}
+
+/** City used for property browse (logged-in profile or guest picker). */
+export const selectBrowseCity = state =>
+  state.auth.user?.city || state.auth.guestLocation?.city || '';
+
+export const selectBrowseState = state =>
+  state.auth.user?.state || state.auth.guestLocation?.state || '';
 
 /**
  * STEP 1: Send OTP
@@ -47,6 +82,9 @@ export const verifyOtp = createAsyncThunk(
 
       await AsyncStorage.setItem('Reparvtoken', res.token);
       await AsyncStorage.setItem('Reparvuser', JSON.stringify(res.user));
+      await AsyncStorage.removeItem(GUEST_MODE_KEY);
+      await clearGuestLocationStorage();
+      logInfo('token_saved', {source: 'verifyOtp'});
 
       return res;
     } catch (error) {
@@ -85,6 +123,9 @@ export const googleLogin = createAsyncThunk(
       const response = await googleLoginApi(idToken);
       await AsyncStorage.setItem('Reparvtoken', response.token);
       await AsyncStorage.setItem('Reparvuser', JSON.stringify(response.user));
+      await AsyncStorage.removeItem(GUEST_MODE_KEY);
+      await clearGuestLocationStorage();
+      logInfo('token_saved', {source: 'google'});
 
       return response;
     } catch (error) {
@@ -104,6 +145,9 @@ export const facebookLoginSlice = createAsyncThunk(
 
       await AsyncStorage.setItem('Reparvtoken', response.token);
       await AsyncStorage.setItem('Reparvuser', JSON.stringify(response.user));
+      await AsyncStorage.removeItem(GUEST_MODE_KEY);
+      await clearGuestLocationStorage();
+      logInfo('token_saved', {source: 'facebook'});
 
       return response;
     } catch (error) {
@@ -117,24 +161,61 @@ export const logoutUser = createAsyncThunk('auth/logoutUser', async () => {
   return true;
 });
 
-export const loadUser = createAsyncThunk(
-  'auth/loadUser',
-  async (_, thunkAPI) => {
-    try {
-      const token = await AsyncStorage.getItem('Reparvtoken');
-      const user = await AsyncStorage.getItem('Reparvuser');
+export const loadUser = createAsyncThunk('auth/loadUser', async () => {
+  try {
+    const token = await AsyncStorage.getItem('Reparvtoken');
+    const user = await AsyncStorage.getItem('Reparvuser');
 
-      if (!token || !user) {
-        return thunkAPI.rejectWithValue(null);
-      }
-
+    if (token && user) {
+      logInfo('token_loaded');
       return {
         token,
         user: JSON.parse(user),
+        isGuest: false,
       };
-    } catch {
-      return thunkAPI.rejectWithValue(null);
     }
+
+    const guestMode = await AsyncStorage.getItem(GUEST_MODE_KEY);
+    if (guestMode === '1') {
+      const guestLocation = await readGuestLocation();
+      logInfo('guest_mode_restored');
+      return {
+        token: null,
+        user: null,
+        isGuest: true,
+        guestLocation,
+      };
+    }
+
+    logWarn('session_restore_missing');
+    return {
+      token: null,
+      user: null,
+      isGuest: false,
+    };
+  } catch {
+    return {
+      token: null,
+      user: null,
+      isGuest: false,
+    };
+  }
+});
+
+export const enterGuestMode = createAsyncThunk(
+  'auth/enterGuestMode',
+  async () => {
+    await AsyncStorage.setItem(GUEST_MODE_KEY, '1');
+    await AsyncStorage.setItem(ONBOARDING_DONE_KEY, '1');
+    return true;
+  },
+);
+
+export const markOnboardingComplete = createAsyncThunk(
+  'auth/markOnboardingComplete',
+  async () => {
+    await AsyncStorage.setItem(ONBOARDING_DONE_KEY, '1');
+    return true;
   },
 );
 
@@ -142,16 +223,26 @@ const authSlice = createSlice({
   name: 'auth',
   initialState: {
     isAuthenticated: false,
+    isGuest: false,
     otpSent: false,
     otpVerified: false,
     user: null,
     token: null,
     isLoading: false,
+    isBootstrapping: true,
     error: null,
+    pendingAuthAction: null,
+    guestLocation: null,
   },
   reducers: {
     clearAuthError: state => {
       state.error = null;
+    },
+    setPendingAuthAction: (state, action) => {
+      state.pendingAuthAction = action.payload;
+    },
+    clearPendingAuthAction: state => {
+      state.pendingAuthAction = null;
     },
     setUser: (state, action) => {
       state.user = action.payload;
@@ -167,10 +258,27 @@ const authSlice = createSlice({
      *   dispatch(setUserLocation({ city: 'Pune', state: 'Maharashtra' }))
      */
     setUserLocation: (state, action) => {
+      const {city, state: regionState} = action.payload;
       if (state.user) {
-        state.user.city = action.payload.city;
-        state.user.state = action.payload.state;
+        state.user.city = city;
+        state.user.state = regionState;
+      } else {
+        state.guestLocation = {city, state: regionState};
       }
+    },
+    /** Immediate guest mode — used before AsyncStorage persist completes */
+    setGuestBrowsing: state => {
+      state.isGuest = true;
+      state.isAuthenticated = false;
+      state.user = null;
+      state.token = null;
+      state.isBootstrapping = false;
+      state.pendingAuthAction = null;
+    },
+    /** User chose Sign in — leave guest mode and show auth stack login */
+    prepareForSignIn: state => {
+      state.isGuest = false;
+      state.isBootstrapping = false;
     },
   },
   extraReducers: builder => {
@@ -195,6 +303,8 @@ const authSlice = createSlice({
       .addCase(verifyOtp.fulfilled, (state, action) => {
         state.isLoading = false;
         state.isAuthenticated = true;
+        state.isGuest = false;
+        state.guestLocation = null;
         state.otpVerified = true;
         state.token = action.payload.token;
         state.user = action.payload.user;
@@ -219,6 +329,8 @@ const authSlice = createSlice({
       // GOOGLE LOGIN
       .addCase(googleLogin.fulfilled, (state, action) => {
         state.isAuthenticated = true;
+        state.isGuest = false;
+        state.guestLocation = null;
         state.token = action.payload.token;
         state.user = action.payload.user;
         state.isLoading = false;
@@ -231,6 +343,8 @@ const authSlice = createSlice({
       .addCase(facebookLoginSlice.fulfilled, (state, action) => {
         state.isLoading = false;
         state.isAuthenticated = true;
+        state.isGuest = false;
+        state.guestLocation = null;
         state.token = action.payload.token;
         state.user = action.payload.user;
       })
@@ -242,28 +356,48 @@ const authSlice = createSlice({
       // LOGOUT
       .addCase(logoutUser.fulfilled, state => {
         state.isAuthenticated = false;
+        state.isGuest = true;
         state.user = null;
         state.token = null;
         state.otpVerified = false;
+        state.isBootstrapping = false;
+        state.pendingAuthAction = null;
+      })
+
+      .addCase(enterGuestMode.fulfilled, state => {
+        state.isGuest = true;
+        state.isAuthenticated = false;
+        state.user = null;
+        state.token = null;
+        state.isBootstrapping = false;
       })
 
       // LOAD USER
       .addCase(loadUser.pending, state => {
         state.isLoading = true;
+        state.isBootstrapping = true;
       })
       .addCase(loadUser.fulfilled, (state, action) => {
         state.isLoading = false;
+        state.isBootstrapping = false;
         state.user = action.payload.user;
         state.token = action.payload.token;
-        state.isAuthenticated = true;
-      })
-      .addCase(loadUser.rejected, state => {
-        state.isLoading = false;
-        state.user = null;
-        state.isAuthenticated = false;
+        state.isGuest = Boolean(action.payload.isGuest);
+        state.guestLocation = action.payload.guestLocation ?? null;
+        state.isAuthenticated = Boolean(
+          action.payload.token && action.payload.user,
+        );
       });
   },
 });
 
-export const {clearAuthError, setUser, setUserLocation} = authSlice.actions;
+export const {
+  clearAuthError,
+  setUser,
+  setUserLocation,
+  setPendingAuthAction,
+  clearPendingAuthAction,
+  setGuestBrowsing,
+  prepareForSignIn,
+} = authSlice.actions;
 export default authSlice.reducer;

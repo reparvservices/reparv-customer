@@ -35,7 +35,10 @@ import {
 } from 'lucide-react-native';
 import Geolocation from '@react-native-community/geolocation';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {setUserLocation} from '../../features/auth/authSlice';
+import {
+  persistGuestLocation,
+  setUserLocation,
+} from '../../features/auth/authSlice';
 import {SafeAreaView} from 'react-native-safe-area-context';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -142,7 +145,9 @@ export default function LocationPickerScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const dispatch = useDispatch();
-  const {user} = useSelector(s => s.auth);
+  const {user, guestLocation} = useSelector(s => s.auth);
+  const activeCity = user?.city ?? guestLocation?.city;
+  const activeState = user?.state ?? guestLocation?.state;
   const onSelectParam = route?.params?.onSelect;
 
   // ── data state ─────────────────────────────────────────────────────────────
@@ -205,6 +210,8 @@ export default function LocationPickerScreen() {
             'Reparvuser',
             JSON.stringify({...JSON.parse(raw), city, state}),
           );
+        } else {
+          await persistGuestLocation(city, state);
         }
       } catch {}
       dispatch(setUserLocation({city, state}));
@@ -306,14 +313,14 @@ export default function LocationPickerScreen() {
     : cities;
 
   const currentLabel =
-    user?.city && user?.state
-      ? `${user.city}, ${user.state}`
-      : user?.city || user?.state || null;
+    activeCity && activeState
+      ? `${activeCity}, ${activeState}`
+      : activeCity || activeState || null;
 
   // ── renderers ──────────────────────────────────────────────────────────────
   const renderState = useCallback(
     ({item}) => {
-      const active = item.state === (user?.state || '');
+      const active = item.state === (activeState || '');
       return (
         <TouchableOpacity
           style={[s.row, active && s.rowActive]}
@@ -332,12 +339,12 @@ export default function LocationPickerScreen() {
         </TouchableOpacity>
       );
     },
-    [user?.state, onStatePress],
+    [activeState, onStatePress],
   );
 
   const renderCity = useCallback(
     ({item}) => {
-      const active = item.city === (user?.city || '');
+      const active = item.city === (activeCity || '');
       return (
         <TouchableOpacity
           style={[s.row, active && s.rowActive]}
@@ -354,7 +361,7 @@ export default function LocationPickerScreen() {
         </TouchableOpacity>
       );
     },
-    [user?.city, onCityPress],
+    [activeCity, onCityPress],
   );
 
   // ─────────────────────────────────────────────────────────────────────────

@@ -722,11 +722,6 @@ const PropertyCard = ({property, onClose, navigation, userCoords}) => {
               {prettifyCategory(property.propertyCategory)}
             </Text>
           </View>
-          {property.loanAvailability === 'Yes' && (
-            <View style={pc.loanBadge}>
-              <Text style={pc.loanBadgeTxt}>🏦 Loan</Text>
-            </View>
-          )}
         </View>
 
         {/* Close button */}
@@ -1363,10 +1358,7 @@ export default function PropertyMapScreen({navigation}) {
             </Text>
             <View style={[s.topTabBadge, isActive && s.topTabBadgeActive]}>
               <Text
-                style={[
-                  s.topTabBadgeTxt,
-                  isActive && s.topTabBadgeTxtActive,
-                ]}>
+                style={[s.topTabBadgeTxt, isActive && s.topTabBadgeTxtActive]}>
                 {categoryCounts[cat] || 0}
               </Text>
             </View>
@@ -1571,9 +1563,7 @@ export default function PropertyMapScreen({navigation}) {
           <View style={s.sliderLabelRow}>
             <Text style={s.sliderLabel}>Search Radius</Text>
             <View style={s.radiusValuePill}>
-              <Text style={s.radiusValueTxt}>
-                {sliderValue.toFixed(1)} km
-              </Text>
+              <Text style={s.radiusValueTxt}>{sliderValue.toFixed(1)} km</Text>
             </View>
           </View>
           <SliderV2
@@ -1665,17 +1655,6 @@ const pc = StyleSheet.create({
   },
   categoryBadgeTxt: {
     color: '#FFF',
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  loanBadge: {
-    backgroundColor: C.success,
-    borderRadius: 20,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  loanBadgeTxt: {
-    color: '#fff',
     fontSize: 11,
     fontWeight: '600',
   },

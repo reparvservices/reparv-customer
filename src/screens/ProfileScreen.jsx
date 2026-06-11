@@ -18,6 +18,7 @@ import {
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useDispatch, useSelector} from 'react-redux';
 import {logoutUser} from '../features/auth/authSlice';
+import {isLoggedIn, requireAuth, AUTH_ACTION_TYPES} from '../utils/authGuard';
 import {
   FileText,
   ShieldOff,
@@ -218,6 +219,31 @@ export default function ProfileScreen() {
     }
   };
 
+  if (!isLoggedIn(auth)) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <StatusBar backgroundColor="#FAF8FF" barStyle="dark-content" />
+        <View style={styles.guestWrap}>
+          <UserCircle size={56} color="#5E23DC" />
+          <Text style={styles.guestTitle}>Sign in to your account</Text>
+          <Text style={styles.guestSubtitle}>
+            Save properties, manage listings, and track enquiries after you sign
+            in.
+          </Text>
+          <TouchableOpacity
+            style={styles.guestPrimaryBtn}
+            onPress={() =>
+              requireAuth(navigation, dispatch, auth, {
+                type: AUTH_ACTION_TYPES.PROFILE,
+              })
+            }>
+            <Text style={styles.guestPrimaryBtnText}>Sign in</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   if (loading) {
     return (
       <View style={styles.loader}>
@@ -349,12 +375,6 @@ export default function ProfileScreen() {
             label="Sell Property"
             image={require('../assets/image/Profile/sell.png')}
             page="OldProperty"
-            navigation={navigation}
-          />
-          <MenuItem
-            label="Loan Application"
-            image={require('../assets/image/Profile/loan.png')}
-            page="HomeLoanDashboard"
             navigation={navigation}
           />
           <MenuItem
@@ -519,6 +539,38 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
   },
   container: {flex: 1, backgroundColor: '#FAF8FF'},
+  guestWrap: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 28,
+  },
+  guestTitle: {
+    marginTop: 20,
+    fontSize: 20,
+    fontFamily: 'SegoeUI-Bold',
+    color: '#111',
+    textAlign: 'center',
+  },
+  guestSubtitle: {
+    marginTop: 10,
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  guestPrimaryBtn: {
+    marginTop: 24,
+    backgroundColor: '#5E23DC',
+    paddingHorizontal: 32,
+    paddingVertical: 14,
+    borderRadius: 12,
+  },
+  guestPrimaryBtnText: {
+    color: '#fff',
+    fontFamily: 'SegoeUI-Bold',
+    fontSize: 16,
+  },
   header: {
     height: 56,
     paddingHorizontal: 16,

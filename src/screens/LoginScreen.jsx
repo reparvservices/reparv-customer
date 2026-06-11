@@ -1,4 +1,4 @@
-import React, {useRef, useState, useEffect, useMemo} from 'react';
+import React, {useRef, useState, useEffect, useMemo, useCallback} from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   ToastAndroid,
   ScrollView,
   Platform,
+  Alert,
 } from 'react-native';
 
 import Bg1 from '../assets/image/login/login1.svg';
@@ -24,7 +25,11 @@ import Logo from '../assets/image/login/logo.svg';
 import DropdownIcon from '../assets/image/login/dropdown.svg';
 import LinearGradient from 'react-native-linear-gradient';
 import OtpModal from '../components/login/OtpModal';
-import {useNavigation} from '@react-navigation/native';
+import {
+  useFocusEffect,
+  useNavigation,
+  useRoute,
+} from '@react-navigation/native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useDispatch, useSelector} from 'react-redux';
 import {
@@ -32,6 +37,7 @@ import {
   sendOtp,
   googleLogin,
 } from '../features/auth/authSlice';
+import {continueAsGuest} from '../utils/continueAsGuest';
 import {GoogleSignin} from '@react-native-google-signin/google-signin';
 import {facebookLogin} from '../utils/facebookLogin';
 
@@ -59,6 +65,14 @@ const slides = [
   },
 ];
 
+const showMessage = message => {
+  if (Platform.OS === 'android') {
+    ToastAndroid.show(message, ToastAndroid.SHORT);
+    return;
+  }
+  Alert.alert('Reparv', message);
+};
+
 // ─────────────────────────────────────────────
 // LOGIN MODAL
 // ─────────────────────────────────────────────
@@ -67,6 +81,7 @@ function LoginModal({
   onClose,
   onSwitchToSignUp,
   onOtpSent,
+  onContinueAsGuest,
   styles,
   width,
   height,
@@ -90,7 +105,7 @@ function LoginModal({
       ).unwrap();
       onOtpSent(phoneNumber);
     } catch (err) {
-      ToastAndroid.show(err || 'Failed to send OTP', ToastAndroid.SHORT);
+      showMessage(err || 'Failed to send OTP');
     }
   };
 
@@ -197,6 +212,12 @@ function LoginModal({
                 <SocialButtons styles={styles} />
               </>
             )}
+
+            <TouchableOpacity
+              style={styles.guestBtn}
+              onPress={onContinueAsGuest}>
+              <Text style={styles.guestBtnText}>Continue as Guest</Text>
+            </TouchableOpacity>
           </ScrollView>
         </View>
       </View>
@@ -212,6 +233,7 @@ function SignUpModal({
   onClose,
   onSwitchToLogin,
   onOtpSent,
+  onContinueAsGuest,
   styles,
   width,
   height,
@@ -245,7 +267,7 @@ function SignUpModal({
       ).unwrap();
       onOtpSent(phoneNumber);
     } catch (err) {
-      ToastAndroid.show(err || 'Failed to send OTP', ToastAndroid.SHORT);
+      showMessage(err || 'Failed to send OTP');
     }
   };
 
@@ -402,6 +424,12 @@ function SignUpModal({
                 <SocialButtons styles={styles} />
               </>
             )}
+
+            <TouchableOpacity
+              style={styles.guestBtn}
+              onPress={onContinueAsGuest}>
+              <Text style={styles.guestBtnText}>Continue as Guest</Text>
+            </TouchableOpacity>
           </ScrollView>
         </View>
       </View>
@@ -425,7 +453,7 @@ function SocialButtons({styles}) {
     try {
       const idToken = await signInWithGoogle();
       await dispatch(googleLogin(idToken)).unwrap();
-      ToastAndroid.show('Login Successful', ToastAndroid.SHORT);
+      showMessage('Login Successful');
     } catch (err) {
       console.log('Google Login Error:', err);
     }
@@ -459,7 +487,12 @@ function SocialButtons({styles}) {
 // ─────────────────────────────────────────────
 export default function LoginScreen() {
   const {width, height} = useWindowDimensions();
-  const {isAuthenticated, isLoading} = useSelector(state => state.auth);
+  const dispatch = useDispatch();
+  const navigation = useNavigation();
+  const route = useRoute();
+  const {isAuthenticated, isLoading, isGuest} = useSelector(
+    state => state.auth,
+  );
   const styles = useMemo(
     () => createLoginStyles(width, height),
     [width, height],
@@ -470,8 +503,26 @@ export default function LoginScreen() {
   const [activeModal, setActiveModal] = useState('login');
   const [otpPhone, setOtpPhone] = useState('');
 
+  const wantsSignIn = Boolean(
+    route.params?.signIn || route.params?.fromAuthGate,
+  );
+  const showMarketingBanner = activeModal !== 'otp';
+
+  const handleContinueAsGuest = () => {
+    setActiveModal(null);
+    continueAsGuest(dispatch);
+  };
+
   const isVerifyingOtp = isLoading && activeModal === 'otp';
   const showTransition = isAuthenticated || isVerifyingOtp;
+
+  useFocusEffect(
+    useCallback(() => {
+      if (wantsSignIn && !isGuest) {
+        setActiveModal('login');
+      }
+    }, [wantsSignIn, isGuest]),
+  );
 
   useEffect(() => {
     if (showTransition) {
@@ -487,7 +538,9 @@ export default function LoginScreen() {
 
   if (showTransition) {
     return (
-      <SafeAreaView style={styles.transitionContainer} edges={['top', 'bottom']}>
+      <SafeAreaView
+        style={styles.transitionContainer}
+        edges={['top', 'bottom']}>
         <StatusBar
           backgroundColor="#FAF8FF"
           barStyle="dark-content"
@@ -509,56 +562,63 @@ export default function LoginScreen() {
     setActiveModal('otp');
   };
 
+  const isOtpOpen = activeModal === 'otp';
+
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView
+      style={[styles.container, isOtpOpen && styles.containerOtp]}
+      edges={['top', 'bottom']}>
       <StatusBar
-        backgroundColor="#FAF8FF"
-        barStyle="dark-content"
+        backgroundColor={isOtpOpen ? '#FFFFFF' : '#321376'}
+        barStyle={isOtpOpen ? 'dark-content' : 'light-content'}
         translucent={false}
       />
 
-      {/* ── Slider ── */}
-      <View style={styles.topContainer}>
-        <FlatList
-          ref={flatRef}
-          data={slides}
-          keyExtractor={item => item.id.toString()}
-          horizontal
-          pagingEnabled
-          scrollEnabled={false}
-          showsHorizontalScrollIndicator={false}
-          renderItem={({item}) => {
-            const Bg = item.image;
-            return (
-              <View style={styles.slide}>
-                <Bg
-                  width={width}
-                  height={height * 0.42}
-                  preserveAspectRatio="xMidYMid slice"
-                />
-                <View style={styles.overlayText}>
-                  <Text style={styles.title}>{breakTitle(item.title)}</Text>
-                  <Text style={styles.smallText}>{item.smallText}</Text>
-                  <View style={styles.dotsContainer}>
-                    {slides.map((_, i) => (
-                      <View
-                        key={i}
-                        style={[styles.dot, index === i && styles.activeDot]}
-                      />
-                    ))}
+      {/* ── Marketing banner carousel ── */}
+      {showMarketingBanner && (
+        <View style={styles.topContainer}>
+          <FlatList
+            ref={flatRef}
+            data={slides}
+            keyExtractor={item => item.id.toString()}
+            horizontal
+            pagingEnabled
+            scrollEnabled={false}
+            showsHorizontalScrollIndicator={false}
+            renderItem={({item}) => {
+              const Bg = item.image;
+              return (
+                <View style={styles.slide}>
+                  <Bg
+                    width={width}
+                    height={height * 0.42}
+                    preserveAspectRatio="xMidYMid slice"
+                  />
+                  <View style={styles.overlayText}>
+                    <Text style={styles.title}>{breakTitle(item.title)}</Text>
+                    <Text style={styles.smallText}>{item.smallText}</Text>
+                    <View style={styles.dotsContainer}>
+                      {slides.map((_, i) => (
+                        <View
+                          key={i}
+                          style={[styles.dot, index === i && styles.activeDot]}
+                        />
+                      ))}
+                    </View>
                   </View>
                 </View>
-              </View>
-            );
-          }}
-        />
-      </View>
+              );
+            }}
+          />
+        </View>
+      )}
 
       <LoginModal
         visible={activeModal === 'login'}
         onClose={() => {}}
         onSwitchToSignUp={() => setActiveModal('signup')}
         onOtpSent={handleOtpSent}
+        onContinueAsGuest={handleContinueAsGuest}
         styles={styles}
         width={width}
         height={height}
@@ -569,6 +629,7 @@ export default function LoginScreen() {
         onClose={() => {}}
         onSwitchToLogin={() => setActiveModal('login')}
         onOtpSent={handleOtpSent}
+        onContinueAsGuest={handleContinueAsGuest}
         styles={styles}
         width={width}
         height={height}

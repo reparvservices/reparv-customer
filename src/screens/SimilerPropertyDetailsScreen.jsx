@@ -47,7 +47,6 @@ import {
   Leaf,
   MapPin,
   Phone,
-  Receipt,
   Share2,
   ShieldCheck,
   Tag,
@@ -62,9 +61,9 @@ import {PropertyIntro} from '../components/PropertyDetails/PropertyIntro';
 import LinearGradient from 'react-native-linear-gradient';
 import SimilerProperty from '../components/PropertyDetails/SimilerProperty';
 import {useNavigation, useRoute} from '@react-navigation/native';
-import {useSelector} from 'react-redux';
+import {useDispatch, useSelector} from 'react-redux';
 import {formatIndianAmount} from '../utils/formatIndianAmount';
-import HomeLoan from '../components/home/HomeLoan';
+import {AUTH_ACTION_TYPES, requireAuth} from '../utils/authGuard';
 import PropertyUploadModal from '../components/property/PropertyBookModal';
 import PriceSummaryDrawer from '../components/property/PriceSummaryDrawer';
 import PropertyVideoModal from '../components/PropertyDetails/VideoModel';
@@ -383,7 +382,9 @@ const RemoveWishlistModal = ({
 const SimilerPropertyDetailsScreen = () => {
   const route = useRoute();
   const navigation = useNavigation();
-  const {token, user} = useSelector(state => state.auth);
+  const dispatch = useDispatch();
+  const auth = useSelector(state => state.auth);
+  const {token, user} = auth;
   const {seoSlug} = route.params || {};
 
   const [activeTab, setActiveTab] = useState('Highlights');
@@ -599,6 +600,14 @@ const SimilerPropertyDetailsScreen = () => {
 
   // ── WhatsApp enquiry ──────────────────────────────────────────────────────
   const sendHelloOnWhatsApp = async () => {
+    if (
+      !requireAuth(navigation, dispatch, auth, {
+        type: AUTH_ACTION_TYPES.CONTACT_WHATSAPP,
+        params: {seoSlug},
+      })
+    ) {
+      return;
+    }
     const phoneNumber = propertyData?.projectPartnerContact || '918010881965';
     const message =
       `Hello,\n\nNew property enquiry:\n\n👤 *Client:* ${user?.fullname}\n` +
@@ -616,6 +625,14 @@ const SimilerPropertyDetailsScreen = () => {
 
   // ── Wishlist ──────────────────────────────────────────────────────────────
   const handleLikePress = async () => {
+    if (
+      !requireAuth(navigation, dispatch, auth, {
+        type: AUTH_ACTION_TYPES.WISHLIST,
+        params: {seoSlug, propertyid: propertyData?.propertyid},
+      })
+    ) {
+      return;
+    }
     if (isLiked) {
       setRemoveModalVisible(true);
       return;
@@ -700,7 +717,6 @@ const SimilerPropertyDetailsScreen = () => {
     },
     {label: 'Total Floors', value: propertyData?.totalFloors},
     {label: 'Floor Number', value: propertyData?.floorNo},
-    {label: 'Loan Availability', value: propertyData?.loanAvailability},
     {label: 'Power Backup', value: propertyData?.powerBackup},
   ];
 
@@ -1152,35 +1168,6 @@ const SimilerPropertyDetailsScreen = () => {
               </View>
             </LinearGradient>
 
-            {/* EMI Card */}
-            {!isRental && propertyData?.emi && (
-              <View style={cardStyles.emiCard}>
-                <View style={cardStyles.serviceIconBox}>
-                  <Receipt size={20} color="#6D28D9" strokeWidth={2} />
-                </View>
-                <View style={cardStyles.serviceTextCol}>
-                  <Text style={cardStyles.serviceLabel}>EMI starts at</Text>
-                  <Text style={cardStyles.serviceAmount}>
-                    ₹{formatIndianAmount(propertyData?.emi)}
-                    <Text style={cardStyles.serviceUnit}> /mo</Text>
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  style={cardStyles.serviceBtn}
-                  activeOpacity={0.8}
-                  onPress={() =>
-                    navigation.navigate('HomeLoan', {
-                      propertyid: propertyData?.propertyid,
-                    })
-                  }>
-                  <Text style={cardStyles.serviceBtnText}>
-                    Check Eligibility
-                  </Text>
-                  <ArrowRight size={15} color="#6D28D9" strokeWidth={2.5} />
-                </TouchableOpacity>
-              </View>
-            )}
-
             {/* Total Price Card */}
             <View style={cardStyles.totalCard}>
               <View style={cardStyles.serviceIconBox}>
@@ -1229,11 +1216,19 @@ const SimilerPropertyDetailsScreen = () => {
               <TouchableOpacity
                 style={ctaStyles.callBtn}
                 activeOpacity={0.8}
-                onPress={() =>
+                onPress={() => {
+                  if (
+                    !requireAuth(navigation, dispatch, auth, {
+                      type: AUTH_ACTION_TYPES.CONTACT_CALL,
+                      params: {seoSlug},
+                    })
+                  ) {
+                    return;
+                  }
                   Linking.openURL(
                     `tel:${propertyData?.projectPartnerContact || 8010881965}`,
-                  )
-                }>
+                  );
+                }}>
                 <Phone size={18} color="#7C3AED" strokeWidth={2} />
                 <Text style={ctaStyles.callBtnText}>Call Promoter</Text>
               </TouchableOpacity>
@@ -1255,7 +1250,17 @@ const SimilerPropertyDetailsScreen = () => {
             <TouchableOpacity
               style={ctaStyles.bookBtn}
               activeOpacity={0.85}
-              onPress={() => setOpen(true)}>
+              onPress={() => {
+                if (
+                  !requireAuth(navigation, dispatch, auth, {
+                    type: AUTH_ACTION_TYPES.BOOK_VISIT,
+                    params: {seoSlug},
+                  })
+                ) {
+                  return;
+                }
+                setOpen(true);
+              }}>
               <Calendar size={20} color="#FFF" strokeWidth={2} />
               <Text style={ctaStyles.bookBtnText}>Book Site Visit</Text>
             </TouchableOpacity>
@@ -1363,8 +1368,6 @@ const SimilerPropertyDetailsScreen = () => {
             city={propertyData?.city}
             budget={propertyData?.totalOfferPrice}
           />
-
-          <HomeLoan />
         </ScrollView>
 
         {/* ── MODALS ────────────────────────────────────────────────────── */}

@@ -21,7 +21,6 @@ import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 import MultiSlider from '@ptomasroos/react-native-multi-slider';
 import {
   ArrowLeft,
-  Calculator,
   Users,
   Plus,
   X,
@@ -32,8 +31,6 @@ import {
   Percent,
 } from 'lucide-react-native';
 import LinearGradient from 'react-native-linear-gradient';
-import Svg, {G, Path} from 'react-native-svg';
-
 import EmiRightSide from '../assets/image/trends/rside.png';
 import EmiLeftSide from '../assets/image/trends/lside.png';
 import {formatIndianAmount} from '../utils/formatIndianAmount';
@@ -59,7 +56,6 @@ const SAMPLE_AVATARS = [
 
 // ─── Tab keys ─────────────────────────────────────────────────────
 const TABS = {
-  EMI: 'emi',
   RENT: 'rent',
   BROKERAGE: 'brokerage',
   SIP: 'sip',
@@ -71,26 +67,7 @@ const TAB_BAR_CLEARANCE = 88;
 export default function CalculatorScreen() {
   const insets = useSafeAreaInsets();
   const scrollBottomPadding = TAB_BAR_CLEARANCE + insets.bottom;
-  const [activeTab, setActiveTab] = useState(TABS.EMI);
-
-  /* ─────────────── EMI State ─────────────── */
-  const [loan, setLoan] = useState(4000000);
-  const [tenure, setTenure] = useState(30);
-  const [rate, setRate] = useState(9.5);
-
-  const [showLoanModal, setShowLoanModal] = useState(false);
-  const [showTenureModal, setShowTenureModal] = useState(false);
-  const [showRateModal, setShowRateModal] = useState(false);
-
-  /* ─────────────── EMI Calc ─────────────── */
-  const monthlyRate = rate / 12 / 100;
-  const months = tenure * 12;
-  const emi = Math.round(
-    (loan * monthlyRate * Math.pow(1 + monthlyRate, months)) /
-      (Math.pow(1 + monthlyRate, months) - 1),
-  );
-  const totalPayment = emi * months;
-  const totalInterest = totalPayment - loan;
+  const [activeTab, setActiveTab] = useState(TABS.RENT);
 
   /* ─────────────── Rent Split State ─────── */
   const [rentAmount, setRentAmount] = useState('12000');
@@ -245,12 +222,6 @@ export default function CalculatorScreen() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.tabsRow}>
             <Tab
-              icon={Calculator}
-              label="EMI Calculator"
-              active={activeTab === TABS.EMI}
-              onPress={() => setActiveTab(TABS.EMI)}
-            />
-            <Tab
               icon={Users}
               label="Rent Split"
               active={activeTab === TABS.RENT}
@@ -269,107 +240,6 @@ export default function CalculatorScreen() {
               onPress={() => setActiveTab(TABS.SIP)}
             />
           </ScrollView>
-
-          {/* ════════════════ EMI TAB ════════════════ */}
-          {activeTab === TABS.EMI && (
-            <View style={styles.tabContent}>
-              <View style={styles.card}>
-                <Field
-                  label="Loan Amount"
-                  value={`₹ ${formatIndianAmount(loan)}`}
-                  onPress={() => setShowLoanModal(true)}
-                />
-                <MultiSlider
-                  values={[loan]}
-                  sliderLength={CARD_SLIDER_LENGTH}
-                  onValuesChange={v => setLoan(v[0])}
-                  min={100000}
-                  max={100000000}
-                  step={100000}
-                  selectedStyle={{backgroundColor: '#7C3AED'}}
-                  unselectedStyle={{backgroundColor: '#E5E7EB'}}
-                  markerStyle={styles.marker}
-                />
-                <RangeRow left="₹ 1 L" right="₹ 10 Cr+" />
-
-                <Field
-                  label="Tenure (Years)"
-                  value={`${tenure} Years`}
-                  onPress={() => setShowTenureModal(true)}
-                />
-                <MultiSlider
-                  values={[tenure]}
-                  sliderLength={CARD_SLIDER_LENGTH}
-                  onValuesChange={v => setTenure(v[0])}
-                  min={2}
-                  max={30}
-                  step={1}
-                  selectedStyle={{backgroundColor: '#7C3AED'}}
-                  unselectedStyle={{backgroundColor: '#E5E7EB'}}
-                  markerStyle={styles.marker}
-                />
-                <RangeRow left="2 Years" right="30 Years" />
-
-                <Field
-                  label="Interest Rate (% P.A.)"
-                  value={`${rate}%`}
-                  onPress={() => setShowRateModal(true)}
-                />
-                <MultiSlider
-                  values={[rate]}
-                  sliderLength={CARD_SLIDER_LENGTH}
-                  onValuesChange={v => setRate(v[0])}
-                  min={1}
-                  max={20}
-                  step={0.1}
-                  selectedStyle={{backgroundColor: '#7C3AED'}}
-                  unselectedStyle={{backgroundColor: '#E5E7EB'}}
-                  markerStyle={styles.marker}
-                />
-                <RangeRow left="1%" right="20%" />
-              </View>
-
-              <View style={styles.emiCardWrap}>
-                <LinearGradient
-                  colors={['#8A38F5', '#5E23DC']}
-                  style={styles.emiCard}>
-                  <Image source={EmiLeftSide} style={styles.leftImage} />
-                  <Image source={EmiRightSide} style={styles.rightImage} />
-                  <View style={styles.emiTextBlock}>
-                    <Text style={styles.emiLabel}>Monthly EMI</Text>
-                    <Text style={styles.emiValue}>
-                      ₹{emi.toLocaleString('en-IN')}
-                    </Text>
-                    <Text style={styles.emiSub}>
-                      For {tenure} years loan tenure
-                    </Text>
-                  </View>
-                </LinearGradient>
-              </View>
-
-              <View style={styles.breakdown}>
-                <Text style={styles.breakdownTitle}>Payment Breakdown</Text>
-                <Row
-                  label="Principal Amount"
-                  value={`₹${formatIndianAmount(loan)}`}
-                />
-                <Row
-                  label="Total Interest"
-                  value={`₹${formatIndianAmount(totalInterest)}`}
-                  danger
-                />
-                <View style={styles.divider} />
-                <Row
-                  label="Total Amount"
-                  value={`₹${formatIndianAmount(totalPayment)}`}
-                  bold
-                />
-              </View>
-
-              <Text style={styles.sectionTitle}>Principal vs Interest</Text>
-              <PieChart principal={loan} interest={totalInterest} />
-            </View>
-          )}
 
           {/* ════════════════ RENT SPLIT TAB ════════════════ */}
           {activeTab === TABS.RENT && (
@@ -634,7 +504,9 @@ export default function CalculatorScreen() {
                   <Image source={EmiLeftSide} style={styles.leftImage} />
                   <Image source={EmiRightSide} style={styles.rightImage} />
                   <View style={styles.emiTextBlock}>
-                    <Text style={styles.emiLabel}>Total Brokerage (incl. GST)</Text>
+                    <Text style={styles.emiLabel}>
+                      Total Brokerage (incl. GST)
+                    </Text>
                     <Text style={styles.emiValue}>
                       ₹{totalBrokerage.toLocaleString('en-IN')}
                     </Text>
@@ -863,37 +735,6 @@ export default function CalculatorScreen() {
           )}
         </ScrollView>
       </KeyboardAvoidingView>
-
-      {/* ── EMI Modals ── */}
-      <Modal transparent visible={showLoanModal} animationType="fade">
-        <ModalBox
-          title="Enter Loan Amount"
-          value={String(loan)}
-          setValue={v => setLoan(Number(v))}
-          onCancel={() => setShowLoanModal(false)}
-          onApply={() => setShowLoanModal(false)}
-        />
-      </Modal>
-
-      <Modal transparent visible={showTenureModal} animationType="fade">
-        <ModalBox
-          title="Enter Tenure (Years)"
-          value={String(tenure)}
-          setValue={v => setTenure(Number(v))}
-          onCancel={() => setShowTenureModal(false)}
-          onApply={() => setShowTenureModal(false)}
-        />
-      </Modal>
-
-      <Modal transparent visible={showRateModal} animationType="fade">
-        <ModalBox
-          title="Enter Interest Rate (%)"
-          value={String(rate)}
-          setValue={v => setRate(Number(v))}
-          onCancel={() => setShowRateModal(false)}
-          onApply={() => setShowRateModal(false)}
-        />
-      </Modal>
     </SafeAreaView>
   );
 }
@@ -938,73 +779,6 @@ const Row = ({label, value, bold, danger}) => (
         danger && {color: '#EF4444'},
       ]}>
       {value}
-    </Text>
-  </View>
-);
-
-/* ──────────────────────────────────────────────────────────────────
-   Pie Chart
-────────────────────────────────────────────────────────────────── */
-const PieChart = ({principal = 0, interest = 0}) => {
-  const total = principal + interest || 1;
-  const principalPercent = Math.round((principal / total) * 100);
-  const interestPercent = 100 - principalPercent;
-
-  const size = Math.min(width * 0.52, 240);
-  const radius = size / 2;
-  const cx = radius;
-  const cy = radius;
-
-  const polarToCartesian = (cx, cy, r, angle) => {
-    const rad = (Math.PI / 180) * angle;
-    return {x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad)};
-  };
-
-  const createSlice = (startAngle, endAngle) => {
-    const start = polarToCartesian(cx, cy, radius, endAngle);
-    const end = polarToCartesian(cx, cy, radius, startAngle);
-    const largeArc = endAngle - startAngle > 180 ? 1 : 0;
-    return `M ${cx} ${cy} L ${start.x} ${start.y} A ${radius} ${radius} 0 ${largeArc} 0 ${end.x} ${end.y} Z`;
-  };
-
-  const startAngle = -90;
-  const interestAngle = (interestPercent / 100) * 360;
-
-  return (
-    <View style={styles.pieChartWrap}>
-      <Svg width={size} height={size}>
-        <G>
-          <Path
-            d={createSlice(startAngle, startAngle + interestAngle)}
-            fill="#22C55E"
-          />
-          <Path
-            d={createSlice(startAngle + interestAngle, 270)}
-            fill="#FBBF24"
-          />
-        </G>
-      </Svg>
-      <View style={styles.legendRow}>
-        <LegendItem
-          color="#FBBF24"
-          label="Principal"
-          percent={principalPercent}
-        />
-        <LegendItem
-          color="#22C55E"
-          label="Interest"
-          percent={interestPercent}
-        />
-      </View>
-    </View>
-  );
-};
-
-const LegendItem = ({color, label, percent}) => (
-  <View style={styles.legendItem}>
-    <View style={[styles.legendDot, {backgroundColor: color}]} />
-    <Text style={styles.legendText}>
-      {label} • {percent}%
     </Text>
   </View>
 );
@@ -1212,7 +986,12 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   rowLabel: {color: '#374151', fontSize: 14, flex: 1, paddingRight: 8},
-  rowValue: {fontWeight: '600', color: '#000', fontSize: 14, textAlign: 'right'},
+  rowValue: {
+    fontWeight: '600',
+    color: '#000',
+    fontSize: 14,
+    textAlign: 'right',
+  },
   divider: {height: 1, backgroundColor: '#E5E7EB', marginVertical: 6},
   sectionTitle: {
     fontSize: 18,

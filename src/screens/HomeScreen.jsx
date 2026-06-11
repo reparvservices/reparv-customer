@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect} from 'react';
+import React, {useCallback} from 'react';
 import {
   View,
   Text,
@@ -10,17 +10,15 @@ import {
   Image,
   FlatList,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import {useFocusEffect, useNavigation} from '@react-navigation/native';
-import {useDispatch, useSelector} from 'react-redux';
-import {loadUser} from '../features/auth/authSlice';
 import {ChevronRight, MapPin, Bed, Bath, Maximize} from 'lucide-react-native';
 
 // ── Updated Components ──
 import HomeHeader from '../components/home/HomeHeader';
 import ActionCards from '../components/home/ActionCards';
 import RentProperty from '../components/home/RentProperty';
-import HomeLoan from '../components/home/HomeLoan';
 import NewLaunchShowcase from '../components/home/NewLauncCard';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {getImageUri} from '../utils/imageHandle';
@@ -33,7 +31,6 @@ import FutureLuxuryCard from '../components/home/FutureLuxuryCard';
    MAIN HOME SCREEN
 ───────────────────────────────────────────────────── */
 export default function HomeScreen() {
-  const dispatch = useDispatch();
   const navigation = useNavigation();
 
   useFocusEffect(
@@ -50,10 +47,6 @@ export default function HomeScreen() {
     }, []),
   );
 
-  useEffect(() => {
-    dispatch(loadUser());
-  }, []);
-
   return (
     <SafeAreaView style={{flex: 1}} edges={['top', 'left', 'right']}>
       <View style={styles.container}>
@@ -69,7 +62,6 @@ export default function HomeScreen() {
           <View style={{padding: 13}}>
             <FutureLuxuryCard />
           </View>
-          <HomeLoan />
           <RentProperty />
           <NewLaunchShowcase />
           <MapExplorerBanner navigation={navigation} />

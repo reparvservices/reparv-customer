@@ -13,7 +13,8 @@ import {
   Platform,
 } from 'react-native';
 import Svg, {Circle, ClipPath, Defs, G, Path, Rect} from 'react-native-svg';
-import {useSelector} from 'react-redux';
+import {useDispatch, useSelector} from 'react-redux';
+import {AUTH_ACTION_TYPES, requireAuth} from '../../utils/authGuard';
 import {formatIndianAmount} from '../../utils/formatIndianAmount';
 import {getImageUri, parseFrontView} from '../../utils/imageHandle';
 
@@ -22,7 +23,9 @@ const IMAGE_BASE_URL = 'https://reparv-assets.s3.ap-south-1.amazonaws.com';
 
 function PropertyCard({item, iswishList}) {
   const navigation = useNavigation();
-  const {user} = useSelector(state => state.auth);
+  const dispatch = useDispatch();
+  const auth = useSelector(state => state.auth);
+  const {user} = auth;
   const [isLiked, setIsLiked] = useState(false);
   const [reparvAssured, setReparvAssured] = useState(false); //  state for tag
   const [likeCount, setLikeCount] = useState(0);
@@ -58,6 +61,17 @@ function PropertyCard({item, iswishList}) {
     fetchVisits(item?.propertyid);
   }, [item?.propertyid]);
   const handleLikePress = async () => {
+    if (
+      !requireAuth(navigation, dispatch, auth, {
+        type: AUTH_ACTION_TYPES.WISHLIST,
+        params: {
+          seoSlug: item?.seoSlug,
+          propertyid: item?.propertyid,
+        },
+      })
+    ) {
+      return;
+    }
     setIsLiked(prev => !prev);
     try {
       const response = await fetch(

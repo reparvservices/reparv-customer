@@ -26,6 +26,7 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 import {parseBhkList} from '../utils/parseBhk';
 import {fetchAllPropertiesCached} from '../services/allPropertiesCache';
 import {useSelector} from 'react-redux';
+import {selectBrowseCity} from '../features/auth/authSlice';
 
 const {width} = Dimensions.get('window');
 const CARD_WIDTH = width - 32;
@@ -78,10 +79,10 @@ const HighlightMatch = ({text, query, style}) => {
 
 const PropertyListScreen = () => {
   const navigation = useNavigation();
-  const {user} = useSelector(state => state.auth);
+  const browseCity = useSelector(state => selectBrowseCity(state));
   const route = useRoute();
   const ptype = route?.params?.ptype;
-  const initialCity = route?.params?.city || user.city;
+  const initialCity = route?.params?.city ?? browseCity ?? '';
 
   const [flats, setFlats] = useState([]);
   const [filteredFlats, setFilteredFlats] = useState([]);

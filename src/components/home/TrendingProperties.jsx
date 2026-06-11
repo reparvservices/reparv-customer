@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import {useSelector} from 'react-redux';
+import {selectBrowseCity} from '../../features/auth/authSlice';
 import {MapPin, Bed, Bath, Maximize, Map} from 'lucide-react-native';
 import {getImageUri} from '../../utils/imageHandle';
 import {
@@ -144,8 +145,8 @@ function TrendingProperties() {
   const [properties, setProperties] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
 
-  const {user} = useSelector(state => state.auth);
-  const selectedCity = (user?.city || '').trim().toLowerCase();
+  const browseCity = useSelector(selectBrowseCity);
+  const selectedCity = (browseCity || '').trim().toLowerCase();
 
   // ── Real GPS distance — one permission prompt per mount ────────
   const {coords: userCoords, loading: locationLoading} = useUserLocation();
