@@ -1,4 +1,4 @@
-import React, {useEffect, useRef, useState} from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {
   View,
   Text,
@@ -11,11 +11,11 @@ import {
   ActivityIndicator,
   ToastAndroid,
   Platform,
+  NativeModules,
 } from 'react-native';
 import {useDispatch, useSelector} from 'react-redux';
 import BackIcon from '../../assets/image/login/arrow.svg';
 import {verifyOtp, sendOtp} from '../../features/auth/authSlice';
-import RNOtpVerify from 'react-native-otp-verify';
 
 const {height} = Dimensions.get('window');
 
@@ -30,6 +30,32 @@ export default function OtpModal({visible, onClose, phone, onEdit, onVerify}) {
   const [resendTimer, setResendTimer] = useState(30);
 
   const {isLoading} = useSelector(state => state.auth);
+
+  const handleVerifyWithCode = useCallback(
+    async otpValue => {
+      if (otpValue.length !== 6) {
+        return setErrorMsg('Enter valid OTP');
+      }
+
+      try {
+        await dispatch(
+          verifyOtp({
+            contact: phone,
+            otp: otpValue,
+          }),
+        ).unwrap();
+
+        ToastAndroid.show('Login Successful', ToastAndroid.SHORT);
+
+        setOtp(Array(6).fill(''));
+        setErrorMsg('');
+        onVerify();
+      } catch (err) {
+        setErrorMsg(err || 'Invalid or expired OTP');
+      }
+    },
+    [dispatch, onVerify, phone],
+  );
 
   /* ================= SLIDE ANIMATION ================= */
   useEffect(() => {
@@ -50,7 +76,11 @@ export default function OtpModal({visible, onClose, phone, onEdit, onVerify}) {
   }, [visible]);
 
   useEffect(() => {
-    if (!visible) return;
+    if (!visible || Platform.OS !== 'android' || !NativeModules.OtpVerify) {
+      return;
+    }
+
+    const RNOtpVerify = require('react-native-otp-verify').default;
 
     RNOtpVerify.getOtp()
       .then(() => {
@@ -59,9 +89,8 @@ export default function OtpModal({visible, onClose, phone, onEdit, onVerify}) {
 
           if (code) {
             setOtp(code.split(''));
-
             setTimeout(() => {
-              verifyOtpAutomatically(code);
+              handleVerifyWithCode(code);
             }, 300);
           }
         });
@@ -71,7 +100,7 @@ export default function OtpModal({visible, onClose, phone, onEdit, onVerify}) {
     return () => {
       RNOtpVerify.removeListener();
     };
-  }, [visible]);
+  }, [visible, handleVerifyWithCode]);
 
   /* ================= RESEND TIMER ================= */
   useEffect(() => {
@@ -113,28 +142,7 @@ export default function OtpModal({visible, onClose, phone, onEdit, onVerify}) {
 
   /* ================= VERIFY OTP ================= */
   const handleVerify = async () => {
-    const otpValue = otp.join('');
-
-    if (otpValue.length !== 6) {
-      return setErrorMsg('Enter valid OTP');
-    }
-
-    try {
-      const res = await dispatch(
-        verifyOtp({
-          contact: phone,
-          otp: otpValue,
-        }),
-      ).unwrap();
-
-      ToastAndroid.show('Login Successful', ToastAndroid.SHORT);
-
-      setOtp(Array(6).fill(''));
-      setErrorMsg('');
-      onVerify(); // navigate to MainTabs
-    } catch (err) {
-      setErrorMsg(err || 'Invalid or expired OTP');
-    }
+    await handleVerifyWithCode(otp.join(''));
   };
 
   /* ================= RESEND OTP ================= */

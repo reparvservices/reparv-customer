@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  ActivityIndicator,
   Image,
   Animated,
   Platform,
@@ -17,9 +16,13 @@ import {
 } from 'react-native';
 import {WebView} from 'react-native-webview';
 import Geolocation from '@react-native-community/geolocation';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import {useSelector} from 'react-redux';
 import {getImageUri} from '../utils/imageHandle';
-import {Filter} from 'lucide-react-native';
-import {SafeAreaView} from 'react-native-safe-area-context';
+import {fetchAllPropertiesCached} from '../services/allPropertiesCache';
+import {API_BASE_URL} from '../config/api';
+import {Filter, LocateFixed} from 'lucide-react-native';
+import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 
 // Enable LayoutAnimation on Android
 if (
@@ -28,9 +31,6 @@ if (
 ) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
-
-// ─── CONFIG ───────────────────────────────────────────────────────────────────
-const API_URL = 'https://aws-api.reparv.in/frontend/all-properties';
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
 const C = {
@@ -57,20 +57,25 @@ const C = {
 };
 
 const RADIUS_KM_DEFAULT = 5;
+const INDIA_CENTER = {lat: 20.5937, lon: 78.9629};
+const INDIA_BOUNDS = {minLat: 6, maxLat: 37.6, minLon: 68, maxLon: 98};
 const BUDGET_MIN = 1_000;
 const BUDGET_MAX = 20_000_000;
 const BUDGET_STEP = 15_000;
 
 // Radius preset chips
 const RADIUS_PRESETS = [
-  {label: '1km', value: 1},
-  {label: '5km', value: 5},
-  {label: '10km', value: 10},
-  {label: '25km', value: 25},
-  {label: '30km', value: 30},
-  {label: '40km-60km', value: 60},
-  {label: '70km-100km', value: 100},
+  {label: '1 km', value: 1},
+  {label: '5 km', value: 5},
+  {label: '10 km', value: 10},
+  {label: '25 km', value: 25},
+  {label: '30 km', value: 30},
+  {label: '60 km', value: 60},
+  {label: '100 km', value: 100},
 ];
+
+// Approximate height of the bottom radius panel (used for FAB / banner placement)
+const SLIDER_PANEL_HEIGHT = Platform.OS === 'ios' ? 178 : 168;
 
 Geolocation.setRNConfiguration({
   skipPermissionRequests: false,
@@ -121,23 +126,130 @@ function prettifyCategory(cat) {
     .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2');
 }
 
-function getLocationRobust() {
+function filterActiveProperties(list) {
+  return (Array.isArray(list) ? list : []).filter(
+    item => item.status === 'Active' && item.approve === 'Approved',
+  );
+}
+
+function isInIndia(lat, lon) {
+  return (
+    lat >= INDIA_BOUNDS.minLat &&
+    lat <= INDIA_BOUNDS.maxLat &&
+    lon >= INDIA_BOUNDS.minLon &&
+    lon <= INDIA_BOUNDS.maxLon
+  );
+}
+
+const geocodeCache = {};
+
+async function geocodeCityState(city, state) {
+  const label = `${city || ''} ${state || ''} India`.trim();
+  if (!city) return null;
+  if (geocodeCache[label]) return geocodeCache[label];
+
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/api/map/geocode?q=${encodeURIComponent(label)}`,
+    );
+    const data = await response.json();
+    if (Array.isArray(data) && data.length > 0) {
+      const lat = parseFloat(data[0].lat);
+      const lon = parseFloat(data[0].lon);
+      if (lat && lon && isInIndia(lat, lon)) {
+        const coords = {lat, lon, source: 'city', label: city};
+        geocodeCache[label] = coords;
+        return coords;
+      }
+    }
+  } catch (_) {}
+
+  return null;
+}
+
+async function readSavedCityState() {
+  try {
+    const raw = await AsyncStorage.getItem('Reparvuser');
+    if (!raw) return null;
+    const user = JSON.parse(raw);
+    if (user?.city) {
+      return {city: user.city, state: user.state || ''};
+    }
+  } catch (_) {}
+  return null;
+}
+
+/** Prefer GPS inside India; otherwise fall back to saved city or India center. */
+async function resolveMapCoords(gpsCoords, profile) {
+  if (gpsCoords?.lat && gpsCoords?.lon && isInIndia(gpsCoords.lat, gpsCoords.lon)) {
+    return {...gpsCoords, source: 'gps'};
+  }
+
+  const city = profile?.city;
+  const state = profile?.state || '';
+  if (city) {
+    const geocoded = await geocodeCityState(city, state);
+    if (geocoded) return geocoded;
+  }
+
+  return {...INDIA_CENTER, source: 'default'};
+}
+
+function getCurrentPosition(options) {
   return new Promise((resolve, reject) => {
     Geolocation.getCurrentPosition(
-      p => resolve({lat: p.coords.latitude, lon: p.coords.longitude}),
-      () =>
-        Geolocation.getCurrentPosition(
-          p => resolve({lat: p.coords.latitude, lon: p.coords.longitude}),
-          () =>
-            Geolocation.getCurrentPosition(
-              p => resolve({lat: p.coords.latitude, lon: p.coords.longitude}),
-              err => reject(err),
-              {enableHighAccuracy: false, timeout: 10000, maximumAge: 300000},
-            ),
-          {enableHighAccuracy: false, timeout: 10000, maximumAge: 0},
-        ),
-      {enableHighAccuracy: true, timeout: 10000, maximumAge: 0},
+      p =>
+        resolve({
+          lat: p.coords.latitude,
+          lon: p.coords.longitude,
+          accuracy: p.coords.accuracy,
+        }),
+      reject,
+      options,
     );
+  });
+}
+
+/** Fast cached fix first, then high-accuracy refinement. */
+function getLocationRobust({onFastFix} = {}) {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const finish = coords => {
+      if (settled) return;
+      settled = true;
+      resolve(coords);
+    };
+
+    getCurrentPosition({
+      enableHighAccuracy: false,
+      timeout: 4000,
+      maximumAge: 300000,
+    })
+      .then(coords => {
+        onFastFix?.(coords);
+        if (coords.accuracy != null && coords.accuracy <= 120) {
+          finish(coords);
+        }
+      })
+      .catch(() => {});
+
+    getCurrentPosition({
+      enableHighAccuracy: true,
+      timeout: 14000,
+      maximumAge: 0,
+    })
+      .then(finish)
+      .catch(() => {
+        getCurrentPosition({
+          enableHighAccuracy: false,
+          timeout: 8000,
+          maximumAge: 60000,
+        })
+          .then(finish)
+          .catch(err => {
+            if (!settled) reject(err);
+          });
+      });
   });
 }
 
@@ -463,7 +575,7 @@ const sliderS = StyleSheet.create({
   },
 });
 
-// ─── Leaflet Satellite Map HTML ───────────────────────────────────────────────
+// ─── Leaflet Hybrid Map HTML (Google labels + satellite) ─────────────────────
 const LEAFLET_HTML = `<!DOCTYPE html>
 <html>
 <head>
@@ -475,46 +587,102 @@ const LEAFLET_HTML = `<!DOCTYPE html>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
-    html, body, #map { width:100%; height:100%; background:#0f172a; }
-    .leaflet-control-attribution,
+    html, body, #map { width:100%; height:100%; background:#e8edf3; }
     .leaflet-control-zoom { display:none !important; }
+    .leaflet-control-attribution {
+      font-size:9px !important; background:rgba(255,255,255,0.85) !important;
+      padding:2px 6px !important; border-radius:6px 0 0 0 !important;
+    }
+    #tileLoader {
+      position:absolute; inset:0; z-index:999;
+      display:flex; align-items:center; justify-content:center;
+      background:rgba(232,237,243,0.72); pointer-events:none;
+      transition:opacity .35s ease;
+    }
+    #tileLoader.hide { opacity:0; }
+    .tileSpinner {
+      width:34px; height:34px; border-radius:50%;
+      border:3px solid rgba(110,86,207,0.18);
+      border-top-color:#6E56CF;
+      animation:spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform:rotate(360deg); } }
     .pm-wrap { display:flex; flex-direction:column; align-items:center; }
     .pm-bubble {
       background:#6E56CF; padding:5px 10px; border-radius:10px;
       display:flex; flex-direction:column; align-items:center;
-      box-shadow:0 2px 8px rgba(110,86,207,0.35); white-space:nowrap;
+      box-shadow:0 2px 10px rgba(110,86,207,0.38); white-space:nowrap;
+      border:1.5px solid rgba(255,255,255,0.9);
     }
-    .pm-bubble.sel { background:#fff; border:2px solid #6E56CF; }
+    .pm-bubble.sel { background:#fff; border:2px solid #6E56CF; box-shadow:0 4px 14px rgba(110,86,207,0.28); }
     .pm-price { color:#fff; font-weight:700; font-size:11.5px; font-family:-apple-system,sans-serif; line-height:1.3; }
     .pm-bubble.sel .pm-price { color:#6E56CF; }
-    .pm-dist { color:rgba(255,255,255,0.75); font-size:9px; font-weight:500; font-family:-apple-system,sans-serif; margin-top:1px; }
-    .pm-bubble.sel .pm-dist { color:#BEB0F0; }
+    .pm-dist { color:rgba(255,255,255,0.82); font-size:9px; font-weight:500; font-family:-apple-system,sans-serif; margin-top:1px; }
+    .pm-bubble.sel .pm-dist { color:#8B7AE8; }
     .pm-pin { width:0; height:0; border-left:5px solid transparent; border-right:5px solid transparent; border-top:7px solid #6E56CF; }
     .pm-bubble.sel + .pm-pin { border-top-color:#6E56CF; }
-    .ud-outer { width:22px; height:22px; border-radius:11px; background:rgba(37,99,235,0.15); border:2px solid #2563EB; display:flex; align-items:center; justify-content:center; }
-    .ud-inner { width:9px; height:9px; border-radius:5px; background:#fff; border:2px solid #2563EB; }
+    .ud-pulse {
+      width:38px; height:38px; border-radius:19px;
+      background:rgba(37,99,235,0.14); border:2px solid #2563EB;
+      display:flex; align-items:center; justify-content:center;
+      box-shadow:0 0 0 6px rgba(37,99,235,0.12);
+      animation:pulse 2s ease-out infinite;
+    }
+    .ud-inner { width:10px; height:10px; border-radius:5px; background:#2563EB; border:2px solid #fff; }
+    @keyframes pulse {
+      0% { box-shadow:0 0 0 0 rgba(37,99,235,0.28); }
+      70% { box-shadow:0 0 0 12px rgba(37,99,235,0); }
+      100% { box-shadow:0 0 0 0 rgba(37,99,235,0); }
+    }
   </style>
 </head>
 <body>
 <div id="map"></div>
+<div id="tileLoader"><div class="tileSpinner"></div></div>
 <script>
-  var map = L.map('map', { zoomControl:false, attributionControl:false });
-  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    { maxZoom:19, tileSize:256 }).addTo(map);
+  var map = L.map('map', { zoomControl:false, attributionControl:true, preferCanvas:true });
+  var baseLayer = L.tileLayer(
+    'https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+    {
+      subdomains: ['mt0','mt1','mt2','mt3'],
+      maxZoom: 20,
+      attribution: '\\u00a9 Google Maps'
+    }
+  ).addTo(map);
   map.setView([20.5937, 78.9629], 5);
   var propertyMarkers = {}, userMarker = null, radiusCircle = null;
+  var updateTimer = null, tilesReady = false;
+  var tileLoader = document.getElementById('tileLoader');
+  function hideTileLoader() {
+    if (!tilesReady) {
+      tilesReady = true;
+      tileLoader.classList.add('hide');
+      setTimeout(function(){ tileLoader.style.display='none'; }, 380);
+    }
+  }
+  baseLayer.on('loading', function(){ tileLoader.style.display='flex'; tileLoader.classList.remove('hide'); tilesReady=false; });
+  baseLayer.on('load', hideTileLoader);
+  setTimeout(hideTileLoader, 2500);
   function _fmt(val) {
-    var n=parseFloat(val); if(!n) return '\u2014';
-    if(n>=10000000) return '\u20b9'+(n/10000000).toFixed(1)+' Cr';
-    if(n>=100000) return '\u20b9'+(n/100000).toFixed(2)+' L';
-    if(n>=1000) return '\u20b9'+(n/1000).toFixed(0)+'K';
-    return '\u20b9'+n;
+    var n=parseFloat(val); if(!n) return '\\u2014';
+    if(n>=10000000) return '\\u20b9'+(n/10000000).toFixed(1)+' Cr';
+    if(n>=100000) return '\\u20b9'+(n/100000).toFixed(2)+' L';
+    if(n>=1000) return '\\u20b9'+(n/1000).toFixed(0)+'K';
+    return '\\u20b9'+n;
   }
   function _dist(km) { return km<1?(km*1000).toFixed(0)+'m':km.toFixed(1)+'km'; }
   function _hav(lat1,lon1,lat2,lon2) {
     var R=6371,dLat=(lat2-lat1)*Math.PI/180,dLon=(lon2-lon1)*Math.PI/180;
     var a=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)*Math.sin(dLon/2);
     return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+  }
+  function _zoomForRadius(km) {
+    if (km <= 1) return 15;
+    if (km <= 5) return 13;
+    if (km <= 10) return 12;
+    if (km <= 25) return 11;
+    if (km <= 60) return 10;
+    return 9;
   }
   function _priceIcon(price,selected,distKm) {
     var priceStr=_fmt(price), distStr=distKm!=null?_dist(distKm):null;
@@ -524,36 +692,132 @@ const LEAFLET_HTML = `<!DOCTYPE html>
     return L.divIcon({ html:html, className:'', iconSize:[w,h], iconAnchor:[w/2,h] });
   }
   map.on('click', function() { window.ReactNativeWebView.postMessage(JSON.stringify({type:'MAP_PRESS'})); });
-  window.flyTo = function(lat,lon,zoom) { map.setView([lat,lon],zoom||13,{animate:true,duration:0.8}); };
-  window.updateMap = function(data) {
+  window.flyTo = function(lat,lon,zoom) {
+    map.flyTo([lat,lon], zoom||13, {animate:true, duration:0.9});
+  };
+  window.flyToRadius = function(lat,lon,radiusKm) {
+    map.flyTo([lat,lon], _zoomForRadius(radiusKm||5), {animate:true, duration:0.9});
+  };
+  function _applyMap(data) {
     var uc=data.userCoords, mList=data.markers||[], radiusKm=data.radiusKm||5;
     if(uc) {
       var uLL=[uc.lat,uc.lon];
-      var uIcon=L.divIcon({html:'<div class="ud-outer"><div class="ud-inner"></div></div>',className:'',iconSize:[22,22],iconAnchor:[11,11]});
+      var uIcon=L.divIcon({
+        html:'<div class="ud-pulse"><div class="ud-inner"></div></div>',
+        className:'', iconSize:[38,38], iconAnchor:[19,19]
+      });
       if(userMarker){userMarker.setLatLng(uLL);userMarker.setIcon(uIcon);}
       else{userMarker=L.marker(uLL,{icon:uIcon,zIndexOffset:999}).addTo(map);}
-      if(radiusCircle){radiusCircle.setLatLng(uLL);radiusCircle.setRadius(radiusKm*1000);}
-      else{radiusCircle=L.circle(uLL,{radius:radiusKm*1000,color:'#6E56CF',weight:1.5,fillColor:'rgba(37,99,235,0.06)',fillOpacity:1}).addTo(map);}
+      if(radiusCircle){
+        radiusCircle.setLatLng(uLL);
+        radiusCircle.setRadius(radiusKm*1000);
+      } else {
+        radiusCircle=L.circle(uLL,{
+          radius:radiusKm*1000, color:'#6E56CF', weight:2,
+          fillColor:'rgba(110,86,207,0.08)', fillOpacity:1
+        }).addTo(map);
+      }
     }
     var incoming={};
     mList.forEach(function(m){incoming[m.id]=true;});
-    Object.keys(propertyMarkers).forEach(function(id){if(!incoming[id]){map.removeLayer(propertyMarkers[id]);delete propertyMarkers[id];}});
+    Object.keys(propertyMarkers).forEach(function(id){
+      if(!incoming[id]){map.removeLayer(propertyMarkers[id]);delete propertyMarkers[id];}
+    });
     mList.forEach(function(m){
       if(!m.lat||!m.lon) return;
       var distKm=uc?_hav(uc.lat,uc.lon,m.lat,m.lon):null;
       var icon=_priceIcon(m.price,m.selected,distKm);
-      if(propertyMarkers[m.id]){propertyMarkers[m.id].setIcon(icon);propertyMarkers[m.id].setZIndexOffset(m.selected?200:0);}
-      else{
+      if(propertyMarkers[m.id]){
+        propertyMarkers[m.id].setIcon(icon);
+        propertyMarkers[m.id].setZIndexOffset(m.selected?200:0);
+      } else {
         var mk=L.marker([m.lat,m.lon],{icon:icon,zIndexOffset:m.selected?200:0,bubblingMouseEvents:false});
-        mk.on('click',function(){window.ReactNativeWebView.postMessage(JSON.stringify({type:'MARKER_PRESS',id:m.id}));});
-        mk.addTo(map);propertyMarkers[m.id]=mk;
+        mk.on('click',function(){
+          window.ReactNativeWebView.postMessage(JSON.stringify({type:'MARKER_PRESS',id:m.id}));
+        });
+        mk.addTo(map); propertyMarkers[m.id]=mk;
       }
     });
+  }
+  window.updateMap = function(data) {
+    if (updateTimer) clearTimeout(updateTimer);
+    updateTimer = setTimeout(function(){ _applyMap(data); }, 60);
   };
   window.ReactNativeWebView.postMessage(JSON.stringify({type:'MAP_READY'}));
 <\/script>
 </body>
 </html>`;
+
+// ─── Map boot loader ─────────────────────────────────────────────────────────
+const LOADER_STEPS = ['map', 'properties', 'location'];
+
+const MapLoader = ({message, step}) => {
+  const spin = useRef(new Animated.Value(0)).current;
+  const pulse = useRef(new Animated.Value(0)).current;
+  const fade = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(fade, {toValue: 1, duration: 280, useNativeDriver: true}).start();
+    const spinLoop = Animated.loop(
+      Animated.timing(spin, {
+        toValue: 1,
+        duration: 1100,
+        useNativeDriver: true,
+      }),
+    );
+    const pulseLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, {toValue: 1, duration: 900, useNativeDriver: true}),
+        Animated.timing(pulse, {toValue: 0, duration: 900, useNativeDriver: true}),
+      ]),
+    );
+    spinLoop.start();
+    pulseLoop.start();
+    return () => {
+      spinLoop.stop();
+      pulseLoop.stop();
+    };
+  }, [fade, spin, pulse]);
+
+  const rotate = spin.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+  const pinScale = pulse.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 1.08],
+  });
+
+  const stepIndex = LOADER_STEPS.indexOf(step);
+
+  return (
+    <Animated.View style={[s.mapLoaderWrap, {opacity: fade}]}>
+      <View style={s.mapLoaderCard}>
+        <Animated.View style={{transform: [{scale: pinScale}]}}>
+          <View style={s.mapLoaderPinOuter}>
+            <Animated.View
+              style={[s.mapLoaderRing, {transform: [{rotate}]}]}
+            />
+            <Text style={s.mapLoaderPinIcon}>📍</Text>
+          </View>
+        </Animated.View>
+        <Text style={s.mapLoaderTitle}>Preparing your map</Text>
+        <Text style={s.mapLoaderMsg}>{message}</Text>
+        <View style={s.mapLoaderSteps}>
+          {LOADER_STEPS.map((key, idx) => (
+            <View
+              key={key}
+              style={[
+                s.mapLoaderStep,
+                idx <= stepIndex && s.mapLoaderStepActive,
+              ]}
+            />
+          ))}
+        </View>
+      </View>
+    </Animated.View>
+  );
+};
 
 // ─── Skeleton Loader ──────────────────────────────────────────────────────────
 const SkeletonBox = ({width, height, borderRadius = 8, style}) => {
@@ -587,58 +851,50 @@ const SkeletonBox = ({width, height, borderRadius = 8, style}) => {
   );
 };
 
-// ─── Empty State ──────────────────────────────────────────────────────────────
-const EmptyState = ({hasFilters, onReset, radiusKm, onExpandRadius}) => {
-  const scaleAnim = useRef(new Animated.Value(0.85)).current;
+// ─── Compact empty banner (filters only — radius is handled in bottom panel) ─
+const EmptyBanner = ({onReset, bottomOffset}) => {
+  const slideAnim = useRef(new Animated.Value(12)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
+
   useEffect(() => {
     Animated.parallel([
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        tension: 80,
-        friction: 10,
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        tension: 120,
+        friction: 12,
         useNativeDriver: true,
       }),
       Animated.timing(opacityAnim, {
         toValue: 1,
-        duration: 300,
+        duration: 220,
         useNativeDriver: true,
       }),
     ]).start();
-  }, []);
+  }, [opacityAnim, slideAnim]);
+
   return (
     <Animated.View
       style={[
-        s.emptyState,
-        {transform: [{scale: scaleAnim}], opacity: opacityAnim},
+        s.emptyBanner,
+        {
+          bottom: bottomOffset,
+          opacity: opacityAnim,
+          transform: [{translateY: slideAnim}],
+        },
       ]}>
-      <Text style={s.emptyEmoji}>🏘️</Text>
-      <Text style={s.emptyTitle}>No properties found</Text>
-      <Text style={s.emptySubtitle}>
-        {hasFilters
-          ? 'Your filters are too narrow. Try resetting them or expanding the radius.'
-          : `No properties within ${radiusKm}km. Try a larger radius.`}
-      </Text>
-      <View style={s.emptyActions}>
-        {hasFilters && (
-          <TouchableOpacity
-            style={s.emptyBtnOutline}
-            onPress={onReset}
-            activeOpacity={0.8}>
-            <Text style={s.emptyBtnOutlineTxt}>Reset Filters</Text>
-          </TouchableOpacity>
-        )}
-        {radiusKm < 25 && (
-          <TouchableOpacity
-            style={s.emptyBtnPrimary}
-            onPress={() => onExpandRadius(radiusKm < 10 ? 10 : 25)}
-            activeOpacity={0.8}>
-            <Text style={s.emptyBtnPrimaryTxt}>
-              Expand to {radiusKm < 10 ? '10' : '25'}km
-            </Text>
-          </TouchableOpacity>
-        )}
+      <View style={s.emptyBannerLeft}>
+        <Text style={s.emptyBannerIcon}>🔍</Text>
+        <View style={s.emptyBannerTextWrap}>
+          <Text style={s.emptyBannerTitle}>No matching properties</Text>
+          <Text style={s.emptyBannerSub}>Try resetting your filters</Text>
+        </View>
       </View>
+      <TouchableOpacity
+        style={s.emptyBannerBtn}
+        onPress={onReset}
+        activeOpacity={0.8}>
+        <Text style={s.emptyBannerBtnTxt}>Reset</Text>
+      </TouchableOpacity>
     </Animated.View>
   );
 };
@@ -1041,9 +1297,12 @@ const FilterPanel = ({
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function PropertyMapScreen({navigation}) {
   const webViewRef = useRef(null);
+  const insets = useSafeAreaInsets();
+  const {user} = useSelector(state => state?.auth || {});
 
   const [status, setStatus] = useState('loading');
-  const [statusMsg, setStatusMsg] = useState('Getting your location…');
+  const [statusMsg, setStatusMsg] = useState('Loading map…');
+  const [loaderStep, setLoaderStep] = useState('map');
   const [userCoords, setUserCoords] = useState(null);
   const [allProperties, setAllProperties] = useState([]);
   const [nearbyProperties, setNearbyProperties] = useState([]);
@@ -1159,12 +1418,13 @@ export default function PropertyMapScreen({navigation}) {
     [],
   );
 
-  const flyTo = useCallback((lat, lon, delta = 0.08) => {
-    const zoom = Math.round(Math.log2(360 / (delta || 0.08)));
+  const flyTo = useCallback((lat, lon, km = radiusKm) => {
     webViewRef.current?.injectJavaScript(
-      `window.flyTo(${lat}, ${lon}, ${zoom}); true;`,
+      `window.flyToRadius(${lat}, ${lon}, ${km}); true;`,
     );
-  }, []);
+  }, [radiusKm]);
+
+  const mapUpdateTimer = useRef(null);
 
   useEffect(() => {
     if (!webViewReady || !webViewRef.current) return;
@@ -1178,7 +1438,15 @@ export default function PropertyMapScreen({navigation}) {
       }))
       .filter(m => m.lat && m.lon);
     const payload = JSON.stringify({userCoords, markers, radiusKm});
-    webViewRef.current.injectJavaScript(`window.updateMap(${payload}); true;`);
+    if (mapUpdateTimer.current) clearTimeout(mapUpdateTimer.current);
+    mapUpdateTimer.current = setTimeout(() => {
+      webViewRef.current?.injectJavaScript(
+        `window.updateMap(${payload}); true;`,
+      );
+    }, 80);
+    return () => {
+      if (mapUpdateTimer.current) clearTimeout(mapUpdateTimer.current);
+    };
   }, [
     webViewReady,
     displayedProperties,
@@ -1216,28 +1484,66 @@ export default function PropertyMapScreen({navigation}) {
   const boot = useCallback(
     async (existingProps = null) => {
       setStatus('loading');
-      setStatusMsg('Getting your location…');
-      let props = existingProps;
-      if (!props) {
-        props = await fetch(API_URL)
-          .then(r => r.json())
-          .then(d => {
-            const list = Array.isArray(d) ? d : d.properties || d.data || [];
-            return list.filter(
-              item => item.status === 'Active' && item.approve === 'Approved',
-            );
-          })
-          .catch(() => []);
-        setAllProperties(props);
-      }
+      setLoaderStep('map');
+      setStatusMsg('Loading map…');
+
       const hasPerm = await requestAndroidPermission();
       if (!hasPerm) {
         setStatus('error');
         setStatusMsg(locationErrMsg(1));
         return;
       }
+
+      setLoaderStep('properties');
+      setStatusMsg('Fetching nearby properties…');
+
+      let props = existingProps;
       try {
-        const coords = await getLocationRobust();
+        if (!props) {
+          const raw = await fetchAllPropertiesCached();
+          props = filterActiveProperties(raw);
+          setAllProperties(props);
+        }
+      } catch {
+        props = props || [];
+      }
+
+      setLoaderStep('location');
+      setStatusMsg('Getting your precise location…');
+
+      const savedProfile = await readSavedCityState();
+      const profile = {
+        city: savedProfile?.city || user?.city,
+        state: savedProfile?.state || user?.state || '',
+      };
+
+      try {
+        let gpsCoords = null;
+        try {
+          gpsCoords = await getLocationRobust({
+            onFastFix: fastCoords => {
+              if (!isInIndia(fastCoords.lat, fastCoords.lon)) return;
+              setUserCoords(fastCoords);
+              setStatusMsg('Refining your location…');
+              if (webViewReady) {
+                flyTo(fastCoords.lat, fastCoords.lon, RADIUS_KM_DEFAULT);
+              }
+            },
+          });
+        } catch (_) {
+          gpsCoords = null;
+        }
+
+        if (gpsCoords && !isInIndia(gpsCoords.lat, gpsCoords.lon)) {
+          setStatusMsg(
+            profile.city
+              ? `GPS outside India — using ${profile.city}…`
+              : 'GPS unavailable — using India map center…',
+          );
+        }
+
+        const coords = await resolveMapCoords(gpsCoords, profile);
+
         setUserCoords(coords);
         const nearby = filterNearby(props, coords, RADIUS_KM_DEFAULT);
         setNearbyProperties(nearby);
@@ -1245,13 +1551,15 @@ export default function PropertyMapScreen({navigation}) {
         setSliderValue(RADIUS_KM_DEFAULT);
         setStatus('ready');
         animatePill();
-        setTimeout(() => flyTo(coords.lat, coords.lon), 300);
+        requestAnimationFrame(() => {
+          flyTo(coords.lat, coords.lon, RADIUS_KM_DEFAULT);
+        });
       } catch (err) {
         setStatus('error');
         setStatusMsg(locationErrMsg(err?.code));
       }
     },
-    [filterNearby, animatePill, flyTo],
+    [filterNearby, animatePill, flyTo, webViewReady, user?.city, user?.state],
   );
 
   useEffect(() => {
@@ -1267,14 +1575,44 @@ export default function PropertyMapScreen({navigation}) {
         setNearbyProperties(filterNearby(allProperties, userCoords, r));
         animatePill();
         setSelectedProperty(null);
+        flyTo(userCoords.lat, userCoords.lon, r);
       }
     },
-    [allProperties, userCoords, filterNearby, animatePill],
+    [allProperties, userCoords, filterNearby, animatePill, flyTo],
   );
 
-  const recenter = useCallback(() => {
-    if (userCoords) flyTo(userCoords.lat, userCoords.lon);
-  }, [userCoords, flyTo]);
+  const recenter = useCallback(async () => {
+    setStatusMsg('Updating your location…');
+    try {
+      const savedProfile = await readSavedCityState();
+      const profile = {
+        city: savedProfile?.city || user?.city,
+        state: savedProfile?.state || user?.state || '',
+      };
+      let gpsCoords = null;
+      try {
+        gpsCoords = await getLocationRobust();
+      } catch (_) {}
+      const coords = await resolveMapCoords(gpsCoords, profile);
+      setUserCoords(coords);
+      setNearbyProperties(
+        filterNearby(allProperties, coords, radiusKm),
+      );
+      flyTo(coords.lat, coords.lon, radiusKm);
+      animatePill();
+    } catch (_) {
+      if (userCoords) flyTo(userCoords.lat, userCoords.lon, radiusKm);
+    }
+  }, [
+    userCoords,
+    flyTo,
+    user?.city,
+    user?.state,
+    allProperties,
+    radiusKm,
+    filterNearby,
+    animatePill,
+  ]);
 
   const handleTabSelect = useCallback(
     cat => {
@@ -1324,7 +1662,18 @@ export default function PropertyMapScreen({navigation}) {
     animatePill();
   }, [animatePill]);
 
-  const handleExpandRadius = useCallback(km => applyRadius(km), [applyRadius]);
+  const hasActiveFilters = activeFilterCount > 0 || activeTab !== 'All';
+  const showEmptyBanner =
+    status === 'ready' &&
+    displayedProperties.length === 0 &&
+    !selectedProperty &&
+    hasActiveFilters;
+  const showNoResultsHint =
+    status === 'ready' && displayedProperties.length === 0 && !hasActiveFilters;
+  const sliderPanelBottom =
+    SLIDER_PANEL_HEIGHT + insets.bottom + (showNoResultsHint ? 42 : 0);
+  const fabBottom = sliderPanelBottom + 14;
+  const emptyBannerBottom = sliderPanelBottom + 10;
 
   return (
     <SafeAreaView style={s.container}>
@@ -1402,12 +1751,7 @@ export default function PropertyMapScreen({navigation}) {
         />
 
         {status === 'loading' && (
-          <View style={s.overlay}>
-            <View style={s.overlayCard}>
-              <ActivityIndicator size="large" color={C.primary} />
-              <Text style={s.overlayMsg}>{statusMsg}</Text>
-            </View>
-          </View>
+          <MapLoader message={statusMsg} step={loaderStep} />
         )}
 
         {status === 'error' && (
@@ -1444,20 +1788,34 @@ export default function PropertyMapScreen({navigation}) {
                 ],
               },
             ]}>
-            <View style={s.pillDot} />
+            <View
+              style={[
+                s.pillDot,
+                displayedProperties.length === 0 && s.pillDotEmpty,
+              ]}
+            />
             <Text style={s.pillTxt}>
-              {displayedProperties.length}{' '}
-              {displayedProperties.length === 1 ? 'property' : 'properties'}
-              {activeFilterCount > 0 || activeTab !== 'All'
-                ? ' matched'
-                : ' nearby'}
+              {displayedProperties.length === 0
+                ? hasActiveFilters
+                  ? 'No matches'
+                  : `No properties within ${radiusKm} km`
+                : `${displayedProperties.length} ${
+                    displayedProperties.length === 1 ? 'property' : 'properties'
+                  }${hasActiveFilters ? ' matched' : ' nearby'}`}
             </Text>
           </Animated.View>
         )}
 
-        {/* Filter FAB */}
+        {/* Map FABs */}
         {status === 'ready' && (
-          <View style={s.fabCol}>
+          <View style={[s.fabCol, {bottom: fabBottom}]}>
+            <TouchableOpacity
+              style={s.fabBtn}
+              onPress={recenter}
+              activeOpacity={0.85}
+              accessibilityLabel="Recenter map">
+              <LocateFixed size={18} color={C.primary} />
+            </TouchableOpacity>
             <TouchableOpacity
               style={[s.fabBtn, activeFilterCount > 0 && s.fabBtnActive]}
               onPress={openFilters}
@@ -1480,7 +1838,17 @@ export default function PropertyMapScreen({navigation}) {
 
         {/* ── Bottom radius panel ── */}
         {status === 'ready' && (
-          <View style={s.sliderPanel}>
+          <View
+            style={[s.sliderPanel, {paddingBottom: Math.max(insets.bottom, 10)}]}>
+            <View style={s.sliderHandle} />
+            {showNoResultsHint && (
+              <View style={s.noResultsRow}>
+                <Text style={s.noResultsIcon}>📍</Text>
+                <Text style={s.noResultsTxt}>
+                  No properties within {radiusKm} km — slide to expand your search
+                </Text>
+              </View>
+            )}
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -1533,17 +1901,12 @@ export default function PropertyMapScreen({navigation}) {
           </View>
         )}
 
-        {/* Empty state */}
-        {status === 'ready' &&
-          displayedProperties.length === 0 &&
-          !selectedProperty && (
-            <EmptyState
-              hasFilters={activeFilterCount > 0 || activeTab !== 'All'}
-              onReset={handleResetAll}
-              radiusKm={radiusKm}
-              onExpandRadius={handleExpandRadius}
-            />
-          )}
+        {showEmptyBanner && (
+          <EmptyBanner
+            onReset={handleResetAll}
+            bottomOffset={emptyBannerBottom}
+          />
+        )}
 
         {/* Property bottom sheet */}
         {selectedProperty && (
@@ -1879,10 +2242,80 @@ const s = StyleSheet.create({
   mapWrapper: {flex: 1},
   map: {flex: 1},
 
+  // Loader
+  mapLoaderWrap: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(248,250,252,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 28,
+  },
+  mapLoaderCard: {
+    backgroundColor: C.card,
+    borderRadius: 22,
+    paddingVertical: 28,
+    paddingHorizontal: 26,
+    alignItems: 'center',
+    width: '100%',
+    maxWidth: 320,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 8},
+    shadowOpacity: 0.12,
+    shadowRadius: 20,
+    borderWidth: 1,
+    borderColor: C.border,
+  },
+  mapLoaderPinOuter: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: C.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+    position: 'relative',
+  },
+  mapLoaderRing: {
+    position: 'absolute',
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    borderWidth: 3,
+    borderColor: 'transparent',
+    borderTopColor: C.primary,
+    borderRightColor: C.primary,
+  },
+  mapLoaderPinIcon: {fontSize: 26},
+  mapLoaderTitle: {
+    color: C.text,
+    fontSize: 16,
+    fontWeight: '800',
+    marginBottom: 6,
+  },
+  mapLoaderMsg: {
+    color: C.textSub,
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 19,
+    marginBottom: 18,
+  },
+  mapLoaderSteps: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+  },
+  mapLoaderStep: {
+    width: 28,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: C.border,
+  },
+  mapLoaderStepActive: {backgroundColor: C.primary},
+
   // Overlays
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(248,250,252,0.9)',
+    backgroundColor: 'rgba(248,250,252,0.92)',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 32,
@@ -1899,12 +2332,6 @@ const s = StyleSheet.create({
     shadowRadius: 16,
     borderWidth: 1,
     borderColor: C.border,
-  },
-  overlayMsg: {
-    color: C.textSub,
-    fontSize: 14,
-    marginTop: 12,
-    textAlign: 'center',
   },
   errEmoji: {fontSize: 38, marginBottom: 10},
   errTitle: {color: C.text, fontSize: 17, fontWeight: '700', marginBottom: 8},
@@ -1947,15 +2374,16 @@ const s = StyleSheet.create({
     shadowRadius: 8,
   },
   pillDot: {width: 7, height: 7, borderRadius: 4, backgroundColor: C.success},
+  pillDotEmpty: {backgroundColor: '#F59E0B'},
   pillTxt: {color: C.text, fontWeight: '600', fontSize: 13},
 
   // FAB
   fabCol: {
     position: 'absolute',
     right: 14,
-    bottom: 174,
     gap: 10,
     alignItems: 'center',
+    zIndex: 5,
   },
   fabBtn: {
     width: 44,
@@ -1995,23 +2423,57 @@ const s = StyleSheet.create({
     position: 'absolute',
     bottom: 0,
     backgroundColor: C.white,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    borderTopWidth: 1,
     borderColor: C.border,
     paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 10,
+    paddingTop: 8,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.07,
-    shadowRadius: 10,
+    shadowOffset: {width: 0, height: -4},
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
+    elevation: 12,
+    zIndex: 6,
   },
-  presetRow: {flexDirection: 'row', gap: 6, paddingRight: 4},
+  noResultsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FFFBEB',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  noResultsIcon: {fontSize: 14},
+  noResultsTxt: {
+    flex: 1,
+    color: '#92400E',
+    fontSize: 12,
+    fontWeight: '600',
+    lineHeight: 17,
+  },
+  sliderHandle: {
+    alignSelf: 'center',
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: C.border,
+    marginBottom: 10,
+  },
+  presetRow: {flexDirection: 'row', gap: 6, paddingRight: 16},
   presetChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
     borderRadius: 50,
     borderWidth: 1.5,
     borderColor: C.border,
     backgroundColor: C.bg,
+    minWidth: 52,
+    alignItems: 'center',
   },
   presetChipActive: {backgroundColor: C.primaryLight, borderColor: C.primary},
   presetChipTxt: {color: C.textSub, fontSize: 12, fontWeight: '600'},
@@ -2034,60 +2496,53 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 0,
+    paddingHorizontal: 2,
   },
   rangeTxt: {color: C.textMuted, fontSize: 10},
 
-  // Empty state
-  emptyState: {
+  // Compact empty banner (filter mismatch only)
+  emptyBanner: {
     position: 'absolute',
-    bottom: 150,
-    left: 24,
-    right: 24,
-    backgroundColor: C.white,
-    borderRadius: 20,
-    padding: 24,
+    left: 14,
+    right: 14,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: C.white,
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
+    shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.1,
-    shadowRadius: 16,
+    shadowRadius: 10,
     borderWidth: 1,
     borderColor: C.border,
-  },
-  emptyEmoji: {fontSize: 42, marginBottom: 10},
-  emptyTitle: {color: C.text, fontSize: 16, fontWeight: '800', marginBottom: 6},
-  emptySubtitle: {
-    color: C.textSub,
-    fontSize: 13,
-    textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 18,
-  },
-  emptyActions: {
-    flexDirection: 'row',
+    zIndex: 4,
     gap: 10,
-    flexWrap: 'wrap',
-    justifyContent: 'center',
   },
-  emptyBtnOutline: {
-    borderWidth: 1.5,
-    borderColor: C.primary,
-    borderRadius: 50,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
+  emptyBannerLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
-  emptyBtnOutlineTxt: {color: C.primary, fontWeight: '700', fontSize: 13},
-  emptyBtnPrimary: {
+  emptyBannerIcon: {fontSize: 18},
+  emptyBannerTextWrap: {flex: 1},
+  emptyBannerTitle: {
+    color: C.text,
+    fontSize: 13,
+    fontWeight: '700',
+    marginBottom: 1,
+  },
+  emptyBannerSub: {color: C.textSub, fontSize: 11, lineHeight: 15},
+  emptyBannerBtn: {
     backgroundColor: C.primary,
     borderRadius: 50,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    shadowColor: C.shadow,
-    shadowOffset: {width: 0, height: 3},
-    shadowOpacity: 0.22,
-    shadowRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
   },
-  emptyBtnPrimaryTxt: {color: C.white, fontWeight: '700', fontSize: 13},
+  emptyBannerBtnTxt: {color: C.white, fontWeight: '700', fontSize: 12},
 
   // Filter
   backdrop: {

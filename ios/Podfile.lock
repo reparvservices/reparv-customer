@@ -1449,6 +1449,8 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
+  - react-native-otp-verify (1.2.0):
+    - React-Core
   - react-native-render-html (6.3.4):
     - React-Core
   - react-native-safe-area-context (5.7.0):
@@ -2091,6 +2093,11 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
+  - RNNotifee (9.1.8):
+    - React-Core
+    - RNNotifee/NotifeeCore (= 9.1.8)
+  - RNNotifee/NotifeeCore (9.1.8):
+    - React-Core
   - RNScreens (4.11.0):
     - DoubleConversion
     - glog
@@ -2250,6 +2257,7 @@ DEPENDENCIES:
   - "react-native-geolocation (from `../node_modules/@react-native-community/geolocation`)"
   - react-native-image-picker (from `../node_modules/react-native-image-picker`)
   - react-native-maps (from `../node_modules/react-native-maps`)
+  - react-native-otp-verify (from `../node_modules/react-native-otp-verify`)
   - react-native-render-html (from `../node_modules/react-native-render-html`)
   - react-native-safe-area-context (from `../node_modules/react-native-safe-area-context`)
   - "react-native-slider (from `../node_modules/@react-native-community/slider`)"
@@ -2291,6 +2299,7 @@ DEPENDENCIES:
   - "RNFBMessaging (from `../node_modules/@react-native-firebase/messaging`)"
   - RNGestureHandler (from `../node_modules/react-native-gesture-handler`)
   - "RNGoogleSignin (from `../node_modules/@react-native-google-signin/google-signin`)"
+  - "RNNotifee (from `../node_modules/@notifee/react-native`)"
   - RNScreens (from `../node_modules/react-native-screens`)
   - RNSensors (from `../node_modules/react-native-sensors`)
   - RNSVG (from `../node_modules/react-native-svg`)
@@ -2412,6 +2421,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-image-picker"
   react-native-maps:
     :path: "../node_modules/react-native-maps"
+  react-native-otp-verify:
+    :path: "../node_modules/react-native-otp-verify"
   react-native-render-html:
     :path: "../node_modules/react-native-render-html"
   react-native-safe-area-context:
@@ -2494,6 +2505,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-gesture-handler"
   RNGoogleSignin:
     :path: "../node_modules/@react-native-google-signin/google-signin"
+  RNNotifee:
+    :path: "../node_modules/@notifee/react-native"
   RNScreens:
     :path: "../node_modules/react-native-screens"
   RNSensors:
@@ -2572,6 +2585,7 @@ SPEC CHECKSUMS:
   react-native-geolocation: 457c6cc4462cffdfc4e63a2b52ec95497eab79cc
   react-native-image-picker: 3a03f96b11ef2b727d3d58a7ed009900b0a56a52
   react-native-maps: 35f4ea63f4cefb60ac2cb60d1846ffe3f059fee1
+  react-native-otp-verify: e46da1fea8de9dfeaa687823bf19dc10770c077b
   react-native-render-html: 984dfe2294163d04bf5fe25d7c9f122e60e05ebe
   react-native-safe-area-context: f73c45199e5df289e0655c8fceb4e6f4fcfab256
   react-native-slider: c970c3282507467efebfca43f4efeb0e532efef3
@@ -2614,6 +2628,7 @@ SPEC CHECKSUMS:
   RNFBMessaging: 8ae37598f30f9dc357cee81134dec059e10590e4
   RNGestureHandler: 4a49bcfafc38b0f365f28004bdeaf1fa9cc02e78
   RNGoogleSignin: bd5e55072fc89c69e3eb139be2a9c8935d0a0f2c
+  RNNotifee: 4a6ee5c7deaf00e005050052d73ee6315dff7ec9
   RNScreens: 93062d301c0e67bcb1ce35bf0f8e3abe0bfc5543
   RNSensors: 117ba71c7eeeea0407ea0c0bb79e3495d602049b
   RNSVG: 97528aaefd680dd1c55b9643089d015f306a2e39
