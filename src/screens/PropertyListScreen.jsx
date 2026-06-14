@@ -29,6 +29,7 @@ import {parseBhkList} from '../utils/parseBhk';
 import {fetchAllPropertiesCached} from '../services/allPropertiesCache';
 import {useSelector} from 'react-redux';
 import {getImageUri, parseFrontView} from '../utils/imageHandle';
+import {selectBrowseCity} from '../features/auth/authSlice';
 
 const {width} = Dimensions.get('window');
 
@@ -98,10 +99,10 @@ const ActiveChip = ({label, onRemove}) => (
 
 const PropertyListScreen = () => {
   const navigation = useNavigation();
-  const {user} = useSelector(state => state.auth);
+  const browseCity = useSelector(state => selectBrowseCity(state));
   const route = useRoute();
   const ptype = route?.params?.ptype;
-  const initialCity = route?.params?.city || user.city;
+  const initialCity = route?.params?.city ?? browseCity ?? '';
 
   const [flats, setFlats] = useState([]);
   const [filteredFlats, setFilteredFlats] = useState([]);

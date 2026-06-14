@@ -19,7 +19,12 @@ import {MapPin, ChevronDown, Search} from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Geolocation from '@react-native-community/geolocation'; //  ADDED
 import {getImageUri} from '../../utils/imageHandle';
-import {setUserLocation} from '../../features/auth/authSlice';
+import {
+  persistGuestLocation,
+  selectBrowseCity,
+  selectBrowseState,
+  setUserLocation,
+} from '../../features/auth/authSlice';
 
 const heroBanner = require('../../assets/image/home/Hero-Banner.png');
 
@@ -152,6 +157,8 @@ function useTypewriterPlaceholder(city) {
 export default function HomeHeader() {
   const navigation = useNavigation();
   const {user} = useSelector(state => state.auth);
+  const browseCity = useSelector(selectBrowseCity);
+  const browseState = useSelector(selectBrowseState);
   const [userimage, setUserImage] = useState(null);
   const dispatch = useDispatch();
 
@@ -208,10 +215,13 @@ export default function HomeHeader() {
   // ── Fetch city + state from GPS coords ─────────────────────────────────
   const getUserCityAndState = useCallback(async () => {
     try {
-      // ✅ If user manually picked a location, never override with GPS
       const locationSource = await AsyncStorage.getItem('locationSource');
       if (locationSource === 'manual' && user?.city && user?.state) {
         devLog('📍 Manual location set, skipping GPS fetch.');
+        return;
+      }
+
+      if (browseCity && browseState) {
         return;
       }
 
@@ -251,6 +261,8 @@ export default function HomeHeader() {
                   'Reparvuser',
                   JSON.stringify({...JSON.parse(raw), city, state}),
                 );
+              } else {
+                await persistGuestLocation(city, state);
               }
               // ✅ Mark source as gps so future manual picks can still override
               await AsyncStorage.setItem('locationSource', 'gps');
@@ -273,7 +285,7 @@ export default function HomeHeader() {
     } catch (error) {
       devLog('getUserCityAndState error:', error);
     }
-  }, [dispatch, user?.city, user?.state]);
+  }, [browseCity, browseState, dispatch, user?.city, user?.state]);
   // ── Fetch user profile image ────────────────────────────────────────────
   const fetchProfile = useCallback(async () => {
     try {
@@ -310,15 +322,15 @@ export default function HomeHeader() {
   );
 
   const locationLine =
-    user?.city && user?.state
-      ? `${user.city}, ${user.state}`
-      : user?.city || user?.state || 'Set your location';
+    browseCity && browseState
+      ? `${browseCity}, ${browseState}`
+      : browseCity || browseState || 'Set your location';
 
   const openLocationPicker = useCallback(() => {
     navigation.navigate('LocationPickerScreen');
   }, [navigation]);
 
-  const {displayText, cursorAnim} = useTypewriterPlaceholder(user?.city);
+  const {displayText, cursorAnim} = useTypewriterPlaceholder(browseCity);
   const styles = makeStyles();
 
   return (

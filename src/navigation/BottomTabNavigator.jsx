@@ -1,5 +1,13 @@
 import React, {useMemo} from 'react';
-import {View, Text, Image, TouchableOpacity, StyleSheet, PixelRatio, useWindowDimensions} from 'react-native';
+import {
+  View,
+  Text,
+  Image,
+  TouchableOpacity,
+  StyleSheet,
+  PixelRatio,
+  useWindowDimensions,
+} from 'react-native';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 
 import HomeScreen from '../screens/HomeScreen';
@@ -21,7 +29,6 @@ function CustomTabBar({state, navigation}) {
   const {width} = useWindowDimensions();
   const tabs = [
     {label: 'Home', icon: HomeIcon, route: 'Home'},
-
     {label: 'Activities', icon: ActivitiesIcon, route: 'Activities'},
     {label: 'Calculator', icon: CalculatorIcon, route: 'Calculator'},
     {label: 'Profile', icon: ProfileIcon, route: 'Profile'},
@@ -29,7 +36,9 @@ function CustomTabBar({state, navigation}) {
 
   const styles = useMemo(() => {
     const r = size =>
-      Math.round(PixelRatio.roundToNearestPixel((width / LAYOUT_BASE_W) * size));
+      Math.round(
+        PixelRatio.roundToNearestPixel((width / LAYOUT_BASE_W) * size),
+      );
 
     return StyleSheet.create({
       tabBarShell: {
@@ -44,6 +53,9 @@ function CustomTabBar({state, navigation}) {
         flexDirection: 'row',
         minHeight: Math.max(56, r(70)),
         backgroundColor: '#FFFFFF',
+        width: '100%',
+        maxWidth: 560,
+        alignSelf: 'center',
       },
       tabItem: {
         flex: 1,
@@ -149,6 +161,7 @@ function CustomTabBar({state, navigation}) {
 export default function BottomTabNavigator() {
   return (
     <Tab.Navigator
+      initialRouteName="Home"
       screenOptions={{headerShown: false, lazy: true}}
       tabBar={props => <CustomTabBar {...props} />}>
       <Tab.Screen name="Home" component={HomeScreen} />

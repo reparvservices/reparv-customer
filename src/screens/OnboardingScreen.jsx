@@ -7,6 +7,7 @@ import {
   Dimensions,
   Animated,
   StatusBar,
+  Platform,
 } from 'react-native';
 
 import On1 from '../assets/image/onboarding/On boarding screen 1.svg';
@@ -16,6 +17,9 @@ import Skip from '../assets/image/onboarding/skip.svg';
 import Arrow from '../assets/image/onboarding/arrow.svg';
 import Logo from '../assets/image/common/logo2.svg';
 import {SafeAreaView} from 'react-native-safe-area-context';
+import {useDispatch} from 'react-redux';
+import {continueAsGuest} from '../utils/continueAsGuest';
+import {prepareForSignIn} from '../features/auth/authSlice';
 
 const {width, height} = Dimensions.get('window');
 
@@ -26,14 +30,24 @@ const slides = [
 ];
 
 export default function OnboardingScreen({navigation}) {
+  const dispatch = useDispatch();
   const [index, setIndex] = useState(0);
   const [prevIndex, setPrevIndex] = useState(0);
   const fadeAnimPrev = useRef(new Animated.Value(1)).current;
   const fadeAnimNext = useRef(new Animated.Value(0)).current;
 
+  const startGuestBrowsing = () => {
+    continueAsGuest(dispatch);
+  };
+
+  const handleSignIn = () => {
+    dispatch(prepareForSignIn());
+    navigation.navigate('Login', {signIn: true});
+  };
+
   const handleNext = () => {
     if (index === slides.length - 1) {
-      navigation.navigate('Login');
+      startGuestBrowsing();
       return;
     }
 
@@ -58,7 +72,7 @@ export default function OnboardingScreen({navigation}) {
   };
 
   const handleSkip = () => {
-    navigation.navigate('Login');
+    startGuestBrowsing();
   };
 
   const CurrentSvg = slides[index].Component;
@@ -112,9 +126,15 @@ export default function OnboardingScreen({navigation}) {
 
         <TouchableOpacity style={styles.nextBtn} onPress={handleNext}>
           <View style={styles.nextContent}>
-            <Text style={styles.nextText}>Next</Text>
+            <Text style={styles.nextText}>
+              {index === slides.length - 1 ? 'Start Browsing' : 'Next'}
+            </Text>
             <Arrow width={24} height={24} style={{marginLeft: 6}} />
           </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.signInBtn} onPress={handleSignIn}>
+          <Text style={styles.signInText}>Sign in</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -189,6 +209,21 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontFamily: 'SegoeUI-Bold',
+    ...Platform.select({
+      android: {includeFontPadding: false, textAlignVertical: 'center'},
+      default: {},
+    }),
+  },
+  signInBtn: {
+    marginTop: 14,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  signInText: {
+    color: '#fff',
+    fontSize: 15,
+    fontFamily: 'SegoeUI-Bold',
+    textDecorationLine: 'underline',
     ...Platform.select({
       android: {includeFontPadding: false, textAlignVertical: 'center'},
       default: {},

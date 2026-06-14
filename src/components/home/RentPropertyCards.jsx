@@ -18,6 +18,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import {Building2, Eye, HeartIcon, Map, MapPin} from 'lucide-react-native';
 import {useNavigation} from '@react-navigation/native';
 import {useSelector} from 'react-redux';
+import {selectBrowseCity} from '../../features/auth/authSlice';
 import Location from '../../assets/image/home/rented-properties-card/location.png';
 import {formatIndianAmount} from '../../utils/formatIndianAmount';
 import {fetchAllPropertiesCached} from '../../services/allPropertiesCache';
@@ -181,8 +182,8 @@ export default function RentPropertyCards() {
 
   const {coords: userCoords, loading: locationLoading} = useUserLocation();
 
-  const {user} = useSelector(state => state.auth);
-  const selectedCity = (user?.city || '').trim().toLowerCase();
+  const browseCity = useSelector(selectBrowseCity);
+  const selectedCity = (browseCity || '').trim().toLowerCase();
 
   const isCityMatch = item => {
     if (!selectedCity) return true;

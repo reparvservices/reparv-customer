@@ -21,7 +21,7 @@ import {useSelector} from 'react-redux';
 import {getImageUri} from '../utils/imageHandle';
 import {fetchAllPropertiesCached} from '../services/allPropertiesCache';
 import {API_BASE_URL} from '../config/api';
-import {Filter, LocateFixed} from 'lucide-react-native';
+import {Filter, LocateFixed, ArrowLeft} from 'lucide-react-native';
 import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 
 // Enable LayoutAnimation on Android
@@ -75,7 +75,7 @@ const RADIUS_PRESETS = [
 ];
 
 // Approximate height of the bottom radius panel (used for FAB / banner placement)
-const SLIDER_PANEL_HEIGHT = Platform.OS === 'ios' ? 178 : 168;
+const SLIDER_PANEL_HEIGHT = Platform.OS === 'ios' ? 168 : 158;
 
 Geolocation.setRNConfiguration({
   skipPermissionRequests: false,
@@ -1670,10 +1670,18 @@ export default function PropertyMapScreen({navigation}) {
     hasActiveFilters;
   const showNoResultsHint =
     status === 'ready' && displayedProperties.length === 0 && !hasActiveFilters;
-  const sliderPanelBottom =
-    SLIDER_PANEL_HEIGHT + insets.bottom + (showNoResultsHint ? 42 : 0);
-  const fabBottom = sliderPanelBottom + 14;
-  const emptyBannerBottom = sliderPanelBottom + 10;
+  const sliderPanelBottom = SLIDER_PANEL_HEIGHT + insets.bottom;
+  const fabBottom = sliderPanelBottom + 16;
+  const emptyBannerBottom = sliderPanelBottom + 12;
+
+  const pillLabel =
+    displayedProperties.length === 0
+      ? hasActiveFilters
+        ? 'No matches'
+        : `0 in ${radiusKm} km`
+      : `${displayedProperties.length} ${
+          displayedProperties.length === 1 ? 'property' : 'properties'
+        }${hasActiveFilters ? ' matched' : ' nearby'}`;
 
   return (
     <SafeAreaView style={s.container}>
@@ -1750,6 +1758,15 @@ export default function PropertyMapScreen({navigation}) {
           onMessage={onWebViewMessage}
         />
 
+        <TouchableOpacity
+          style={s.backBtn}
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel="Go back">
+          <ArrowLeft size={20} color={C.text} strokeWidth={2} />
+        </TouchableOpacity>
+
         {status === 'loading' && (
           <MapLoader message={statusMsg} step={loaderStep} />
         )}
@@ -1794,14 +1811,8 @@ export default function PropertyMapScreen({navigation}) {
                 displayedProperties.length === 0 && s.pillDotEmpty,
               ]}
             />
-            <Text style={s.pillTxt}>
-              {displayedProperties.length === 0
-                ? hasActiveFilters
-                  ? 'No matches'
-                  : `No properties within ${radiusKm} km`
-                : `${displayedProperties.length} ${
-                    displayedProperties.length === 1 ? 'property' : 'properties'
-                  }${hasActiveFilters ? ' matched' : ' nearby'}`}
+            <Text style={s.pillTxt} numberOfLines={1}>
+              {pillLabel}
             </Text>
           </Animated.View>
         )}
@@ -1839,21 +1850,14 @@ export default function PropertyMapScreen({navigation}) {
         {/* ── Bottom radius panel ── */}
         {status === 'ready' && (
           <View
-            style={[s.sliderPanel, {paddingBottom: Math.max(insets.bottom, 10)}]}>
+            style={[s.sliderPanel, {paddingBottom: Math.max(insets.bottom, 12)}]}>
             <View style={s.sliderHandle} />
-            {showNoResultsHint && (
-              <View style={s.noResultsRow}>
-                <Text style={s.noResultsIcon}>📍</Text>
-                <Text style={s.noResultsTxt}>
-                  No properties within {radiusKm} km — slide to expand your search
-                </Text>
-              </View>
-            )}
+
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={s.presetRow}
-              style={{marginBottom: 6}}>
+              style={s.presetScroll}>
               {RADIUS_PRESETS.map(p => {
                 const active = radiusKm === p.value;
                 return (
@@ -1873,27 +1877,39 @@ export default function PropertyMapScreen({navigation}) {
                 );
               })}
             </ScrollView>
+
             <View style={s.sliderLabelRow}>
-              <Text style={s.sliderLabel}>Search Radius</Text>
+              <View style={s.sliderLabelCol}>
+                <Text style={s.sliderLabel}>Search radius</Text>
+                {showNoResultsHint ? (
+                  <Text style={s.expandHint}>
+                    Widen the radius to discover more properties
+                  </Text>
+                ) : null}
+              </View>
               <View style={s.radiusValuePill}>
                 <Text style={s.radiusValueTxt}>
-                  {sliderValue.toFixed(1)} km
+                  {sliderValue.toFixed(sliderValue % 1 === 0 ? 0 : 1)} km
                 </Text>
               </View>
             </View>
-            <SliderV2
-              minimumValue={1}
-              maximumValue={100}
-              step={0.5}
-              value={sliderValue}
-              trackHeight={6}
-              thumbSize={24}
-              touchHeight={44}
-              style={{marginHorizontal: 0, marginBottom: 2}}
-              formatLabel={v => `${v.toFixed(1)} km`}
-              onValueChange={setSliderValue}
-              onSlidingComplete={km => applyRadius(km)}
-            />
+
+            <View style={s.sliderTrackWrap}>
+              <SliderV2
+                minimumValue={1}
+                maximumValue={100}
+                step={0.5}
+                value={sliderValue}
+                trackHeight={6}
+                thumbSize={26}
+                touchHeight={44}
+                style={s.sliderControl}
+                formatLabel={v => `${v.toFixed(1)} km`}
+                onValueChange={setSliderValue}
+                onSlidingComplete={km => applyRadius(km)}
+              />
+            </View>
+
             <View style={s.rangeRow}>
               <Text style={s.rangeTxt}>1 km</Text>
               <Text style={s.rangeTxt}>100 km</Text>
@@ -2013,17 +2029,6 @@ const pc = StyleSheet.create({
   },
   categoryBadgeTxt: {
     color: '#FFF',
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  loanBadge: {
-    backgroundColor: C.success,
-    borderRadius: 20,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  loanBadgeTxt: {
-    color: '#fff',
     fontSize: 11,
     fontWeight: '600',
   },
@@ -2358,34 +2363,39 @@ const s = StyleSheet.create({
   pill: {
     position: 'absolute',
     top: Platform.OS === 'ios' ? 16 : 14,
-    alignSelf: 'center',
+    left: 68,
+    right: 68,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
     backgroundColor: C.white,
-    paddingHorizontal: 16,
-    paddingVertical: 9,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     borderRadius: 50,
     borderWidth: 1,
     borderColor: C.border,
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 4,
+    zIndex: 55,
   },
-  pillDot: {width: 7, height: 7, borderRadius: 4, backgroundColor: C.success},
+  pillDot: {width: 8, height: 8, borderRadius: 4, backgroundColor: C.success},
   pillDotEmpty: {backgroundColor: '#F59E0B'},
-  pillTxt: {color: C.text, fontWeight: '600', fontSize: 13},
-
-  // FAB
-  fabCol: {
-    position: 'absolute',
-    right: 14,
-    gap: 10,
-    alignItems: 'center',
-    zIndex: 5,
+  pillTxt: {
+    color: C.text,
+    fontWeight: '700',
+    fontSize: 13,
+    letterSpacing: -0.1,
+    flexShrink: 1,
   },
-  fabBtn: {
+
+  backBtn: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 16 : 14,
+    left: 14,
     width: 44,
     height: 44,
     borderRadius: 22,
@@ -2398,6 +2408,32 @@ const s = StyleSheet.create({
     shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.08,
     shadowRadius: 6,
+    elevation: 3,
+    zIndex: 60,
+  },
+
+  // FAB
+  fabCol: {
+    position: 'absolute',
+    right: 14,
+    gap: 10,
+    alignItems: 'center',
+    zIndex: 5,
+  },
+  fabBtn: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: C.white,
+    borderWidth: 1,
+    borderColor: C.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 3},
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 4,
   },
   fabBtnActive: {backgroundColor: C.primary, borderColor: C.primary},
   fabIcon: {alignItems: 'center', justifyContent: 'center'},
@@ -2423,82 +2459,87 @@ const s = StyleSheet.create({
     position: 'absolute',
     bottom: 0,
     backgroundColor: C.white,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     borderTopWidth: 1,
     borderColor: C.border,
-    paddingHorizontal: 16,
-    paddingTop: 8,
+    paddingHorizontal: 18,
+    paddingTop: 10,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: -4},
-    shadowOpacity: 0.08,
-    shadowRadius: 14,
-    elevation: 12,
+    shadowOffset: {width: 0, height: -6},
+    shadowOpacity: 0.1,
+    shadowRadius: 18,
+    elevation: 16,
     zIndex: 6,
-  },
-  noResultsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#FFFBEB',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#FDE68A',
-  },
-  noResultsIcon: {fontSize: 14},
-  noResultsTxt: {
-    flex: 1,
-    color: '#92400E',
-    fontSize: 12,
-    fontWeight: '600',
-    lineHeight: 17,
   },
   sliderHandle: {
     alignSelf: 'center',
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: C.border,
-    marginBottom: 10,
+    width: 44,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: '#D1D5DB',
+    marginBottom: 14,
   },
-  presetRow: {flexDirection: 'row', gap: 6, paddingRight: 16},
+  presetScroll: {marginBottom: 14},
+  presetRow: {flexDirection: 'row', gap: 8, paddingRight: 4},
   presetChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 7,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
     borderRadius: 50,
     borderWidth: 1.5,
-    borderColor: C.border,
-    backgroundColor: C.bg,
-    minWidth: 52,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#F8FAFC',
+    minWidth: 56,
     alignItems: 'center',
   },
-  presetChipActive: {backgroundColor: C.primaryLight, borderColor: C.primary},
-  presetChipTxt: {color: C.textSub, fontSize: 12, fontWeight: '600'},
+  presetChipActive: {
+    backgroundColor: C.primaryLight,
+    borderColor: C.primary,
+  },
+  presetChipTxt: {color: C.textSub, fontSize: 13, fontWeight: '600'},
   presetChipTxtActive: {color: C.primary, fontWeight: '700'},
   sliderLabelRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
+    alignItems: 'flex-start',
+    marginBottom: 10,
+    gap: 12,
   },
-  sliderLabel: {color: C.textSub, fontSize: 12, fontWeight: '600'},
+  sliderLabelCol: {flex: 1, minWidth: 0},
+  sliderLabel: {
+    color: C.text,
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: -0.2,
+  },
+  expandHint: {
+    marginTop: 3,
+    color: '#B45309',
+    fontSize: 12,
+    fontWeight: '500',
+    lineHeight: 16,
+  },
   radiusValuePill: {
     backgroundColor: C.primaryLight,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: '#DDD6FE',
   },
-  radiusValueTxt: {color: C.primary, fontSize: 12, fontWeight: '800'},
+  radiusValueTxt: {color: C.primary, fontSize: 13, fontWeight: '800'},
+  sliderTrackWrap: {
+    paddingHorizontal: 2,
+    marginBottom: 6,
+  },
+  sliderControl: {marginHorizontal: 0},
   rangeRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 0,
     paddingHorizontal: 2,
+    marginBottom: 2,
   },
-  rangeTxt: {color: C.textMuted, fontSize: 10},
+  rangeTxt: {color: C.textSub, fontSize: 12, fontWeight: '600'},
 
   // Compact empty banner (filter mismatch only)
   emptyBanner: {

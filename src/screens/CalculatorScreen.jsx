@@ -9,19 +9,17 @@ import {
   Dimensions,
   Image,
   Platform,
-  Modal,
   TextInput,
-  Alert,
   Share,
   Clipboard,
   KeyboardAvoidingView,
   ToastAndroid,
 } from 'react-native';
 import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
+import {useNavigation} from '@react-navigation/native';
 import MultiSlider from '@ptomasroos/react-native-multi-slider';
 import {
   ArrowLeft,
-  Calculator,
   Users,
   Plus,
   X,
@@ -32,12 +30,9 @@ import {
   Percent,
 } from 'lucide-react-native';
 import LinearGradient from 'react-native-linear-gradient';
-import Svg, {G, Path} from 'react-native-svg';
-
 import EmiRightSide from '../assets/image/trends/rside.png';
 import EmiLeftSide from '../assets/image/trends/lside.png';
 import {formatIndianAmount} from '../utils/formatIndianAmount';
-import {ModalBox} from '../components/calculator/ValueModel';
 
 const {width} = Dimensions.get('window');
 
@@ -59,38 +54,20 @@ const SAMPLE_AVATARS = [
 
 // ─── Tab keys ─────────────────────────────────────────────────────
 const TABS = {
-  EMI: 'emi',
   RENT: 'rent',
   BROKERAGE: 'brokerage',
   SIP: 'sip',
   AREA: 'area',
 };
 
-const TAB_BAR_CLEARANCE = 88;
+const TAB_BAR_CLEARANCE = 100;
 
 export default function CalculatorScreen() {
+  const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const scrollBottomPadding = TAB_BAR_CLEARANCE + insets.bottom;
-  const [activeTab, setActiveTab] = useState(TABS.EMI);
-
-  /* ─────────────── EMI State ─────────────── */
-  const [loan, setLoan] = useState(4000000);
-  const [tenure, setTenure] = useState(30);
-  const [rate, setRate] = useState(9.5);
-
-  const [showLoanModal, setShowLoanModal] = useState(false);
-  const [showTenureModal, setShowTenureModal] = useState(false);
-  const [showRateModal, setShowRateModal] = useState(false);
-
-  /* ─────────────── EMI Calc ─────────────── */
-  const monthlyRate = rate / 12 / 100;
-  const months = tenure * 12;
-  const emi = Math.round(
-    (loan * monthlyRate * Math.pow(1 + monthlyRate, months)) /
-      (Math.pow(1 + monthlyRate, months) - 1),
-  );
-  const totalPayment = emi * months;
-  const totalInterest = totalPayment - loan;
+  const scrollBottomPadding = TAB_BAR_CLEARANCE + insets.bottom + 16;
+  const canGoBack = navigation.canGoBack?.() ?? false;
+  const [activeTab, setActiveTab] = useState(TABS.RENT);
 
   /* ─────────────── Rent Split State ─────── */
   const [rentAmount, setRentAmount] = useState('12000');
@@ -220,18 +197,29 @@ export default function CalculatorScreen() {
 
       {/* ── Header ── */}
       <View style={styles.header}>
-        <TouchableOpacity>
-          <ArrowLeft size={22} color="#111" />
-        </TouchableOpacity>
+        {canGoBack ? (
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}
+            accessibilityRole="button"
+            accessibilityLabel="Go back">
+            <ArrowLeft size={22} color="#111" />
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.headerSide} />
+        )}
         <Text style={styles.headerTitle}>Property Calculator</Text>
-        <View style={{width: 22}} />
+        <View style={styles.headerSide} />
       </View>
 
       <KeyboardAvoidingView
-        style={{flex: 1}}
+        style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
-          contentContainerStyle={{paddingBottom: scrollBottomPadding}}
+          contentContainerStyle={[
+            styles.scrollContent,
+            {paddingBottom: scrollBottomPadding},
+          ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
           bounces>
@@ -239,17 +227,11 @@ export default function CalculatorScreen() {
             Make smarter property decisions instantly
           </Text>
 
-          {/* ── Tabs (horizontal scroll) ── */}
+          {/* ── Tabs ── */}
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.tabsRow}>
-            <Tab
-              icon={Calculator}
-              label="EMI Calculator"
-              active={activeTab === TABS.EMI}
-              onPress={() => setActiveTab(TABS.EMI)}
-            />
             <Tab
               icon={Users}
               label="Rent Split"
@@ -270,110 +252,10 @@ export default function CalculatorScreen() {
             />
           </ScrollView>
 
-          {/* ════════════════ EMI TAB ════════════════ */}
-          {activeTab === TABS.EMI && (
-            <View style={styles.tabContent}>
-              <View style={styles.card}>
-                <Field
-                  label="Loan Amount"
-                  value={`₹ ${formatIndianAmount(loan)}`}
-                  onPress={() => setShowLoanModal(true)}
-                />
-                <MultiSlider
-                  values={[loan]}
-                  sliderLength={CARD_SLIDER_LENGTH}
-                  onValuesChange={v => setLoan(v[0])}
-                  min={100000}
-                  max={100000000}
-                  step={100000}
-                  selectedStyle={{backgroundColor: '#7C3AED'}}
-                  unselectedStyle={{backgroundColor: '#E5E7EB'}}
-                  markerStyle={styles.marker}
-                />
-                <RangeRow left="₹ 1 L" right="₹ 10 Cr+" />
-
-                <Field
-                  label="Tenure (Years)"
-                  value={`${tenure} Years`}
-                  onPress={() => setShowTenureModal(true)}
-                />
-                <MultiSlider
-                  values={[tenure]}
-                  sliderLength={CARD_SLIDER_LENGTH}
-                  onValuesChange={v => setTenure(v[0])}
-                  min={2}
-                  max={30}
-                  step={1}
-                  selectedStyle={{backgroundColor: '#7C3AED'}}
-                  unselectedStyle={{backgroundColor: '#E5E7EB'}}
-                  markerStyle={styles.marker}
-                />
-                <RangeRow left="2 Years" right="30 Years" />
-
-                <Field
-                  label="Interest Rate (% P.A.)"
-                  value={`${Math.round(rate * 10) / 10}%`}
-                  onPress={() => setShowRateModal(true)}
-                />
-                <MultiSlider
-                  values={[rate]}
-                  sliderLength={CARD_SLIDER_LENGTH}
-                  onValuesChange={v => setRate(v[0])}
-                  min={1}
-                  max={20}
-                  step={0.1}
-                  selectedStyle={{backgroundColor: '#7C3AED'}}
-                  unselectedStyle={{backgroundColor: '#E5E7EB'}}
-                  markerStyle={styles.marker}
-                />
-                <RangeRow left="1%" right="20%" />
-              </View>
-
-              <View style={styles.emiCardWrap}>
-                <LinearGradient
-                  colors={['#8A38F5', '#5E23DC']}
-                  style={styles.emiCard}>
-                  <Image source={EmiLeftSide} style={styles.leftImage} />
-                  <Image source={EmiRightSide} style={styles.rightImage} />
-                  <View style={styles.emiTextBlock}>
-                    <Text style={styles.emiLabel}>Monthly EMI</Text>
-                    <Text style={styles.emiValue}>
-                      ₹{emi.toLocaleString('en-IN')}
-                    </Text>
-                    <Text style={styles.emiSub}>
-                      For {tenure} years loan tenure
-                    </Text>
-                  </View>
-                </LinearGradient>
-              </View>
-
-              <View style={styles.breakdown}>
-                <Text style={styles.breakdownTitle}>Payment Breakdown</Text>
-                <Row
-                  label="Principal Amount"
-                  value={`₹${formatIndianAmount(loan)}`}
-                />
-                <Row
-                  label="Total Interest"
-                  value={`₹${formatIndianAmount(totalInterest)}`}
-                  danger
-                />
-                <View style={styles.divider} />
-                <Row
-                  label="Total Amount"
-                  value={`₹${formatIndianAmount(totalPayment)}`}
-                  bold
-                />
-              </View>
-
-              <Text style={styles.sectionTitle}>Principal vs Interest</Text>
-              <PieChart principal={loan} interest={totalInterest} />
-            </View>
-          )}
 
           {/* ════════════════ RENT SPLIT TAB ════════════════ */}
           {activeTab === TABS.RENT && (
-            <View style={styles.rentSplitContainer}>
+            <View style={styles.tabPanel}>
               <LinearGradient
                 colors={['#8A38F5', '#5E23DC']}
                 style={styles.rentGradientCard}
@@ -394,79 +276,87 @@ export default function CalculatorScreen() {
                     selectionColor="rgba(255,255,255,0.7)"
                   />
                 </View>
-                <Text style={styles.rentHint}>per month • tap to edit</Text>
+                <Text style={styles.rentHint}>per month · tap to edit</Text>
               </LinearGradient>
 
-              <View style={styles.presetsRow}>
-                {['8000', '12000', '18000', '25000'].map(amt => (
-                  <TouchableOpacity
-                    key={amt}
-                    onPress={() => setRentAmount(amt)}
-                    style={[
-                      styles.presetChip,
-                      rentAmount === amt && styles.presetChipActive,
-                    ]}>
-                    <Text
+              <View style={styles.sectionCard}>
+                <Text style={styles.sectionLabel}>Quick select</Text>
+                <View style={styles.presetsRow}>
+                  {['8000', '12000', '18000', '25000'].map(amt => (
+                    <TouchableOpacity
+                      key={amt}
+                      onPress={() => setRentAmount(amt)}
                       style={[
-                        styles.presetText,
-                        rentAmount === amt && styles.presetTextActive,
-                      ]}>
-                      ₹{parseInt(amt, 10).toLocaleString('en-IN')}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              <View style={styles.rentSectionHeader}>
-                <Text style={styles.rentSectionTitle}>
-                  Roommates ({people.length})
-                </Text>
-                <View style={styles.splitBadge}>
-                  <Text style={styles.splitBadgeText}>
-                    ÷ {people.length} ways
-                  </Text>
+                        styles.presetChip,
+                        rentAmount === amt && styles.presetChipActive,
+                      ]}
+                      activeOpacity={0.8}>
+                      <Text
+                        style={[
+                          styles.presetText,
+                          rentAmount === amt && styles.presetTextActive,
+                        ]}>
+                        ₹{parseInt(amt, 10).toLocaleString('en-IN')}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
                 </View>
               </View>
 
-              <View style={styles.chipsWrap}>
-                {people.map((p, i) => (
-                  <View key={`chip-${i}`} style={styles.chip}>
-                    <View style={styles.chipAvatarWrapper}>
-                      <Text style={styles.chipAvatarText}>
-                        {p.name.charAt(0).toUpperCase()}
-                      </Text>
-                    </View>
-                    <Text style={styles.chipTxt}>{p.name}</Text>
-                    {people.length > 1 && (
-                      <TouchableOpacity
-                        onPress={() => removePerson(i)}
-                        hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
-                        <View style={styles.chipXCircle}>
-                          <X size={10} color="#6B7280" strokeWidth={2.8} />
-                        </View>
-                      </TouchableOpacity>
-                    )}
+              <View style={styles.sectionCard}>
+                <View style={styles.rentSectionHeader}>
+                  <Text style={styles.rentSectionTitle}>
+                    Roommates ({people.length})
+                  </Text>
+                  <View style={styles.splitBadge}>
+                    <Text style={styles.splitBadgeText}>
+                      ÷ {people.length} ways
+                    </Text>
                   </View>
-                ))}
-              </View>
+                </View>
 
-              <View style={styles.addRow}>
-                <TextInput
-                  value={newName}
-                  onChangeText={setNewName}
-                  onSubmitEditing={addPerson}
-                  placeholder="Add roommate name…"
-                  placeholderTextColor="#9CA3AF"
-                  style={styles.addInput}
-                  returnKeyType="done"
-                />
-                <TouchableOpacity
-                  onPress={addPerson}
-                  style={styles.addBtn}
-                  activeOpacity={0.85}>
-                  <Plus size={16} color="#fff" strokeWidth={2.5} />
-                  <Text style={styles.addBtnTxt}>Add</Text>
-                </TouchableOpacity>
+                <View style={styles.chipsWrap}>
+                  {people.map((p, i) => (
+                    <View key={`chip-${i}`} style={styles.chip}>
+                      <View style={styles.chipAvatarWrapper}>
+                        <Text style={styles.chipAvatarText}>
+                          {p.name.charAt(0).toUpperCase()}
+                        </Text>
+                      </View>
+                      <Text style={styles.chipTxt} numberOfLines={1}>
+                        {p.name}
+                      </Text>
+                      {people.length > 1 && (
+                        <TouchableOpacity
+                          onPress={() => removePerson(i)}
+                          hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
+                          <View style={styles.chipXCircle}>
+                            <X size={10} color="#6B7280" strokeWidth={2.8} />
+                          </View>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  ))}
+                </View>
+
+                <View style={styles.addRow}>
+                  <TextInput
+                    value={newName}
+                    onChangeText={setNewName}
+                    onSubmitEditing={addPerson}
+                    placeholder="Add roommate name…"
+                    placeholderTextColor="#9CA3AF"
+                    style={styles.addInput}
+                    returnKeyType="done"
+                  />
+                  <TouchableOpacity
+                    onPress={addPerson}
+                    style={styles.addBtn}
+                    activeOpacity={0.85}>
+                    <Plus size={16} color="#fff" strokeWidth={2.5} />
+                    <Text style={styles.addBtnTxt}>Add</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
 
               <View style={styles.summaryBanner}>
@@ -478,7 +368,7 @@ export default function CalculatorScreen() {
                 </View>
                 <View style={styles.summaryDivider} />
                 <View style={styles.summaryItem}>
-                  <Text style={[styles.summaryItemVal, {color: '#8A38F5'}]}>
+                  <Text style={[styles.summaryItemVal, styles.summaryHighlight]}>
                     ₹{share.toLocaleString('en-IN')}
                   </Text>
                   <Text style={styles.summaryItemLabel}>Per Person</Text>
@@ -490,51 +380,51 @@ export default function CalculatorScreen() {
                 </View>
               </View>
 
-              <Text
-                style={[
-                  styles.rentSectionTitle,
-                  {marginTop: 20, marginBottom: 12},
-                ]}>
-                Each person pays
-              </Text>
+              <View style={styles.sectionCard}>
+                <Text style={styles.sectionLabel}>Each person pays</Text>
 
-              {people.map((p, i) => {
-                const personShare = i === 0 ? share + remainder : share;
-                const percent =
-                  totalRent > 0
-                    ? Math.round((personShare / totalRent) * 100)
-                    : 0;
-                return (
-                  <View key={`split-${i}`} style={styles.splitCard}>
-                    <View style={styles.splitAvatarCircle}>
-                      <Text style={styles.splitAvatarText}>
-                        {p.name.charAt(0).toUpperCase()}
-                      </Text>
-                    </View>
-                    <View style={{flex: 1}}>
-                      <Text style={styles.splitName}>{p.name}</Text>
-                      <View style={styles.progressBarBg}>
-                        <View
-                          style={[
-                            styles.progressBarFill,
-                            {width: `${percent}%`},
-                          ]}
-                        />
+                {people.map((p, i) => {
+                  const personShare = i === 0 ? share + remainder : share;
+                  const percent =
+                    totalRent > 0
+                      ? Math.round((personShare / totalRent) * 100)
+                      : 0;
+                  return (
+                    <View key={`split-${i}`} style={styles.splitCard}>
+                      <View style={styles.splitAvatarCircle}>
+                        <Text style={styles.splitAvatarText}>
+                          {p.name.charAt(0).toUpperCase()}
+                        </Text>
                       </View>
-                      <Text style={styles.splitSub}>
-                        {percent}% of total rent
-                        {i === 0 && remainder > 0
-                          ? ' (includes ₹' + remainder + ' rounding)'
-                          : ''}
-                      </Text>
+                      <View style={styles.splitBody}>
+                        <View style={styles.splitTopRow}>
+                          <Text style={styles.splitName} numberOfLines={1}>
+                            {p.name}
+                          </Text>
+                          <Text style={styles.splitAmt}>
+                            ₹{personShare.toLocaleString('en-IN')}
+                            <Text style={styles.splitMo}>/mo</Text>
+                          </Text>
+                        </View>
+                        <View style={styles.progressBarBg}>
+                          <View
+                            style={[
+                              styles.progressBarFill,
+                              {width: `${percent}%`},
+                            ]}
+                          />
+                        </View>
+                        <Text style={styles.splitSub}>
+                          {percent}% of total rent
+                          {i === 0 && remainder > 0
+                            ? ` · includes ₹${remainder} rounding`
+                            : ''}
+                        </Text>
+                      </View>
                     </View>
-                    <Text style={styles.splitAmt}>
-                      ₹{personShare.toLocaleString('en-IN')}
-                      <Text style={styles.splitMo}>/mo</Text>
-                    </Text>
-                  </View>
-                );
-              })}
+                  );
+                })}
+              </View>
 
               <View style={styles.btnRow}>
                 <TouchableOpacity
@@ -549,7 +439,7 @@ export default function CalculatorScreen() {
                   style={[styles.actionBtn, styles.whatsappBtn]}
                   activeOpacity={0.85}>
                   <MessageCircle size={16} color="#fff" strokeWidth={2.2} />
-                  <Text style={styles.filledBtnTxt}>Share via WhatsApp</Text>
+                  <Text style={styles.filledBtnTxt}>Share</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -634,7 +524,9 @@ export default function CalculatorScreen() {
                   <Image source={EmiLeftSide} style={styles.leftImage} />
                   <Image source={EmiRightSide} style={styles.rightImage} />
                   <View style={styles.emiTextBlock}>
-                    <Text style={styles.emiLabel}>Total Brokerage (incl. GST)</Text>
+                    <Text style={styles.emiLabel}>
+                      Total Brokerage (incl. GST)
+                    </Text>
                     <Text style={styles.emiValue}>
                       ₹{totalBrokerage.toLocaleString('en-IN')}
                     </Text>
@@ -863,37 +755,6 @@ export default function CalculatorScreen() {
           )}
         </ScrollView>
       </KeyboardAvoidingView>
-
-      {/* ── EMI Modals ── */}
-      <Modal transparent visible={showLoanModal} animationType="fade">
-        <ModalBox
-          title="Enter Loan Amount"
-          value={String(loan)}
-          setValue={v => setLoan(Number(v))}
-          onCancel={() => setShowLoanModal(false)}
-          onApply={() => setShowLoanModal(false)}
-        />
-      </Modal>
-
-      <Modal transparent visible={showTenureModal} animationType="fade">
-        <ModalBox
-          title="Enter Tenure (Years)"
-          value={String(tenure)}
-          setValue={v => setTenure(Number(v))}
-          onCancel={() => setShowTenureModal(false)}
-          onApply={() => setShowTenureModal(false)}
-        />
-      </Modal>
-
-      <Modal transparent visible={showRateModal} animationType="fade">
-        <ModalBox
-          title="Enter Interest Rate (%)"
-          value={String(rate)}
-          setValue={v => setRate(Number(v))}
-          onCancel={() => setShowRateModal(false)}
-          onApply={() => setShowRateModal(false)}
-        />
-      </Modal>
     </SafeAreaView>
   );
 }
@@ -905,10 +766,10 @@ export default function CalculatorScreen() {
 const Tab = ({icon: Icon, label, active, onPress}) => (
   <TouchableOpacity
     onPress={onPress}
-    activeOpacity={0.8}
+    activeOpacity={0.85}
     style={[styles.tab, active && styles.activeTab]}>
-    <Icon size={18} color={active ? '#FFF' : '#6B7280'} />
-    <Text style={[styles.tabText, active && {color: '#FFF'}]}>{label}</Text>
+    <Icon size={16} color={active ? '#FFF' : '#6B7280'} strokeWidth={2.2} />
+    <Text style={[styles.tabText, active && styles.tabTextActive]}>{label}</Text>
   </TouchableOpacity>
 );
 
@@ -943,116 +804,115 @@ const Row = ({label, value, bold, danger}) => (
 );
 
 /* ──────────────────────────────────────────────────────────────────
-   Pie Chart
-────────────────────────────────────────────────────────────────── */
-const PieChart = ({principal = 0, interest = 0}) => {
-  const total = principal + interest || 1;
-  const principalPercent = Math.round((principal / total) * 100);
-  const interestPercent = 100 - principalPercent;
-
-  const size = Math.min(width * 0.52, 240);
-  const radius = size / 2;
-  const cx = radius;
-  const cy = radius;
-
-  const polarToCartesian = (cx, cy, r, angle) => {
-    const rad = (Math.PI / 180) * angle;
-    return {x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad)};
-  };
-
-  const createSlice = (startAngle, endAngle) => {
-    const start = polarToCartesian(cx, cy, radius, endAngle);
-    const end = polarToCartesian(cx, cy, radius, startAngle);
-    const largeArc = endAngle - startAngle > 180 ? 1 : 0;
-    return `M ${cx} ${cy} L ${start.x} ${start.y} A ${radius} ${radius} 0 ${largeArc} 0 ${end.x} ${end.y} Z`;
-  };
-
-  const startAngle = -90;
-  const interestAngle = (interestPercent / 100) * 360;
-
-  return (
-    <View style={styles.pieChartWrap}>
-      <Svg width={size} height={size}>
-        <G>
-          <Path
-            d={createSlice(startAngle, startAngle + interestAngle)}
-            fill="#22C55E"
-          />
-          <Path
-            d={createSlice(startAngle + interestAngle, 270)}
-            fill="#FBBF24"
-          />
-        </G>
-      </Svg>
-      <View style={styles.legendRow}>
-        <LegendItem
-          color="#FBBF24"
-          label="Principal"
-          percent={principalPercent}
-        />
-        <LegendItem
-          color="#22C55E"
-          label="Interest"
-          percent={interestPercent}
-        />
-      </View>
-    </View>
-  );
-};
-
-const LegendItem = ({color, label, percent}) => (
-  <View style={styles.legendItem}>
-    <View style={[styles.legendDot, {backgroundColor: color}]} />
-    <Text style={styles.legendText}>
-      {label} • {percent}%
-    </Text>
-  </View>
-);
-
-/* ──────────────────────────────────────────────────────────────────
    Styles
 ────────────────────────────────────────────────────────────────── */
 const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: '#FAF8FF'},
+  container: {flex: 1, backgroundColor: '#F5F3FF'},
+  flex: {flex: 1},
+  scrollContent: {
+    paddingTop: 4,
+  },
 
   header: {
-    height: 56,
-    paddingHorizontal: 16,
+    height: 52,
+    paddingHorizontal: HORIZONTAL_PADDING,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    backgroundColor: '#FAF8FF',
   },
+  headerSide: {width: 28},
   headerTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
-    color: '#000',
+    color: '#111827',
+    letterSpacing: -0.2,
     ...Platform.select({
       android: {includeFontPadding: false, textAlignVertical: 'center'},
     }),
   },
 
-  subTitle: {textAlign: 'center', marginVertical: 12, color: '#6B7280'},
+  subTitle: {
+    textAlign: 'center',
+    marginTop: 4,
+    marginBottom: 14,
+    paddingHorizontal: 24,
+    color: '#6B7280',
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '500',
+  },
 
   tabsRow: {
     flexDirection: 'row',
-    gap: 10,
-    paddingHorizontal: 16,
-    paddingBottom: 12,
+    gap: 8,
+    paddingHorizontal: HORIZONTAL_PADDING,
+    paddingBottom: 16,
   },
   tab: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 6,
     paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingVertical: 10,
+    borderRadius: 24,
     borderWidth: 1,
     borderColor: '#E5E7EB',
     backgroundColor: '#FFF',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: {width: 0, height: 1},
+        shadowOpacity: 0.04,
+        shadowRadius: 3,
+      },
+      android: {elevation: 1},
+    }),
   },
-  activeTab: {backgroundColor: '#7C3AED', borderColor: '#7C3AED'},
-  tabText: {fontSize: 13, color: '#6B7280'},
+  activeTab: {
+    backgroundColor: '#7C3AED',
+    borderColor: '#7C3AED',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#7C3AED',
+        shadowOffset: {width: 0, height: 4},
+        shadowOpacity: 0.28,
+        shadowRadius: 8,
+      },
+      android: {elevation: 3},
+    }),
+  },
+  tabText: {fontSize: 13, fontWeight: '600', color: '#6B7280'},
+  tabTextActive: {color: '#FFF'},
+
+  tabPanel: {
+    paddingHorizontal: HORIZONTAL_PADDING,
+    gap: 14,
+  },
+  sectionCard: {
+    backgroundColor: '#FFF',
+    borderRadius: 18,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#EDE9FE',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#5E23DC',
+        shadowOffset: {width: 0, height: 2},
+        shadowOpacity: 0.06,
+        shadowRadius: 10,
+      },
+      android: {elevation: 2},
+    }),
+  },
+  sectionLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#6B7280',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginBottom: 12,
+  },
 
   tabContent: {
     paddingHorizontal: HORIZONTAL_PADDING,
@@ -1061,8 +921,9 @@ const styles = StyleSheet.create({
   },
   newTabContainer: {
     paddingHorizontal: HORIZONTAL_PADDING,
-    paddingTop: 8,
+    paddingTop: 0,
     paddingBottom: 8,
+    gap: 14,
   },
 
   card: {
@@ -1212,7 +1073,12 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   rowLabel: {color: '#374151', fontSize: 14, flex: 1, paddingRight: 8},
-  rowValue: {fontWeight: '600', color: '#000', fontSize: 14, textAlign: 'right'},
+  rowValue: {
+    fontWeight: '600',
+    color: '#000',
+    fontSize: 14,
+    textAlign: 'right',
+  },
   divider: {height: 1, backgroundColor: '#E5E7EB', marginVertical: 6},
   sectionTitle: {
     fontSize: 18,
@@ -1242,16 +1108,20 @@ const styles = StyleSheet.create({
   legendText: {fontSize: 14, fontWeight: '600', color: '#374151'},
 
   /* Rent Split */
-  rentSplitContainer: {paddingHorizontal: 16, paddingTop: 16},
   rentGradientCard: {
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 14,
+    borderRadius: 22,
+    paddingHorizontal: 20,
+    paddingVertical: 22,
     overflow: 'hidden',
-    shadowColor: '#7C3AED',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#7C3AED',
+        shadowOffset: {width: 0, height: 8},
+        shadowOpacity: 0.28,
+        shadowRadius: 16,
+      },
+      android: {elevation: 6},
+    }),
   },
   decorCircle1: {
     position: 'absolute',
@@ -1272,57 +1142,82 @@ const styles = StyleSheet.create({
     bottom: -20,
   },
   rentGradLabel: {
-    color: 'rgba(255,255,255,0.85)',
+    color: 'rgba(255,255,255,0.88)',
     fontSize: 13,
     fontWeight: '600',
+    letterSpacing: 0.2,
   },
-  rentInputRow: {flexDirection: 'row', alignItems: 'center', marginTop: 6},
-  rentRupee: {color: '#fff', fontSize: 36, fontWeight: '800', lineHeight: 50},
+  rentInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  rentRupee: {
+    color: '#fff',
+    fontSize: 32,
+    fontWeight: '800',
+    lineHeight: 44,
+  },
   rentInput: {
     flex: 1,
     color: '#fff',
-    fontSize: 48,
+    fontSize: 40,
     fontWeight: '800',
     paddingVertical: 0,
-    marginLeft: 4,
-    letterSpacing: -1,
+    marginLeft: 2,
+    letterSpacing: -0.5,
+    minHeight: 48,
   },
-  rentHint: {color: 'rgba(255,255,255,0.65)', fontSize: 12, marginTop: 2},
+  rentHint: {
+    color: 'rgba(255,255,255,0.72)',
+    fontSize: 12,
+    marginTop: 6,
+    fontWeight: '500',
+  },
 
   presetsRow: {
     flexDirection: 'row',
     gap: 8,
-    marginBottom: 20,
     flexWrap: 'wrap',
   },
   presetChip: {
     paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingVertical: 9,
+    borderRadius: 22,
     borderWidth: 1.5,
-    borderColor: '#D1D5DB',
-    backgroundColor: '#FFF',
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FAFAFA',
   },
-  presetChipActive: {borderColor: '#7C3AED', backgroundColor: '#F3E8FF'},
-  presetText: {fontSize: 12, fontWeight: '600', color: '#6B7280'},
+  presetChipActive: {
+    borderColor: '#7C3AED',
+    backgroundColor: '#F3E8FF',
+  },
+  presetText: {fontSize: 13, fontWeight: '600', color: '#6B7280'},
   presetTextActive: {color: '#7C3AED'},
 
   rentSectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: 14,
   },
-  rentSectionTitle: {fontSize: 17, fontWeight: '700', color: '#111'},
+  rentSectionTitle: {fontSize: 16, fontWeight: '700', color: '#111827'},
   splitBadge: {
-    backgroundColor: '#F3E8FF',
+    backgroundColor: '#EDE9FE',
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: 5,
     borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#DDD6FE',
   },
-  splitBadgeText: {color: '#7C3AED', fontSize: 12, fontWeight: '700'},
+  splitBadgeText: {color: '#6D28D9', fontSize: 12, fontWeight: '700'},
 
-  chipsWrap: {flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14},
+  chipsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 14,
+  },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1354,81 +1249,124 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
-  addRow: {flexDirection: 'row', gap: 10, marginBottom: 4},
+  addRow: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    gap: 10,
+  },
   addInput: {
     flex: 1,
-    backgroundColor: '#FFF',
+    backgroundColor: '#F9FAFB',
     paddingHorizontal: 14,
-    paddingVertical: Platform.OS === 'ios' ? 14 : 10,
-    borderRadius: 12,
-    color: '#111',
+    paddingVertical: Platform.OS === 'ios' ? 13 : 11,
+    borderRadius: 14,
+    color: '#111827',
     fontSize: 14,
     borderWidth: 1,
     borderColor: '#E5E7EB',
+    minHeight: 48,
   },
   addBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 5,
     backgroundColor: '#7C3AED',
-    paddingHorizontal: 18,
-    borderRadius: 12,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    minHeight: 48,
+    minWidth: 88,
   },
   addBtnTxt: {color: '#fff', fontSize: 14, fontWeight: '700'},
 
   summaryBanner: {
     flexDirection: 'row',
     backgroundColor: '#FFF',
-    borderRadius: 16,
-    paddingVertical: 16,
-    marginTop: 16,
+    borderRadius: 18,
+    paddingVertical: 18,
     borderWidth: 1,
     borderColor: '#EDE9FE',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#5E23DC',
+        shadowOffset: {width: 0, height: 2},
+        shadowOpacity: 0.06,
+        shadowRadius: 10,
+      },
+      android: {elevation: 2},
+    }),
   },
-  summaryItem: {flex: 1, alignItems: 'center'},
-  summaryItemVal: {fontSize: 18, fontWeight: '800', color: '#111'},
+  summaryItem: {flex: 1, alignItems: 'center', paddingHorizontal: 4},
+  summaryItemVal: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#111827',
+    letterSpacing: -0.3,
+  },
+  summaryHighlight: {color: '#7C3AED'},
   summaryItemLabel: {
     fontSize: 11,
     color: '#9CA3AF',
-    fontWeight: '500',
-    marginTop: 2,
+    fontWeight: '600',
+    marginTop: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
   },
-  summaryDivider: {width: 1, backgroundColor: '#E5E7EB'},
+  summaryDivider: {width: 1, backgroundColor: '#E5E7EB', marginVertical: 4},
 
   splitCard: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     padding: 14,
     marginBottom: 10,
-    borderRadius: 16,
-    backgroundColor: '#FFF',
+    borderRadius: 14,
+    backgroundColor: '#FAFAFF',
     gap: 12,
     borderWidth: 1,
     borderColor: '#EDE9FE',
   },
   splitAvatarCircle: {
-    width: 46,
-    height: 46,
-    borderRadius: 999,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     backgroundColor: '#7C3AED',
     justifyContent: 'center',
     alignItems: 'center',
+    marginTop: 2,
   },
-  splitAvatarText: {color: '#FFF', fontSize: 18, fontWeight: '800'},
-  splitName: {fontWeight: '700', color: '#111', fontSize: 15, marginBottom: 4},
+  splitAvatarText: {color: '#FFF', fontSize: 16, fontWeight: '800'},
+  splitBody: {flex: 1, minWidth: 0},
+  splitTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginBottom: 8,
+  },
+  splitName: {
+    flex: 1,
+    fontWeight: '700',
+    color: '#111827',
+    fontSize: 15,
+  },
   progressBarBg: {
-    height: 4,
+    height: 5,
     backgroundColor: '#EDE9FE',
-    borderRadius: 4,
-    marginBottom: 4,
+    borderRadius: 5,
+    marginBottom: 6,
     overflow: 'hidden',
   },
-  progressBarFill: {height: 4, backgroundColor: '#7C3AED', borderRadius: 4},
-  splitSub: {fontSize: 11, color: '#9CA3AF'},
-  splitAmt: {fontSize: 20, fontWeight: '800', color: '#7C3AED'},
-  splitMo: {fontSize: 12, fontWeight: '500', color: '#9CA3AF'},
+  progressBarFill: {height: 5, backgroundColor: '#7C3AED', borderRadius: 5},
+  splitSub: {fontSize: 11, color: '#9CA3AF', fontWeight: '500'},
+  splitAmt: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#7C3AED',
+    flexShrink: 0,
+  },
+  splitMo: {fontSize: 11, fontWeight: '600', color: '#9CA3AF'},
 
-  btnRow: {flexDirection: 'row', gap: 10, marginTop: 20},
+  btnRow: {flexDirection: 'row', gap: 10, marginTop: 4, marginBottom: 8},
   actionBtn: {
     flex: 1,
     flexDirection: 'row',

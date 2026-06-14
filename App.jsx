@@ -33,6 +33,7 @@ import {devLog} from './src/utils/devLog';
 import {AppErrorBoundary} from './src/components/AppErrorBoundary';
 import {Fonts} from './src/theme/fonts';
 import {displayNotification} from './src/utils/notificationService';
+import {logInfo, logWarn} from './src/utils/appLogger';
 
 if (Platform.OS === 'android') {
   Settings.initializeSDK();
@@ -100,13 +101,14 @@ const Root = () => {
 
       if (enabled) {
         const token = await messaging().getToken();
+        logInfo('fcm_token_ready');
         devLog('🔥 FCM TOKEN:', token);
 
         if (!userId) {
           return;
         }
 
-        await fetch(
+        const res = await fetch(
           `${API_BASE_URL}/customerapp/notifications/save-fcm-token`,
           {
             method: 'POST',
@@ -117,8 +119,12 @@ const Root = () => {
             }),
           },
         );
+        if (!res.ok) {
+          logWarn('save_fcm_failed', {status: res.status});
+        }
       }
     } catch (error) {
+      logWarn('notification_permission_failed');
       devLog('Notification permission error:', error);
     }
   }, []);
@@ -229,6 +235,7 @@ const Root = () => {
 
   // App init
   useEffect(() => {
+    logInfo('app_init_start');
     configureSocialLogin();
     dispatch(loadUser());
     getUserCityAndState(); // ← Fetch city/state on app start

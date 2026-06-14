@@ -5,6 +5,8 @@ import {Platform, StyleSheet} from 'react-native';
  * behave better on small Android phones, large iPhones, and foldables.
  */
 export function createLoginStyles(width, height) {
+  const isTablet = width >= 768;
+
   const ms = (size, factor = 0.32) =>
     Math.round(size + ((width / 375) * size - size) * factor);
 
@@ -12,20 +14,33 @@ export function createLoginStyles(width, height) {
   const LABEL_SIZE = ms(13, 0.22);
   const HELPER_SIZE = ms(11, 0.35);
 
-  const bottomCardHeight =
-    height < 700 ? height * 0.58 : height < 850 ? height * 0.64 : height * 0.62;
+  const bottomCardHeight = isTablet
+    ? Math.min(560, Math.round(height * 0.62))
+    : height < 700
+    ? height * 0.58
+    : height < 850
+    ? height * 0.64
+    : height * 0.62;
 
   const overlayTranslateY = -Math.max(28, Math.min(48, height * 0.05));
 
   return StyleSheet.create({
     container: {flex: 1, backgroundColor: '#321376'},
+    authGateContainer: {
+      flex: 1,
+      backgroundColor: 'transparent',
+    },
+    containerOtp: {backgroundColor: '#FFFFFF'},
     transitionContainer: {
       flex: 1,
       backgroundColor: '#FAF8FF',
       justifyContent: 'center',
       alignItems: 'center',
     },
-    topContainer: {height: '40%', width: '100%'},
+    topContainer: {
+      height: isTablet ? '46%' : '40%',
+      width: '100%',
+    },
     slide: {
       width,
       height: '100%',
@@ -88,13 +103,17 @@ export function createLoginStyles(width, height) {
       justifyContent: 'flex-end',
       backgroundColor: 'transparent',
     },
-    bottomCardWrapper: {height: bottomCardHeight},
+    bottomCardWrapper: {
+      width: '100%',
+      height: bottomCardHeight,
+    },
     bottomCardContent: {
-      paddingTop: ms(10, 0.1),
+      paddingTop: isTablet ? ms(14, 0.1) : ms(10, 0.1),
+      paddingHorizontal: isTablet ? ms(22, 0.1) : 0,
       alignItems: 'center',
       gap: ms(4, 0.05),
       zIndex: 1,
-      paddingBottom: ms(20, 0.15),
+      paddingBottom: isTablet ? ms(30, 0.15) : ms(20, 0.15),
     },
 
     mainTitle: {
@@ -102,7 +121,7 @@ export function createLoginStyles(width, height) {
       fontFamily: 'SegoeUI-Bold',
       textAlign: 'center',
       color: '#5E23DC',
-      width: '70%',
+      width: isTablet ? '74%' : '70%',
       ...Platform.select({
         android: {includeFontPadding: false, textAlignVertical: 'center'},
         default: {},
@@ -122,7 +141,7 @@ export function createLoginStyles(width, height) {
     dividerRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      width: '85%',
+      width: isTablet ? '82%' : '85%',
       marginVertical: ms(12, 0.15),
     },
     dividerLine: {flex: 1, height: 1},
@@ -138,7 +157,7 @@ export function createLoginStyles(width, height) {
       }),
     },
 
-    inputWrapper: {width: '85%', marginBottom: ms(8, 0.1)},
+    inputWrapper: {width: isTablet ? '82%' : '85%', marginBottom: ms(8, 0.1)},
     inputField: {
       borderBottomWidth: 2,
       borderColor: '#5E23DC',
@@ -152,7 +171,7 @@ export function createLoginStyles(width, height) {
     },
     inputError: {borderColor: 'red'},
 
-    phoneWrapper: {width: '85%'},
+    phoneWrapper: {width: isTablet ? '82%' : '85%'},
     phoneRow: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -195,7 +214,7 @@ export function createLoginStyles(width, height) {
     },
 
     loginBtn: {
-      width: '85%',
+      width: isTablet ? '82%' : '85%',
       backgroundColor: '#5E23DC',
       padding: ms(14, 0.15),
       borderRadius: ms(12, 0.15),
@@ -282,6 +301,25 @@ export function createLoginStyles(width, height) {
       padding: ms(8, 0.1),
       alignItems: 'center',
       justifyContent: 'center',
+    },
+    guestBtn: {
+      width: isTablet ? '82%' : '85%',
+      marginTop: ms(16, 0.15),
+      paddingVertical: ms(12, 0.15),
+      borderRadius: ms(12, 0.15),
+      borderWidth: 1,
+      borderColor: '#5E23DC',
+      alignSelf: 'center',
+    },
+    guestBtnText: {
+      color: '#5E23DC',
+      textAlign: 'center',
+      fontSize: ms(15, 0.25),
+      fontFamily: 'SegoeUI-Bold',
+      ...Platform.select({
+        android: {includeFontPadding: false, textAlignVertical: 'center'},
+        default: {},
+      }),
     },
   });
 }

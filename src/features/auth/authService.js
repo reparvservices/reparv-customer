@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {Alert} from 'react-native';
 import {API_BASE_URL} from '../../config/api';
+import {requestJson, ApiError} from '../../utils/networkClient';
+import {logInfo} from '../../utils/appLogger';
 
 const API_URL = API_BASE_URL;
 
@@ -8,35 +9,40 @@ const API_URL = API_BASE_URL;
  * STEP 1: Send OTP (Login / Signup)
  */
 export const sendOtpAPI = async credentials => {
-  const res = await fetch(`${API_URL}/customerapp/user/signup`, {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify(credentials),
-  });
-
-  const data = await res.json(); // read ONCE
-  console.log(data, 'fbbf');
-
-  return data; // { success, message }
+  return requestJson(
+    `${API_URL}/customerapp/user/signup`,
+    {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(credentials),
+    },
+    'auth.sendOtp',
+  );
 };
 
 /**
  * STEP 2: Verify OTP
  */
 export const verifyOtpAPI = async data => {
-  const res = await fetch(`${API_URL}/customerapp/user/verify-otp`, {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify(data),
-  });
+  const json = await requestJson(
+    `${API_URL}/customerapp/user/verify-otp`,
+    {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(data),
+    },
+    'auth.verifyOtp',
+  );
 
-  const json = await res.json();
-  console.log(json);
-
-  if (!res.ok || !json?.success || !json?.token) {
-    throw new Error(json?.message || 'OTP verification failed');
+  if (!json?.success || !json?.token || !json?.user) {
+    throw new ApiError(
+      'Invalid login response from server.',
+      200,
+      'INVALID_AUTH',
+    );
   }
 
+  logInfo('login_success', {source: 'otp'});
   return json; // { success, token, user }
 };
 
@@ -44,31 +50,31 @@ export const verifyOtpAPI = async data => {
  * STEP 3: Resend OTP
  */
 export const resendOtpAPI = async contact => {
-  const res = await fetch(`${API_URL}/customerapp/user/resend-otp`, {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({contact}),
-  });
-
-  return await res.json();
+  return requestJson(
+    `${API_URL}/customerapp/user/resend-otp`,
+    {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({contact}),
+    },
+    'auth.resendOtp',
+  );
 };
 
 /**
  * Google Login (UNCHANGED)
  */
 export const googleLoginApi = async idToken => {
-  const res = await fetch(`${API_URL}/customerapp/user/google-login`, {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({token: idToken}),
-  });
-
-  const data = await res.json();
-
-  if (!res.ok) {
-    throw new Error(data?.message || 'Google login failed');
-  }
-
+  const data = await requestJson(
+    `${API_URL}/customerapp/user/google-login`,
+    {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({token: idToken}),
+    },
+    'auth.googleLogin',
+  );
+  logInfo('login_success', {source: 'google'});
   return data;
 };
 
@@ -77,23 +83,22 @@ export const googleLoginApi = async idToken => {
  * payload = { uid, email, displayName, photoURL }
  */
 export const facebookLoginApi = async payload => {
-  const res = await fetch(`${API_URL}/customerapp/user/facebook-login`, {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify(payload),
-  });
-
-  const data = await res.json();
-
-  if (!res.ok) {
-    throw new Error(data?.message || 'Facebook login failed');
-  }
-
+  const data = await requestJson(
+    `${API_URL}/customerapp/user/facebook-login`,
+    {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload),
+    },
+    'auth.facebookLogin',
+  );
+  logInfo('login_success', {source: 'facebook'});
   return data; // { success, token, user }
 };
 
 export const logoutAPI = async () => {
-  await AsyncStorage.clear();
+  await AsyncStorage.multiRemove(['Reparvtoken', 'Reparvuser']);
+  await AsyncStorage.setItem('ReparvGuestMode', '1');
 };
 
 export const getStoredAuth = async () => {

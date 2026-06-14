@@ -91,15 +91,3 @@ ios/build/
 # misc
 *.log
 .env
-<<<<<<< HEAD
-=======
-
-node_modules/
-android/.gradle/
-android/build/
-android/app/build/
-android/.cxx/
-ios/Pods/
-*.keystore
-.env
->>>>>>> c97ae5fe9b1141d2e925d73b2359185946777473
