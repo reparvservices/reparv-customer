@@ -759,7 +759,8 @@ const styles = StyleSheet.create({
   launcherWrap: {
     position: 'absolute',
     right: 18,
-    zIndex: 100,
+    zIndex: 10000,
+    elevation: 10000,
   },
   launcherBtn: {position: 'relative'},
   launcherGradient: {

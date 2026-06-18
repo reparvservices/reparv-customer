@@ -301,8 +301,11 @@ const Root = () => {
       });
   }, []);
 
-  // Version check
+  // Version check (skip in dev — local builds are often behind the store)
   useEffect(() => {
+    if (__DEV__) {
+      return;
+    }
     const checkForUpdate = async () => {
       try {
         const updateInfo = await VersionCheck.needUpdate();
