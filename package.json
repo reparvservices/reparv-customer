@@ -1,12 +1,11 @@
 {
   "name": "reparv",
-  "version": "0.0.1",
+  "version": "5.6.7",
   "private": true,
   "scripts": {
     "android": "react-native run-android",
     "ios": "react-native run-ios",
     "lint": "eslint .",
-    "postinstall": "patch-package && node scripts/refresh-android-autolinking.js",
     "start": "react-native start",
     "test": "jest --watchman=false"
   },
@@ -41,7 +40,6 @@
     "react-native-image-picker": "^8.2.1",
     "react-native-linear-gradient": "^2.8.3",
     "react-native-maps": "^1.17.1",
-    "react-native-otp-verify": "^1.2.0",
     "react-native-render-html": "^6.3.4",
     "react-native-safe-area-context": "^5.3.0",
     "react-native-screens": "4.11.0",
@@ -79,5 +77,8 @@
   },
   "engines": {
     "node": ">=18"
+  },
+  "overrides": {
+    "@react-native/virtualized-lists": "0.78.0"
   }
 }
