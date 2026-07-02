@@ -78,6 +78,35 @@ function handleNotificationNavigation(data) {
   }
 }
 
+/** App Store lists this app as version "45" (build-style), not semver "5.6.7". */
+function isNumericStoreVersion(version) {
+  return (
+    version != null &&
+    !String(version).includes('.') &&
+    /^\d+$/.test(String(version))
+  );
+}
+
+async function checkIosUpdateNeeded() {
+  const currentBuild = Number(VersionCheck.getCurrentBuildNumber());
+  const latestStoreVersion = await VersionCheck.getLatestVersion();
+
+  if (
+    isNumericStoreVersion(latestStoreVersion) &&
+    Number.isFinite(currentBuild) &&
+    currentBuild > 0
+  ) {
+    const storeBuild = Number(latestStoreVersion);
+    if (currentBuild >= storeBuild) {
+      return {isNeeded: false};
+    }
+    const storeUrl = await VersionCheck.getStoreUrl();
+    return {isNeeded: true, storeUrl};
+  }
+
+  return VersionCheck.needUpdate();
+}
+
 const Root = () => {
   const dispatch = useDispatch();
   const {user} = useSelector(state => state?.auth);
@@ -308,7 +337,10 @@ const Root = () => {
     }
     const checkForUpdate = async () => {
       try {
-        const updateInfo = await VersionCheck.needUpdate();
+        const updateInfo =
+          Platform.OS === 'ios'
+            ? await checkIosUpdateNeeded()
+            : await VersionCheck.needUpdate();
         if (updateInfo?.isNeeded) {
           setStoreUrl(updateInfo.storeUrl);
           setShowUpdate(true);

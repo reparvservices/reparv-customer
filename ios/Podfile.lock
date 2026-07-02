@@ -1408,9 +1408,9 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
-  - react-native-maps (1.27.2):
-    - react-native-maps/Maps (= 1.27.2)
-  - react-native-maps/Generated (1.27.2):
+  - react-native-maps (1.29.0):
+    - react-native-maps/Maps (= 1.29.0)
+  - react-native-maps/Generated (1.29.0):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -1431,7 +1431,7 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
-  - react-native-maps/Maps (1.27.2):
+  - react-native-maps/Maps (1.29.0):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -2585,7 +2585,7 @@ SPEC CHECKSUMS:
   react-native-fbsdk-next: 325e4973a478f098bb9406fb2a13fa2e1f5dffeb
   react-native-geolocation: 57a4a35c149d8613f81b89ff155e6ae28e76aea0
   react-native-image-picker: 5f9867b6a223594dbfdb456428638daef42e6e6c
-  react-native-maps: 15783eb6f913b4025f978ee3fd2a1f0ea9703e4b
+  react-native-maps: 9b2435584a6f60b61e798039b5617264e4efec25
   react-native-render-html: 5afc4751f1a98621b3009432ef84c47019dcb2bd
   react-native-safe-area-context: fe9a46a1191affbc09cca7ea4fa3ff41caa392f0
   react-native-slider: bffebc1b85cd1b22590a2b542b7cb5540cbad1fd

@@ -87,8 +87,8 @@ android {
         applicationId "com.reparvcustomer"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 44
-        versionName "5.6.7"
+        versionCode 46
+        versionName "5.6.8"
     }
     signingConfigs {
         release {
