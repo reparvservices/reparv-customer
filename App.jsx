@@ -78,7 +78,7 @@ function handleNotificationNavigation(data) {
   }
 }
 
-/** App Store lists this app as version "45" (build-style), not semver "5.6.7". */
+/** App Store may list a numeric build-style version (e.g. "45") instead of semver. */
 function isNumericStoreVersion(version) {
   return (
     version != null &&
